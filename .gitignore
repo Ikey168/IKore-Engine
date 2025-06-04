@@ -1,3 +1,9 @@
+# macOS
+.DS_Store
+
+# IDE directories
+.vscode/
+cmake-build-*/
 # Prerequisites
 *.d
 
@@ -30,3 +36,13 @@
 *.exe
 *.out
 *.app
+
+# Build directories
+build/
+build-*/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
