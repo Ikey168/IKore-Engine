@@ -45,15 +45,15 @@ FetchContent_Declare(
 FetchContent_GetProperties(stb)
 if(NOT stb_POPULATED)
   FetchContent_Populate(stb)
-  add_library(stb INTERFACE)
-  target_include_directories(stb INTERFACE ${stb_SOURCE_DIR})
+  add_library(stb_image INTERFACE)
+  target_include_directories(stb_image INTERFACE ${stb_SOURCE_DIR})
 endif()
 
 find_package(OpenGL REQUIRED)
 
 add_executable(IKore src/main.cpp)
 
-target_link_libraries(IKore PRIVATE glfw glad glm stb OpenGL::GL)
+target_link_libraries(IKore PRIVATE glfw glad glm stb_image OpenGL::GL)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
