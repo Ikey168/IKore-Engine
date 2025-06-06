@@ -23,11 +23,32 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glad)
 
+# GLM
+FetchContent_Declare(
+  glm
+  GIT_REPOSITORY https://github.com/g-truc/glm.git
+  GIT_TAG        0.9.9.8
+)
+FetchContent_MakeAvailable(glm)
+
+# stb_image
+FetchContent_Declare(
+  stb
+  GIT_REPOSITORY https://github.com/nothings/stb.git
+  GIT_TAG        f58f558c120e9b32c217290b80bad1a0729fbb2c
+)
+FetchContent_GetProperties(stb)
+if(NOT stb_POPULATED)
+  FetchContent_Populate(stb)
+  add_library(stb INTERFACE)
+  target_include_directories(stb INTERFACE ${stb_SOURCE_DIR})
+endif()
+
 find_package(OpenGL REQUIRED)
 
 add_executable(IKore src/main.cpp)
 
-target_link_libraries(IKore PRIVATE glfw glad OpenGL::GL)
+target_link_libraries(IKore PRIVATE glfw glad glm stb OpenGL::GL)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)

@@ -26,4 +26,4 @@ mkdir build && cd build
 cmake .. -G Xcode
 ```
 
-This setup downloads GLFW and GLAD at configure time and should work on Linux, macOS and Windows.
+This setup downloads GLFW, GLAD, GLM and stb_image at configure time and should work on Linux, macOS and Windows.
