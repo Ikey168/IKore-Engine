@@ -3,12 +3,19 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include "Logger.h"
 
 int main() {
+    // Initialize logging system
+    IKore::Logger::getInstance().initialize();
+    LOG_INFO("Starting IKore Engine");
+
     if (!glfwInit()) {
+        LOG_ERROR("Failed to initialize GLFW");
         std::cerr << "Failed to initialize GLFW\n";
         return -1;
     }
+    LOG_INFO("GLFW initialized successfully");
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -19,16 +26,20 @@ int main() {
 
     GLFWwindow* window = glfwCreateWindow(1280, 720, "IKore Engine", nullptr, nullptr);
     if (!window) {
+        LOG_ERROR("Failed to create GLFW window");
         std::cerr << "Failed to create GLFW window\n";
         glfwTerminate();
         return -1;
     }
+    LOG_INFO("Window created successfully");
     glfwMakeContextCurrent(window);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        LOG_ERROR("Failed to initialize GLAD");
         std::cerr << "Failed to initialize GLAD\n";
         return -1;
     }
+    LOG_INFO("GLAD initialized successfully");
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
@@ -59,6 +70,7 @@ int main() {
         }
     }
 
+    LOG_INFO("Shutting down IKore Engine");
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
