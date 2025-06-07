@@ -1,0 +1,107 @@
+name: Release Build
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag for the release'
+        required: true
+        default: 'v1.0.0'
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  release-build:
+    name: Release Build - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: IKore-Linux
+            asset_extension: ""
+          - os: windows-latest
+            artifact_name: IKore-Windows
+            asset_extension: ".exe"
+          - os: macos-latest
+            artifact_name: IKore-macOS
+            asset_extension: ""
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libxrandr-dev \
+          libxinerama-dev \
+          libxcursor-dev \
+          libxi-dev \
+          libxext-dev \
+          libx11-dev \
+          mesa-common-dev \
+          libgl1-mesa-dev \
+          libglu1-mesa-dev
+
+    - name: Create build directory
+      run: cmake -E make_directory ${{github.workspace}}/build
+
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/build
+      run: |
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          cmake .. -G "Visual Studio 17 2022" -A x64
+        else
+          cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+        fi
+      shell: bash
+
+    - name: Build project (Unix)
+      if: matrix.os != 'windows-latest'
+      working-directory: ${{github.workspace}}/build
+      run: make -j$(nproc 2>/dev/null || echo 4)
+      shell: bash
+
+    - name: Build project (Windows)
+      if: matrix.os == 'windows-latest'
+      working-directory: ${{github.workspace}}/build
+      run: cmake --build . --config $env:BUILD_TYPE --parallel
+
+    - name: Prepare release artifact
+      run: |
+        mkdir -p release
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          cp build/Release/IKore.exe release/${{ matrix.artifact_name }}.exe
+        else
+          cp build/IKore release/${{ matrix.artifact_name }}
+        fi
+        # Create a simple README for the release
+        cat > release/README.md << EOF
+        # IKore Engine - ${{ matrix.os }} Build
+        
+        This is a compiled binary of IKore Engine for ${{ matrix.os }}.
+        
+        ## System Requirements
+        - OpenGL 3.3 compatible graphics card
+        $(if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then echo "- Linux with X11 display server"; fi)
+        $(if [ "${{ matrix.os }}" == "windows-latest" ]; then echo "- Windows 10 or later"; fi)
+        $(if [ "${{ matrix.os }}" == "macos-latest" ]; then echo "- macOS 10.15 or later"; fi)
+        
+        ## Usage
+        Run the executable to start the IKore Engine.
+        Check the logs/ directory for engine logs.
+        EOF
+      shell: bash
+
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: release/
+        retention-days: 30
