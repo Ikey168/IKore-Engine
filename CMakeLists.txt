@@ -51,7 +51,7 @@ endif()
 
 find_package(OpenGL REQUIRED)
 
-add_executable(IKore src/main.cpp)
+add_executable(IKore src/main.cpp src/Logger.cpp)
 
 target_link_libraries(IKore PRIVATE glfw glad glm stb_image OpenGL::GL)
 
