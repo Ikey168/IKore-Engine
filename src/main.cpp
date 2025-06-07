@@ -4,6 +4,7 @@
 #include <chrono>
 #include <thread>
 #include "Logger.h"
+#include "DeltaTimeDemo.h"
 
 int main() {
     // Initialize logging system
@@ -46,15 +47,62 @@ int main() {
     const double targetFPS = 60.0;
     const double targetFrameTime = 1.0 / targetFPS;
 
+    // Initialize delta time demo
+    IKore::DeltaTimeDemo deltaDemo;
+    deltaDemo.initialize();
+
+    // Delta time tracking
+    double lastFrameTime = glfwGetTime();
+    double deltaTime = 0.0;
+    
+    // Frame timing statistics
+    double frameTimeAccumulator = 0.0;
+    int frameCount = 0;
+    double statsTimer = 0.0;
+
+    LOG_INFO("Starting main game loop with delta time calculation");
+
     while (!glfwWindowShouldClose(window)) {
         auto frameStart = std::chrono::high_resolution_clock::now();
+
+        // Calculate delta time using glfwGetTime() for precision
+        double currentFrameTime = glfwGetTime();
+        deltaTime = currentFrameTime - lastFrameTime;
+        lastFrameTime = currentFrameTime;
+        
+        // Update statistics
+        frameTimeAccumulator += deltaTime;
+        frameCount++;
+        statsTimer += deltaTime;
+        
+        // Log frame timing statistics every 2 seconds
+        if (statsTimer >= 2.0) {
+            double avgFrameTime = frameTimeAccumulator / frameCount;
+            double avgFPS = 1.0 / avgFrameTime;
+            LOG_INFO("Frame stats - Avg FPS: " + std::to_string(avgFPS) + 
+                    ", Avg Frame Time: " + std::to_string(avgFrameTime * 1000.0) + "ms" +
+                    ", Current Delta: " + std::to_string(deltaTime * 1000.0) + "ms");
+            
+            // Reset statistics
+            frameTimeAccumulator = 0.0;
+            frameCount = 0;
+            statsTimer = 0.0;
+        }
 
         // Input processing
         glfwPollEvents();
         // (Add input handling here as needed)
 
         // Update game objects
-        // (Add game update logic here)
+        // (Add game update logic here - use deltaTime for frame-rate independent movement)
+        // Example: position += velocity * deltaTime;
+        //          rotation += angularVelocity * deltaTime;
+        //          animation.update(deltaTime);
+        // Delta time ensures smooth movement regardless of frame rate
+
+        // Update delta time demo for testing frame-rate independent movement
+        deltaDemo.update();
+        deltaDemo.updateTestMovement();
 
         // Render
         glClear(GL_COLOR_BUFFER_BIT);
