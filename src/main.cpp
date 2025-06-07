@@ -15,7 +15,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "IKore Engine", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "IKore Engine", nullptr, nullptr);
     if (!window) {
         std::cerr << "Failed to create GLFW window\n";
         glfwTerminate();
@@ -27,6 +27,8 @@ int main() {
         std::cerr << "Failed to initialize GLAD\n";
         return -1;
     }
+
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT);
