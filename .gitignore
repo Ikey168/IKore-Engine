@@ -1,9 +1,107 @@
+# =============================================================================
+# IKore Engine - Comprehensive .gitignore for C++ & CMake Development
+# =============================================================================
+
+# ==========================
+# Operating System Files
+# ==========================
+
 # macOS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# IDE directories
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ==========================
+# IDE and Editor Files
+# ==========================
+
+# Visual Studio Code
 .vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# JetBrains IDEs (CLion, IntelliJ, etc.)
+.idea/
+*.iws
+*.iml
+*.ipr
 cmake-build-*/
+
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.vcxproj.filters
+*.sln.docstates
+*.suo
+*.user
+*.userosscache
+*.sln.docstates.suo
+
+# Qt Creator
+CMakeLists.txt.user*
+*.autosave
+
+# Code::Blocks
+*.cbp
+*.layout
+*.depend
+
+# Dev-C++
+*.dev
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+build/
+DerivedData/
+
+# Vim/Neovim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# ==========================
+# C/C++ Compilation Artifacts
+# ==========================
+
 # Prerequisites
 *.d
 
@@ -12,19 +110,25 @@ cmake-build-*/
 *.lo
 *.o
 *.obj
+*.ko
+*.elf
+
+# Linker output
+*.ilk
+*.map
+*.exp
 
 # Precompiled Headers
 *.gch
 *.pch
+*.pth
 
 # Compiled Dynamic libraries
 *.so
+*.so.*
 *.dylib
 *.dll
-
-# Fortran module files
-*.mod
-*.smod
+*.DLL
 
 # Compiled Static libraries
 *.lai
@@ -36,16 +140,141 @@ cmake-build-*/
 *.exe
 *.out
 *.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Fortran module files
+*.mod
+*.smod
+
+# ==========================
+# CMake Build System
+# ==========================
 
 # Build directories
 build/
 build-*/
+builds/
+out/
+bin/
+target/
 
 # CMake generated files
 CMakeCache.txt
 CMakeFiles/
+CMakeScripts/
 cmake_install.cmake
 compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# CMake GUI files
+cmake-gui/
+
+# CPack generated files
+CPackConfig.cmake
+CPackSourceConfig.cmake
+_CPack_Packages/
+
+# Testing
+Testing/
+
+# Install manifest
+install_manifest.txt
+
+# CMake build info
+CMakeLists.txt.user
+
+# ==========================
+# Package Managers & Dependencies
+# ==========================
+
+# vcpkg
+vcpkg_installed/
+.vcpkg-root
+
+# Conan
+conandata.yml
+conanfile.py
+conaninfo.txt
+conanbuildinfo.*
+
+# Hunter
+.hunter/
+
+# CPM
+cmake/CPM_*.cmake
+
+# FetchContent (keep source dirs but ignore build artifacts)
+_deps/*/build/
+_deps/*-build/
+
+# ==========================
+# Documentation & Tools
+# ==========================
+
+# Doxygen
+Doxyfile.bak
+html/
+latex/
+xml/
+
+# Sphinx
+docs/_build/
+docs/build/
+
+# Coverage reports
+*.gcov
+*.gcda
+*.gcno
+lcov.info
+coverage/
+*.profraw
+*.profdata
+
+# Static analysis
+*.sarif
+cppcheck-results.xml
+
+# ==========================
+# Runtime & Logs
+# ==========================
 
 # Log files
 logs/
+*.log
+
+# Crash dumps
+*.dmp
+core
+core.*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+*.rej
+
+# ==========================
+# Project Specific
+# ==========================
+
+# Engine assets that shouldn't be tracked
+assets/temp/
+cache/
+temp/
+
+# Configuration files (keep templates)
+config.ini
+settings.json
+!config.template.ini
+!settings.template.json
