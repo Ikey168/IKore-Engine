@@ -62,15 +62,16 @@ jobs:
         fi
       shell: bash
 
-    - name: Build project
+    - name: Build project (Unix)
+      if: matrix.os != 'windows-latest'
       working-directory: ${{github.workspace}}/build
-      run: |
-        if [ "${{ matrix.os }}" == "windows-latest" ]; then
-          cmake --build . --config $BUILD_TYPE --parallel
-        else
-          make -j$(nproc 2>/dev/null || echo 4)
-        fi
+      run: make -j$(nproc 2>/dev/null || echo 4)
       shell: bash
+
+    - name: Build project (Windows)
+      if: matrix.os == 'windows-latest'
+      working-directory: ${{github.workspace}}/build
+      run: cmake --build . --config $env:BUILD_TYPE --parallel
 
     - name: Prepare release artifact
       run: |

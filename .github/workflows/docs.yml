@@ -92,11 +92,10 @@ jobs:
     - name: Run spell check on markdown files
       run: |
         echo "📝 Running spell check on documentation..."
-        find . -name "*.md" -not -path "./build/*" -not -path "./_deps/*" | while read md_file; do
-          echo "Checking $md_file..."
-          # Create a simple word list for technical terms
-          cat > .aspell.en.pws << EOF
-personal_ws-1.1 en 20
+        
+        # Create a simple word list for technical terms
+        cat > .aspell.en.pws << EOF
+personal_ws-1.1 en 30
 OpenGL
 GLFW
 CMake
@@ -108,9 +107,24 @@ Ubuntu
 workflow
 backends
 renderer
+API
+APIs
+enum
+namespace
+bool
+hpp
+cpp
+inline
+const
+struct
+typedef
+templating
 EOF
-          
-          # Check spelling (ignore code blocks and URLs)
-          aspell --home-dir=. --personal=.aspell.en.pws --lang=en \
-            --mode=markdown --check "$md_file" < /dev/null || true
+        
+        find . -name "*.md" -not -path "./build/*" -not -path "./_deps/*" | while read md_file; do
+          echo "Checking $md_file..."
+          # Use aspell list mode to just report misspelled words without interactive prompts
+          cat "$md_file" | aspell --home-dir=. --personal=.aspell.en.pws --lang=en \
+            --mode=markdown list | head -10 || true
+          echo "✅ Spell check completed for $md_file"
         done
