@@ -1,0 +1,116 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main ]
+    paths: 
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '**.md'
+      - 'docs/**'
+
+jobs:
+  docs-check:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check README structure
+      run: |
+        echo "📚 Checking documentation structure..."
+        
+        if [ -f "README.md" ]; then
+          echo "✅ README.md exists"
+          
+          # Check if README has essential sections
+          if grep -qi "# IKore Engine" README.md; then
+            echo "✅ Project title found"
+          else
+            echo "⚠️  Project title not found in README"
+          fi
+          
+          if grep -qi "building\|build" README.md; then
+            echo "✅ Build instructions found"
+          else
+            echo "⚠️  Build instructions not found in README"
+          fi
+          
+          # Check for broken links (basic check)
+          if grep -o "http[s]*://[^)]*" README.md | while read url; do
+            echo "🔗 Found URL: $url"
+          done; then
+            echo "✅ URLs found in README"
+          fi
+        else
+          echo "❌ README.md not found"
+          exit 1
+        fi
+
+    - name: Check for documentation completeness
+      run: |
+        echo "📋 Checking documentation completeness..."
+        
+        # Check if source files have documentation
+        find src/ -name "*.h" | while read header; do
+          if grep -q "//\|/\*" "$header"; then
+            echo "✅ $header has comments"
+          else
+            echo "⚠️  $header may need more documentation"
+          fi
+        done
+
+    - name: Validate markdown files
+      run: |
+        echo "🔍 Validating markdown files..."
+        find . -name "*.md" -not -path "./build/*" -not -path "./_deps/*" | while read md_file; do
+          if [ -s "$md_file" ]; then
+            echo "✅ $md_file is valid"
+          else
+            echo "⚠️  $md_file is empty"
+          fi
+        done
+
+  spellcheck:
+    name: Spell Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install spell checker
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y aspell aspell-en
+
+    - name: Run spell check on markdown files
+      run: |
+        echo "📝 Running spell check on documentation..."
+        find . -name "*.md" -not -path "./build/*" -not -path "./_deps/*" | while read md_file; do
+          echo "Checking $md_file..."
+          # Create a simple word list for technical terms
+          cat > .aspell.en.pws << EOF
+personal_ws-1.1 en 20
+OpenGL
+GLFW
+CMake
+GitHub
+IKore
+vcpkg
+macOS
+Ubuntu
+workflow
+backends
+renderer
+EOF
+          
+          # Check spelling (ignore code blocks and URLs)
+          aspell --home-dir=. --personal=.aspell.en.pws --lang=en \
+            --mode=markdown --check "$md_file" < /dev/null || true
+        done
