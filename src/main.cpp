@@ -1,11 +1,15 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <chrono>
 #include <thread>
 #include "Logger.h"
 #include "DeltaTimeDemo.h"
 #include "Shader.h"
+#include "Light.h"
 
 int main() {
     // Initialize logging system
@@ -44,6 +48,7 @@ int main() {
     LOG_INFO("GLAD initialized successfully");
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glEnable(GL_DEPTH_TEST);
 
     const double targetFPS = 60.0;
     const double targetFrameTime = 1.0 / targetFPS;
@@ -52,46 +57,90 @@ int main() {
     IKore::DeltaTimeDemo deltaDemo;
     deltaDemo.initialize();
 
-    // === VAO / VBO / EBO Setup ===
+    // === Cube vertices with normals ===
     float vertices[] = {
-        // positions      // colors
-        -0.5f, -0.5f, 0.0f,  1.f, 0.f, 0.f,
-         0.5f, -0.5f, 0.0f,  0.f, 1.f, 0.f,
-         0.5f,  0.5f, 0.0f,  0.f, 0.f, 1.f,
-        -0.5f,  0.5f, 0.0f,  1.f, 1.f, 0.f
-    };
-    unsigned int indices[] = {
-        0,1,2,
-        2,3,0
+        // positions          // normals
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
     };
 
-    GLuint VAO, VBO, EBO;
+    GLuint VAO, VBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
 
     glBindVertexArray(VAO);
-
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    // position attribute
+    // Position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    // color attribute
+    // Normal attribute
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    glBindVertexArray(0); // safe unbind (EBO stays bound to VAO state)
+    glBindVertexArray(0);
 
     std::string shaderError;
-    auto shaderPtr = IKore::Shader::loadFromFilesCached("src/shaders/basic.vert", "src/shaders/basic.frag", shaderError);
+    auto shaderPtr = IKore::Shader::loadFromFilesCached("src/shaders/phong.vert", "src/shaders/phong.frag", shaderError);
     if(!shaderPtr){
         LOG_ERROR(std::string("Shader file load/compile failed: ") + shaderError);
     }
+
+    // Setup lights
+    IKore::DirectionalLight dirLight(glm::vec3(-0.2f, -1.0f, -0.3f));
+    dirLight.ambient = glm::vec3(0.05f, 0.05f, 0.05f);
+    dirLight.diffuse = glm::vec3(0.4f, 0.4f, 0.4f);
+    dirLight.specular = glm::vec3(0.5f, 0.5f, 0.5f);
+
+    IKore::PointLight pointLight(glm::vec3(1.2f, 1.0f, 2.0f));
+    pointLight.ambient = glm::vec3(0.05f, 0.05f, 0.05f);
+    pointLight.diffuse = glm::vec3(0.8f, 0.8f, 0.8f);
+    pointLight.specular = glm::vec3(1.0f, 1.0f, 1.0f);
+
+    // Camera setup
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+    glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
     // Delta time tracking
     double lastFrameTime = glfwGetTime();
@@ -138,12 +187,67 @@ int main() {
         deltaDemo.update();
         deltaDemo.updateTestMovement();
 
+        // Animate point light position
+        pointLight.setPosition(glm::vec3(
+            sin(currentFrameTime) * 2.0f,
+            cos(currentFrameTime) * 1.0f,
+            sin(currentFrameTime * 0.5f) * 2.0f + 2.0f
+        ));
+
         // Render
-        glClear(GL_COLOR_BUFFER_BIT);
-        if(shaderPtr) shaderPtr->use();
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        if(shaderPtr) {
+            shaderPtr->use();
+            
+            // Set up matrices
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::rotate(model, (float)currentFrameTime * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+            
+            glm::mat4 view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
+            glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1280.0f / 720.0f, 0.1f, 100.0f);
+            
+            glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(model)));
+            
+            // Set matrices
+            shaderPtr->setMat4("model", glm::value_ptr(model));
+            shaderPtr->setMat4("view", glm::value_ptr(view));
+            shaderPtr->setMat4("projection", glm::value_ptr(projection));
+            shaderPtr->setMat3("normalMatrix", glm::value_ptr(normalMatrix));
+            
+            // Set camera position
+            shaderPtr->setVec3("viewPos", cameraPos.x, cameraPos.y, cameraPos.z);
+            
+            // Set material properties
+            shaderPtr->setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
+            shaderPtr->setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
+            shaderPtr->setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+            shaderPtr->setFloat("material.shininess", 32.0f);
+            
+            // Set directional light
+            shaderPtr->setFloat("useDirLight", 1.0f);
+            shaderPtr->setVec3("dirLight.direction", dirLight.direction.x, dirLight.direction.y, dirLight.direction.z);
+            shaderPtr->setVec3("dirLight.ambient", dirLight.ambient.x, dirLight.ambient.y, dirLight.ambient.z);
+            shaderPtr->setVec3("dirLight.diffuse", dirLight.diffuse.x, dirLight.diffuse.y, dirLight.diffuse.z);
+            shaderPtr->setVec3("dirLight.specular", dirLight.specular.x, dirLight.specular.y, dirLight.specular.z);
+            
+            // Set point light
+            shaderPtr->setFloat("numPointLights", 1.0f);
+            shaderPtr->setVec3("pointLights[0].position", pointLight.position.x, pointLight.position.y, pointLight.position.z);
+            shaderPtr->setVec3("pointLights[0].ambient", pointLight.ambient.x, pointLight.ambient.y, pointLight.ambient.z);
+            shaderPtr->setVec3("pointLights[0].diffuse", pointLight.diffuse.x, pointLight.diffuse.y, pointLight.diffuse.z);
+            shaderPtr->setVec3("pointLights[0].specular", pointLight.specular.x, pointLight.specular.y, pointLight.specular.z);
+            shaderPtr->setFloat("pointLights[0].constant", pointLight.constant);
+            shaderPtr->setFloat("pointLights[0].linear", pointLight.linear);
+            shaderPtr->setFloat("pointLights[0].quadratic", pointLight.quadratic);
+            
+            // No spot lights for now
+            shaderPtr->setFloat("numSpotLights", 0.0f);
+            
+            glBindVertexArray(VAO);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+            glBindVertexArray(0);
+        }
 
         glfwSwapBuffers(window);
 
@@ -159,7 +263,6 @@ int main() {
     // Cleanup
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
 
     LOG_INFO("Shutting down IKore Engine");
     glfwDestroyWindow(window);

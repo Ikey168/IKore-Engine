@@ -28,6 +28,13 @@ public:
 
     const std::string& lastLog() const { return m_lastLog; }
 
+    // Uniform setters
+    void setFloat(const std::string& name, float value) const;
+    void setVec3(const std::string& name, float x, float y, float z) const;
+    void setVec3(const std::string& name, const float* value) const;
+    void setMat4(const std::string& name, const float* value) const;
+    void setMat3(const std::string& name, const float* value) const;
+
 private:
     GLuint m_program = 0;
     GLuint compile(GLenum type, const char* src, std::string& outError);
