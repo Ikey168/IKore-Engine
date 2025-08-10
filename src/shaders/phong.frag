@@ -3,12 +3,20 @@ out vec4 FragColor;
 
 in vec3 FragPos;
 in vec3 Normal;
+in vec2 TexCoord;
 
 struct Material {
+    // Support for both texture-based and color-based materials
+    sampler2D diffuse;
+    sampler2D specular;
     vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
+    vec3 diffuseColor;
+    vec3 specularColor;
     float shininess;
+    
+    // Flags to determine whether to use textures or colors
+    bool useDiffuseTexture;
+    bool useSpecularTexture;
 };
 
 struct DirectionalLight {
@@ -95,10 +103,16 @@ vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     
+    // Get material properties (texture or color)
+    vec3 diffuseColor = material.useDiffuseTexture ? 
+                       texture(material.diffuse, TexCoord).rgb : material.diffuseColor;
+    vec3 specularColor = material.useSpecularTexture ? 
+                        texture(material.specular, TexCoord).rgb : material.specularColor;
+    
     // Combine results
-    vec3 ambient = light.ambient * material.ambient;
-    vec3 diffuse = light.diffuse * diff * material.diffuse;
-    vec3 specular = light.specular * spec * material.specular;
+    vec3 ambient = light.ambient * material.ambient * diffuseColor;
+    vec3 diffuse = light.diffuse * diff * diffuseColor;
+    vec3 specular = light.specular * spec * specularColor;
     
     return (ambient + diffuse + specular);
 }
@@ -117,10 +131,16 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
     
+    // Get material properties (texture or color)
+    vec3 diffuseColor = material.useDiffuseTexture ? 
+                       texture(material.diffuse, TexCoord).rgb : material.diffuseColor;
+    vec3 specularColor = material.useSpecularTexture ? 
+                        texture(material.specular, TexCoord).rgb : material.specularColor;
+    
     // Combine results
-    vec3 ambient = light.ambient * material.ambient;
-    vec3 diffuse = light.diffuse * diff * material.diffuse;
-    vec3 specular = light.specular * spec * material.specular;
+    vec3 ambient = light.ambient * material.ambient * diffuseColor;
+    vec3 diffuse = light.diffuse * diff * diffuseColor;
+    vec3 specular = light.specular * spec * specularColor;
     
     ambient *= attenuation;
     diffuse *= attenuation;
@@ -148,10 +168,16 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
     float epsilon = light.cutOff - light.outerCutOff;
     float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
     
+    // Get material properties (texture or color)
+    vec3 diffuseColor = material.useDiffuseTexture ? 
+                       texture(material.diffuse, TexCoord).rgb : material.diffuseColor;
+    vec3 specularColor = material.useSpecularTexture ? 
+                        texture(material.specular, TexCoord).rgb : material.specularColor;
+    
     // Combine results
-    vec3 ambient = light.ambient * material.ambient;
-    vec3 diffuse = light.diffuse * diff * material.diffuse;
-    vec3 specular = light.specular * spec * material.specular;
+    vec3 ambient = light.ambient * material.ambient * diffuseColor;
+    vec3 diffuse = light.diffuse * diff * diffuseColor;
+    vec3 specular = light.specular * spec * specularColor;
     
     ambient *= attenuation * intensity;
     diffuse *= attenuation * intensity;

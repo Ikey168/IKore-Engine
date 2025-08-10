@@ -10,6 +10,7 @@
 #include "DeltaTimeDemo.h"
 #include "Shader.h"
 #include "Light.h"
+#include "Texture.h"
 
 int main() {
     // Initialize logging system
@@ -57,50 +58,50 @@ int main() {
     IKore::DeltaTimeDemo deltaDemo;
     deltaDemo.initialize();
 
-    // === Cube vertices with normals ===
+    // === Cube vertices with normals and texture coordinates ===
     float vertices[] = {
-        // positions          // normals
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+        // positions          // normals           // texture coords
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
+         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
 
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
 
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
 
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
 
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
 
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
     };
 
     GLuint VAO, VBO;
@@ -112,11 +113,14 @@ int main() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     // Normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+    // Texture coordinate attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 
     glBindVertexArray(0);
 
@@ -136,6 +140,27 @@ int main() {
     pointLight.ambient = glm::vec3(0.05f, 0.05f, 0.05f);
     pointLight.diffuse = glm::vec3(0.8f, 0.8f, 0.8f);
     pointLight.specular = glm::vec3(1.0f, 1.0f, 1.0f);
+
+    // === Texture Loading ===
+    IKore::TextureManager textureManager;
+    
+    // Load diffuse texture
+    auto diffuseTexture = IKore::Texture::loadFromFileShared("assets/textures/colorful.png", IKore::Texture::Type::DIFFUSE);
+    if (diffuseTexture) {
+        textureManager.addTexture(diffuseTexture, "material.diffuse");
+        LOG_INFO("Successfully loaded and added diffuse texture");
+    } else {
+        LOG_ERROR("Failed to load diffuse texture - falling back to color-only material");
+    }
+
+    // Load specular texture
+    auto specularTexture = IKore::Texture::loadFromFileShared("assets/textures/specular.png", IKore::Texture::Type::SPECULAR);
+    if (specularTexture) {
+        textureManager.addTexture(specularTexture, "material.specular");
+        LOG_INFO("Successfully loaded and added specular texture");
+    } else {
+        LOG_ERROR("Failed to load specular texture - falling back to color-only material");
+    }
 
     // Camera setup
     glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
@@ -218,10 +243,31 @@ int main() {
             // Set camera position
             shaderPtr->setVec3("viewPos", cameraPos.x, cameraPos.y, cameraPos.z);
             
-            // Set material properties
-            shaderPtr->setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
-            shaderPtr->setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
-            shaderPtr->setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+            // Bind textures and set material properties
+            textureManager.bindAll(shaderPtr->id());
+            
+            // Set material properties (support both textured and non-textured materials)
+            bool hasTextures = textureManager.getTextureCount() > 0;
+            
+            if (hasTextures) {
+                // Using textures - set flags
+                shaderPtr->setFloat("material.useDiffuseTexture", 1.0f);
+                shaderPtr->setFloat("material.useSpecularTexture", 
+                    textureManager.getTextureByType(IKore::Texture::Type::SPECULAR) ? 1.0f : 0.0f);
+                
+                // Set fallback colors for areas where texture might not cover
+                shaderPtr->setVec3("material.ambient", 0.2f, 0.2f, 0.2f);
+                shaderPtr->setVec3("material.diffuseColor", 1.0f, 1.0f, 1.0f);  // White to not tint texture
+                shaderPtr->setVec3("material.specularColor", 0.5f, 0.5f, 0.5f);
+            } else {
+                // No textures - use colors only
+                shaderPtr->setFloat("material.useDiffuseTexture", 0.0f);
+                shaderPtr->setFloat("material.useSpecularTexture", 0.0f);
+                shaderPtr->setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
+                shaderPtr->setVec3("material.diffuseColor", 1.0f, 0.5f, 0.31f);
+                shaderPtr->setVec3("material.specularColor", 0.5f, 0.5f, 0.5f);
+            }
+            
             shaderPtr->setFloat("material.shininess", 32.0f);
             
             // Set directional light
@@ -247,6 +293,9 @@ int main() {
             glBindVertexArray(VAO);
             glDrawArrays(GL_TRIANGLES, 0, 36);
             glBindVertexArray(0);
+            
+            // Unbind textures
+            textureManager.unbindAll();
         }
 
         glfwSwapBuffers(window);
