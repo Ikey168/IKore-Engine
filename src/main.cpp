@@ -87,25 +87,10 @@ int main() {
 
     glBindVertexArray(0); // safe unbind (EBO stays bound to VAO state)
 
-    const char* vs = R"(#version 330 core
-layout(location=0) in vec3 aPos;
-layout(location=1) in vec3 aColor;
-out vec3 vColor;
-void main(){
-    vColor = aColor;
-    gl_Position = vec4(aPos, 1.0);
-})";
-    const char* fs = R"(#version 330 core
-in vec3 vColor;
-out vec4 FragColor;
-void main(){
-    FragColor = vec4(vColor, 1.0);
-})";
-
-    IKore::Shader shader;
     std::string shaderError;
-    if(!shader.loadFromSource(vs, fs, shaderError)){
-        LOG_ERROR(std::string("Shader compilation/link failed: ") + shaderError);
+    auto shaderPtr = IKore::Shader::loadFromFilesCached("src/shaders/basic.vert", "src/shaders/basic.frag", shaderError);
+    if(!shaderPtr){
+        LOG_ERROR(std::string("Shader file load/compile failed: ") + shaderError);
     }
 
     // Delta time tracking
@@ -155,7 +140,7 @@ void main(){
 
         // Render
         glClear(GL_COLOR_BUFFER_BIT);
-        shader.use();
+        if(shaderPtr) shaderPtr->use();
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
