@@ -9,7 +9,8 @@ struct Material {
     // Support for both texture-based and color-based materials
     sampler2D diffuse;
     sampler2D specular;
-    vec3 ambient;
+    sampler2D normal;
+    vec3 ambientColor;
     vec3 diffuseColor;
     vec3 specularColor;
     float shininess;
@@ -17,6 +18,7 @@ struct Material {
     // Flags to determine whether to use textures or colors
     bool useDiffuseTexture;
     bool useSpecularTexture;
+    bool useNormalTexture;
 };
 
 struct DirectionalLight {
@@ -110,7 +112,7 @@ vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
                         texture(material.specular, TexCoord).rgb : material.specularColor;
     
     // Combine results
-    vec3 ambient = light.ambient * material.ambient * diffuseColor;
+    vec3 ambient = light.ambient * material.ambientColor * diffuseColor;
     vec3 diffuse = light.diffuse * diff * diffuseColor;
     vec3 specular = light.specular * spec * specularColor;
     
@@ -138,7 +140,7 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
                         texture(material.specular, TexCoord).rgb : material.specularColor;
     
     // Combine results
-    vec3 ambient = light.ambient * material.ambient * diffuseColor;
+    vec3 ambient = light.ambient * material.ambientColor * diffuseColor;
     vec3 diffuse = light.diffuse * diff * diffuseColor;
     vec3 specular = light.specular * spec * specularColor;
     
@@ -175,7 +177,7 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
                         texture(material.specular, TexCoord).rgb : material.specularColor;
     
     // Combine results
-    vec3 ambient = light.ambient * material.ambient * diffuseColor;
+    vec3 ambient = light.ambient * material.ambientColor * diffuseColor;
     vec3 diffuse = light.diffuse * diff * diffuseColor;
     vec3 specular = light.specular * spec * specularColor;
     
