@@ -11,6 +11,7 @@
 #include "Shader.h"
 #include "Light.h"
 #include "Texture.h"
+#include "Model.h"
 
 int main() {
     // Initialize logging system
@@ -162,6 +163,16 @@ int main() {
         LOG_ERROR("Failed to load specular texture - falling back to color-only material");
     }
 
+    // === Model Loading ===
+    LOG_INFO("Loading 3D model...");
+    IKore::Model cubeModel;
+    bool modelLoaded = cubeModel.loadFromFile("assets/models/cube.obj");
+    if (!modelLoaded || cubeModel.getMeshes().empty()) {
+        LOG_ERROR("Failed to load model - falling back to primitive geometry");
+    } else {
+        LOG_INFO("Successfully loaded model with " + std::to_string(cubeModel.getMeshes().size()) + " meshes");
+    }
+
     // Camera setup
     glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
     glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -290,9 +301,16 @@ int main() {
             // No spot lights for now
             shaderPtr->setFloat("numSpotLights", 0.0f);
             
-            glBindVertexArray(VAO);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-            glBindVertexArray(0);
+            // Render models if available, otherwise fallback to primitive cube
+            if (modelLoaded && !cubeModel.getMeshes().empty()) {
+                // Render the loaded model
+                cubeModel.render(shaderPtr);
+            } else {
+                // Fallback: render primitive cube
+                glBindVertexArray(VAO);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+                glBindVertexArray(0);
+            }
             
             // Unbind textures
             textureManager.unbindAll();
