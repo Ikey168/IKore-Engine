@@ -1,4 +1,4 @@
-﻿// Shader.h - Extended to support file-based compilation & caching
+// Shader.h - Extended to support file-based compilation & caching
 #pragma once
 #include <string>
 #include <memory>

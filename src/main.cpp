@@ -140,7 +140,7 @@ int main() {
 
         // Render
         glClear(GL_COLOR_BUFFER_BIT);
-    if(shaderPtr) shaderPtr->use();
+        if(shaderPtr) shaderPtr->use();
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);

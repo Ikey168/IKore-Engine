@@ -13,7 +13,6 @@ namespace IKore {
 
 std::unordered_map<std::string, Shader::CacheEntry> Shader::s_cache;
 std::mutex Shader::s_cacheMutex;
-
 Shader::~Shader(){
     if(m_program){
         glDeleteProgram(m_program);
@@ -29,7 +28,7 @@ GLuint Shader::compile(GLenum type, const char* src, std::string& outError){
         GLint len; glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
         std::vector<char> log(len);
         glGetShaderInfoLog(shader, len, nullptr, log.data());
-    outError.assign(log.begin(), log.end());
+        outError.assign(log.begin(), log.end());
         glDeleteShader(shader);
         return 0;
     }
@@ -60,6 +59,7 @@ bool Shader::loadFromSource(const char* vertexSrc, const char* fragmentSrc, std:
         m_program = 0;
         return false;
     }
+<<<<<<< HEAD
     m_lastLog.clear();
     return true;
 }
@@ -141,4 +141,9 @@ void Shader::clearCache(){
     s_cache.clear();
 }
 
+=======
+    return true;
+}
+
+>>>>>>> origin/main
 }
