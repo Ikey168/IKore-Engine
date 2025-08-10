@@ -5,6 +5,7 @@
 #include <thread>
 #include "Logger.h"
 #include "DeltaTimeDemo.h"
+#include "Shader.h"
 
 int main() {
     // Initialize logging system
@@ -51,6 +52,62 @@ int main() {
     IKore::DeltaTimeDemo deltaDemo;
     deltaDemo.initialize();
 
+    // === VAO / VBO / EBO Setup ===
+    float vertices[] = {
+        // positions      // colors
+        -0.5f, -0.5f, 0.0f,  1.f, 0.f, 0.f,
+         0.5f, -0.5f, 0.0f,  0.f, 1.f, 0.f,
+         0.5f,  0.5f, 0.0f,  0.f, 0.f, 1.f,
+        -0.5f,  0.5f, 0.0f,  1.f, 1.f, 0.f
+    };
+    unsigned int indices[] = {
+        0,1,2,
+        2,3,0
+    };
+
+    GLuint VAO, VBO, EBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindVertexArray(0); // safe unbind (EBO stays bound to VAO state)
+
+    const char* vs = R"(#version 330 core
+layout(location=0) in vec3 aPos;
+layout(location=1) in vec3 aColor;
+out vec3 vColor;
+void main(){
+    vColor = aColor;
+    gl_Position = vec4(aPos, 1.0);
+})";
+    const char* fs = R"(#version 330 core
+in vec3 vColor;
+out vec4 FragColor;
+void main(){
+    FragColor = vec4(vColor, 1.0);
+})";
+
+    IKore::Shader shader;
+    std::string shaderError;
+    if(!shader.loadFromSource(vs, fs, shaderError)){
+        LOG_ERROR(std::string("Shader compilation/link failed: ") + shaderError);
+    }
+
     // Delta time tracking
     double lastFrameTime = glfwGetTime();
     double deltaTime = 0.0;
@@ -91,22 +148,18 @@ int main() {
 
         // Input processing
         glfwPollEvents();
-        // (Add input handling here as needed)
 
-        // Update game objects
-        // (Add game update logic here - use deltaTime for frame-rate independent movement)
-        // Example: position += velocity * deltaTime;
-        //          rotation += angularVelocity * deltaTime;
-        //          animation.update(deltaTime);
-        // Delta time ensures smooth movement regardless of frame rate
-
-        // Update delta time demo for testing frame-rate independent movement
+        // Update demo
         deltaDemo.update();
         deltaDemo.updateTestMovement();
 
         // Render
         glClear(GL_COLOR_BUFFER_BIT);
-        // (Add rendering code here)
+        shader.use();
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
+
         glfwSwapBuffers(window);
 
         // Frame timing to cap FPS
@@ -117,6 +170,11 @@ int main() {
             std::this_thread::sleep_for(std::chrono::duration<double>(sleepTime));
         }
     }
+
+    // Cleanup
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
 
     LOG_INFO("Shutting down IKore Engine");
     glfwDestroyWindow(window);
