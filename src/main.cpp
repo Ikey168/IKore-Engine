@@ -12,6 +12,48 @@
 #include "Light.h"
 #include "Texture.h"
 #include "Model.h"
+#include "PostProcessor.h"
+
+// Global post-processor pointer for keyboard callbacks
+IKore::PostProcessor* g_postProcessor = nullptr;
+
+// Window resize callback
+void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height) {
+    glViewport(0, 0, width, height);
+    if (g_postProcessor) {
+        g_postProcessor->resize(width, height);
+    }
+}
+
+// Keyboard callback for toggling post-processing effects
+void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action, int /*mods*/) {
+    if (action == GLFW_PRESS) {
+        if (key == GLFW_KEY_1 && g_postProcessor) {
+            // Toggle Bloom
+            auto* bloom = g_postProcessor->getBloomEffect();
+            if (bloom) {
+                bloom->setEnabled(!bloom->isEnabled());
+                LOG_INFO("Bloom effect " + std::string(bloom->isEnabled() ? "enabled" : "disabled"));
+            }
+        }
+        else if (key == GLFW_KEY_2 && g_postProcessor) {
+            // Toggle FXAA
+            auto* fxaa = g_postProcessor->getFXAAEffect();
+            if (fxaa) {
+                fxaa->setEnabled(!fxaa->isEnabled());
+                LOG_INFO("FXAA effect " + std::string(fxaa->isEnabled() ? "enabled" : "disabled"));
+            }
+        }
+        else if (key == GLFW_KEY_3 && g_postProcessor) {
+            // Toggle SSAO
+            auto* ssao = g_postProcessor->getSSAOEffect();
+            if (ssao) {
+                ssao->setEnabled(!ssao->isEnabled());
+                LOG_INFO("SSAO effect " + std::string(ssao->isEnabled() ? "enabled" : "disabled"));
+            }
+        }
+    }
+}
 
 int main() {
     // Initialize logging system
@@ -41,6 +83,10 @@ int main() {
     }
     LOG_INFO("Window created successfully");
     glfwMakeContextCurrent(window);
+    
+    // Set up keyboard callback
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         LOG_ERROR("Failed to initialize GLAD");
@@ -54,6 +100,30 @@ int main() {
 
     const double targetFPS = 60.0;
     const double targetFrameTime = 1.0 / targetFPS;
+
+    // === Post-Processing Initialization ===
+    IKore::PostProcessor postProcessor;
+    postProcessor.initialize(1280, 720);
+    g_postProcessor = &postProcessor; // Set global pointer for keyboard callbacks
+    
+    // Configure post-processing effects
+    if (auto* bloom = postProcessor.getBloomEffect()) {
+        bloom->setThreshold(1.0f);
+        bloom->setIntensity(0.5f);
+        bloom->setBlurPasses(5);
+        bloom->setEnabled(true);
+    }
+    
+    if (auto* fxaa = postProcessor.getFXAAEffect()) {
+        fxaa->setEnabled(true);
+    }
+    
+    if (auto* ssao = postProcessor.getSSAOEffect()) {
+        ssao->setEnabled(false); // Disabled for now since we don't have G-buffer
+    }
+    
+    LOG_INFO("Post-processing effects initialized");
+    LOG_INFO("Controls: Press 1 to toggle Bloom, 2 to toggle FXAA, 3 to toggle SSAO");
 
     // Initialize delta time demo
     IKore::DeltaTimeDemo deltaDemo;
@@ -230,8 +300,8 @@ int main() {
             sin(currentFrameTime * 0.5f) * 2.0f + 2.0f
         ));
 
-        // Render
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // Begin post-processing frame (renders to framebuffer)
+        postProcessor.beginFrame();
         
         if(shaderPtr) {
             shaderPtr->use();
@@ -315,6 +385,9 @@ int main() {
             // Unbind textures
             textureManager.unbindAll();
         }
+
+        // End post-processing frame (applies effects and renders to screen)
+        postProcessor.endFrame();
 
         glfwSwapBuffers(window);
 
