@@ -59,7 +59,6 @@ bool Shader::loadFromSource(const char* vertexSrc, const char* fragmentSrc, std:
         m_program = 0;
         return false;
     }
-<<<<<<< HEAD
     m_lastLog.clear();
     return true;
 }
@@ -141,9 +140,4 @@ void Shader::clearCache(){
     s_cache.clear();
 }
 
-=======
-    return true;
-}
-
->>>>>>> origin/main
 }
