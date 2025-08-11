@@ -20,12 +20,17 @@
 #include "DeltaTimeDemo.h"
 #include "Skybox.h"
 #include "ParticleSystem.h"
+#include "ShadowMap.h"
 
 // Forward declarations for GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+
+// Function to render scene objects (for both shadow pass and main rendering)
+void renderSceneObjects(std::shared_ptr<IKore::Shader> shader, GLuint VAO, bool modelLoaded, 
+                       const IKore::Model& cubeModel, double currentFrameTime);
 
 // Global camera instance and controller
 IKore::Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
@@ -39,6 +44,9 @@ IKore::Skybox* g_skybox = nullptr;
 
 // Global particle system manager for keyboard callbacks
 IKore::ParticleSystemManager* g_particleManager = nullptr;
+
+// Global shadow map manager for keyboard callbacks
+IKore::ShadowMapManager* g_shadowManager = nullptr;
 
 // Mouse tracking variables
 bool firstMouse = true;
@@ -171,6 +179,7 @@ int main() {
     
     LOG_INFO("Particle systems initialized");
     LOG_INFO("Controls: Press 4 to toggle skybox, 5/6 to adjust intensity, 7 to toggle particles, 8 for fire, 9 for explosion, 0 for smoke, - for sparks");
+    LOG_INFO("Shadow Controls: Press F1 to toggle shadows, F2 to cycle shadow quality");
 
     // Initialize delta time demo
     IKore::DeltaTimeDemo deltaDemo;
@@ -243,9 +252,15 @@ int main() {
     glBindVertexArray(0);
 
     std::string shaderError;
-    auto shaderPtr = IKore::Shader::loadFromFilesCached("src/shaders/phong.vert", "src/shaders/phong.frag", shaderError);
+    auto shaderPtr = IKore::Shader::loadFromFilesCached("src/shaders/phong_shadows.vert", "src/shaders/phong_shadows.frag", shaderError);
     if(!shaderPtr){
         LOG_ERROR(std::string("Shader file load/compile failed: ") + shaderError);
+    }
+
+    // Load shadow mapping shaders
+    auto shadowShaderPtr = IKore::Shader::loadFromFilesCached("src/shaders/shadow_depth.vert", "src/shaders/shadow_depth.frag", shaderError);
+    if(!shadowShaderPtr){
+        LOG_ERROR(std::string("Shadow shader file load/compile failed: ") + shaderError);
     }
 
     // Setup lights
@@ -258,6 +273,30 @@ int main() {
     pointLight.ambient = glm::vec3(0.05f, 0.05f, 0.05f);
     pointLight.diffuse = glm::vec3(0.8f, 0.8f, 0.8f);
     pointLight.specular = glm::vec3(1.0f, 1.0f, 1.0f);
+
+    // === Shadow Mapping Initialization ===
+    IKore::ShadowMapManager shadowManager;
+    if (!shadowManager.initialize()) {
+        LOG_ERROR("Failed to initialize shadow mapping system");
+        return -1;
+    }
+    g_shadowManager = &shadowManager; // Set global pointer for keyboard callbacks
+    
+    // Create shadow map for directional light
+    auto* dirShadowMap = shadowManager.createDirectionalShadowMap(0, 2048);
+    if (!dirShadowMap) {
+        LOG_WARNING("Failed to create directional shadow map - shadows will be disabled");
+    } else {
+        LOG_INFO("Directional light shadow mapping initialized");
+    }
+    
+    // Create shadow map for point light
+    auto* pointShadowMap = shadowManager.createPointShadowMap(1, 1024);
+    if (!pointShadowMap) {
+        LOG_WARNING("Failed to create point light shadow map - point shadows will be disabled");
+    } else {
+        LOG_INFO("Point light shadow mapping initialized");
+    }
 
     // === Texture Loading ===
     IKore::TextureManager textureManager;
@@ -355,6 +394,38 @@ int main() {
             sin(currentFrameTime * 0.5f) * 2.0f + 2.0f
         ));
 
+        // === SHADOW MAPPING PASSES ===
+        
+        // Update shadow maps with current light positions
+        if (dirShadowMap) {
+            dirShadowMap->setLightSpaceMatrix(dirLight.direction, glm::vec3(0.0f), 15.0f);
+        }
+        
+        if (pointShadowMap) {
+            pointShadowMap->setPointLightMatrices(pointLight.position, 25.0f);
+        }
+        
+        // Render directional light shadow map
+        if (dirShadowMap && shadowShaderPtr) {
+            dirShadowMap->beginShadowPass();
+            shadowShaderPtr->use();
+            
+            // Set light space matrix
+            glm::mat4 lightSpaceMatrix = dirShadowMap->getLightSpaceMatrix();
+            shadowShaderPtr->setMat4("lightSpaceMatrix", glm::value_ptr(lightSpaceMatrix));
+            
+            // Render scene objects to shadow map
+            renderSceneObjects(shadowShaderPtr, VAO, modelLoaded, cubeModel, currentFrameTime);
+            
+            dirShadowMap->endShadowPass();
+        }
+        
+        // Render point light shadow map (if point shadow shader is available)
+        // Note: This would require the point shadow shader with geometry shader
+        // For now, we'll focus on directional light shadows
+        
+        // === END SHADOW MAPPING PASSES ===
+
         // Begin post-processing frame (renders to framebuffer)
         postProcessor.beginFrame();
         
@@ -418,6 +489,26 @@ int main() {
             shaderPtr->setVec3("dirLight.diffuse", dirLight.diffuse.x, dirLight.diffuse.y, dirLight.diffuse.z);
             shaderPtr->setVec3("dirLight.specular", dirLight.specular.x, dirLight.specular.y, dirLight.specular.z);
             
+            // Set directional light shadow mapping parameters
+            if (dirShadowMap) {
+                shaderPtr->setFloat("dirLight.castShadows", 1.0f);
+                shaderPtr->setMat4("dirLight.lightSpaceMatrix", glm::value_ptr(dirShadowMap->getLightSpaceMatrix()));
+                shaderPtr->setFloat("dirLight.shadowBias", dirShadowMap->getShadowBias());
+                shaderPtr->setFloat("dirLight.softShadows", dirShadowMap->getSoftShadows() ? 1.0f : 0.0f);
+                shaderPtr->setInt("dirLight.pcfKernelSize", dirShadowMap->getPCFKernelSize());
+                
+                // Bind shadow map texture
+                dirShadowMap->bindShadowMap(15); // Use texture unit 15 for shadow map
+                shaderPtr->setInt("dirLight.shadowMap", 15);
+            } else {
+                shaderPtr->setFloat("dirLight.castShadows", 0.0f);
+            }
+            
+            // Set light space matrix for main shader (for FragPosLightSpace calculation)
+            if (dirShadowMap) {
+                shaderPtr->setMat4("lightSpaceMatrix", glm::value_ptr(dirShadowMap->getLightSpaceMatrix()));
+            }
+            
             // Set point light
             shaderPtr->setFloat("numPointLights", 1.0f);
             shaderPtr->setVec3("pointLights[0].position", pointLight.position.x, pointLight.position.y, pointLight.position.z);
@@ -427,6 +518,20 @@ int main() {
             shaderPtr->setFloat("pointLights[0].constant", pointLight.constant);
             shaderPtr->setFloat("pointLights[0].linear", pointLight.linear);
             shaderPtr->setFloat("pointLights[0].quadratic", pointLight.quadratic);
+            
+            // Set point light shadow mapping parameters
+            if (pointShadowMap) {
+                shaderPtr->setFloat("pointLights[0].castShadows", 1.0f);
+                shaderPtr->setFloat("pointLights[0].farPlane", 25.0f);
+                shaderPtr->setFloat("pointLights[0].shadowBias", pointShadowMap->getShadowBias());
+                shaderPtr->setFloat("pointLights[0].softShadows", pointShadowMap->getSoftShadows() ? 1.0f : 0.0f);
+                
+                // Bind shadow cubemap texture
+                pointShadowMap->bindShadowMap(16); // Use texture unit 16 for point shadow cubemap
+                shaderPtr->setInt("pointLights[0].shadowCubemap", 16);
+            } else {
+                shaderPtr->setFloat("pointLights[0].castShadows", 0.0f);
+            }
             
             // No spot lights for now
             shaderPtr->setFloat("numSpotLights", 0.0f);
@@ -552,6 +657,60 @@ void mouse_callback(GLFWwindow* /*window*/, double xpos, double ypos) {
     camera.processMouseMovement(xoffset, yoffset);
 }
 
+// Function to render scene objects (for both shadow pass and main rendering)
+void renderSceneObjects(std::shared_ptr<IKore::Shader> shader, GLuint VAO, bool modelLoaded, 
+                       const IKore::Model& cubeModel, double currentFrameTime) {
+    // Define cube positions (same as in main rendering)
+    glm::vec3 cubePositions[] = {
+        glm::vec3( 0.0f,  0.0f,  0.0f),
+        glm::vec3( 2.0f,  5.0f, -15.0f),
+        glm::vec3(-1.5f, -2.2f, -2.5f),
+        glm::vec3(-3.8f, -2.0f, -12.3f),
+        glm::vec3( 2.4f, -0.4f, -3.5f),
+        glm::vec3(-1.7f,  3.0f, -7.5f),
+        glm::vec3( 1.3f, -2.0f, -2.5f),
+        glm::vec3( 1.5f,  2.0f, -2.5f),
+        glm::vec3( 1.5f,  0.2f, -1.5f),
+        glm::vec3(-1.3f,  1.0f, -1.5f)
+    };
+    
+    // Render models if available, otherwise fallback to primitive cubes
+    if (modelLoaded && !cubeModel.getMeshes().empty()) {
+        for (size_t i = 0; i < 10; i++) {
+            // Calculate individual model matrix for each cube
+            glm::mat4 instanceModel = glm::mat4(1.0f);
+            instanceModel = glm::translate(instanceModel, cubePositions[i]);
+            float angle = 20.0f * i + (float)currentFrameTime * 30.0f;
+            instanceModel = glm::rotate(instanceModel, glm::radians(angle), 
+                                      glm::vec3(1.0f, 0.3f, 0.5f));
+            
+            // Update model matrix for this cube
+            shader->setMat4("model", glm::value_ptr(instanceModel));
+            
+            // Render the model instance
+            cubeModel.render(shader);
+        }
+    } else {
+        // Fallback: render multiple primitive cubes
+        glBindVertexArray(VAO);
+        for (size_t i = 0; i < 10; i++) {
+            // Calculate individual model matrix for each cube
+            glm::mat4 instanceModel = glm::mat4(1.0f);
+            instanceModel = glm::translate(instanceModel, cubePositions[i]);
+            float angle = 20.0f * i + (float)currentFrameTime * 30.0f;
+            instanceModel = glm::rotate(instanceModel, glm::radians(angle), 
+                                      glm::vec3(1.0f, 0.3f, 0.5f));
+            
+            // Update model matrix for this cube
+            shader->setMat4("model", glm::value_ptr(instanceModel));
+            
+            // Render the cube
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+        glBindVertexArray(0);
+    }
+}
+
 // Scroll callback function
 void scroll_callback(GLFWwindow* /*window*/, double /*xoffset*/, double yoffset) {
     camera.processMouseScroll(static_cast<float>(yoffset));
@@ -640,6 +799,20 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
             glm::vec3 sparksPos = camera.getPosition() + camera.getFront() * 2.0f;
             g_particleManager->createSparksEffect(sparksPos);
             LOG_INFO("Sparks effect created at camera position");
+        }
+        else if (key == GLFW_KEY_F1 && g_shadowManager) {
+            // Toggle shadows globally
+            g_shadowManager->setEnabled(!g_shadowManager->isEnabled());
+            LOG_INFO("Shadow mapping " + std::string(g_shadowManager->isEnabled() ? "enabled" : "disabled"));
+        }
+        else if (key == GLFW_KEY_F2 && g_shadowManager) {
+            // Cycle shadow quality (Low, Medium, High)
+            static int qualityLevel = 1; // 0=Low, 1=Medium, 2=High
+            qualityLevel = (qualityLevel + 1) % 3;
+            float quality = qualityLevel == 0 ? 0.3f : (qualityLevel == 1 ? 0.6f : 1.0f);
+            g_shadowManager->setShadowQuality(quality);
+            std::string qualityName = qualityLevel == 0 ? "Low" : (qualityLevel == 1 ? "Medium" : "High");
+            LOG_INFO("Shadow quality set to: " + qualityName);
         }
     }
 }
