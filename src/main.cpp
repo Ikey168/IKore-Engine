@@ -4,20 +4,28 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
-#include <chrono>
-#include <thread>
+#include <memory>
+#include <vector>
 #include <filesystem>
-#include <algorithm>
+#include <thread>
+
 #include "Logger.h"
-#include "DeltaTimeDemo.h"
-#include "Shader.h"
-#include "Light.h"
-#include "Texture.h"
-#include "Model.h"
-#include "PostProcessor.h"
 #include "Camera.h"
 #include "CameraController.h"
+#include "Shader.h"
+#include "Texture.h"
+#include "Model.h"
+#include "Light.h"
+#include "PostProcessor.h"
+#include "DeltaTimeDemo.h"
 #include "Skybox.h"
+#include "ParticleSystem.h"
+
+// Forward declarations for GLFW callbacks
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 // Global camera instance and controller
 IKore::Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
@@ -28,6 +36,9 @@ IKore::PostProcessor* g_postProcessor = nullptr;
 
 // Global skybox pointer for keyboard callbacks  
 IKore::Skybox* g_skybox = nullptr;
+
+// Global particle system manager for keyboard callbacks
+IKore::ParticleSystemManager* g_particleManager = nullptr;
 
 // Mouse tracking variables
 bool firstMouse = true;
@@ -138,14 +149,28 @@ int main() {
     
     if (skyboxLoaded) {
         LOG_INFO("Skybox initialized successfully");
-        LOG_INFO("Controls: Press 4 to toggle skybox, 5/6 to adjust intensity");
     } else {
         LOG_WARNING("Skybox initialization failed - skybox will be disabled");
         skybox.setEnabled(false);
     }
     
-    // Set global skybox pointer for keyboard callbacks
-    g_skybox = &skybox;
+    g_skybox = &skybox; // Set global pointer for keyboard callbacks
+    
+    // === Particle System Initialization ===
+    IKore::ParticleSystemManager particleManager;
+    g_particleManager = &particleManager; // Set global pointer for keyboard callbacks
+    
+    // Create some default particle effects
+    auto* fireSystem = particleManager.createFireEffect(glm::vec3(-2.0f, 0.0f, 0.0f));
+    auto* smokeSystem = particleManager.createSmokeEffect(glm::vec3(2.0f, 0.0f, 0.0f));
+
+    
+    // Start the effects
+    if (fireSystem) fireSystem->play();
+    if (smokeSystem) smokeSystem->play();
+    
+    LOG_INFO("Particle systems initialized");
+    LOG_INFO("Controls: Press 4 to toggle skybox, 5/6 to adjust intensity, 7 to toggle particles, 8 for fire, 9 for explosion, 0 for smoke, - for sparks");
 
     // Initialize delta time demo
     IKore::DeltaTimeDemo deltaDemo;
@@ -316,6 +341,9 @@ int main() {
         glfwPollEvents();
         cameraController.processInput(window, static_cast<float>(deltaTime));
 
+        // Update particle systems
+        particleManager.updateAll(static_cast<float>(deltaTime));
+
         // Update demo
         deltaDemo.update();
         deltaDemo.updateTestMovement();
@@ -476,6 +504,9 @@ int main() {
             textureManager.unbindAll();
         }
 
+        // Render particle systems
+        particleManager.renderAll(view, projection);
+
         // End post-processing frame (applies effects and renders to screen)
         postProcessor.endFrame();
 
@@ -580,6 +611,35 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
             float newIntensity = std::min(3.0f, currentIntensity + 0.1f);
             g_skybox->setIntensity(newIntensity);
             LOG_INFO("Skybox intensity increased to: " + std::to_string(newIntensity));
+        }
+        else if (key == GLFW_KEY_7 && g_particleManager) {
+            // Toggle particle systems
+            g_particleManager->setGlobalEnabled(!g_particleManager->isGlobalEnabled());
+            LOG_INFO("Particle systems " + std::string(g_particleManager->isGlobalEnabled() ? "enabled" : "disabled"));
+        }
+        else if (key == GLFW_KEY_8 && g_particleManager) {
+            // Create fire effect at camera position
+            glm::vec3 firePos = camera.getPosition() + camera.getFront() * 2.0f;
+            g_particleManager->createFireEffect(firePos);
+            LOG_INFO("Fire effect created at camera position");
+        }
+        else if (key == GLFW_KEY_9 && g_particleManager) {
+            // Create explosion effect at camera position
+            glm::vec3 explosionPos = camera.getPosition() + camera.getFront() * 3.0f;
+            g_particleManager->createExplosionEffect(explosionPos);
+            LOG_INFO("Explosion effect created at camera position");
+        }
+        else if (key == GLFW_KEY_0 && g_particleManager) {
+            // Create smoke effect at camera position
+            glm::vec3 smokePos = camera.getPosition() + camera.getFront() * 2.0f;
+            g_particleManager->createSmokeEffect(smokePos);
+            LOG_INFO("Smoke effect created at camera position");
+        }
+        else if (key == GLFW_KEY_MINUS && g_particleManager) {
+            // Create sparks effect at camera position
+            glm::vec3 sparksPos = camera.getPosition() + camera.getFront() * 2.0f;
+            g_particleManager->createSparksEffect(sparksPos);
+            LOG_INFO("Sparks effect created at camera position");
         }
     }
 }
