@@ -6,6 +6,8 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <filesystem>
+#include <algorithm>
 #include "Logger.h"
 #include "DeltaTimeDemo.h"
 #include "Shader.h"
@@ -15,6 +17,7 @@
 #include "PostProcessor.h"
 #include "Camera.h"
 #include "CameraController.h"
+#include "Skybox.h"
 
 // Global camera instance and controller
 IKore::Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
@@ -22,6 +25,9 @@ IKore::CameraController cameraController(camera);
 
 // Global post-processor pointer for keyboard callbacks
 IKore::PostProcessor* g_postProcessor = nullptr;
+
+// Global skybox pointer for keyboard callbacks  
+IKore::Skybox* g_skybox = nullptr;
 
 // Mouse tracking variables
 bool firstMouse = true;
@@ -111,6 +117,35 @@ int main() {
     
     LOG_INFO("Post-processing effects initialized");
     LOG_INFO("Controls: Press 1 to toggle Bloom, 2 to toggle FXAA, 3 to toggle SSAO");
+
+    // === Skybox Initialization ===
+    IKore::Skybox skybox;
+    
+    // Try to load skybox from directory first (if textures exist)
+    bool skyboxLoaded = false;
+    if (std::filesystem::exists("assets/skybox/space")) {
+        skyboxLoaded = skybox.loadFromDirectory("assets/skybox/space", ".jpg");
+        if (!skyboxLoaded) {
+            skyboxLoaded = skybox.loadFromDirectory("assets/skybox/space", ".png");
+        }
+    }
+    
+    // Fallback: Create procedural skybox if no textures found
+    if (!skyboxLoaded) {
+        LOG_INFO("No skybox textures found, creating procedural test skybox");
+        skyboxLoaded = skybox.initializeTestSkybox();
+    }
+    
+    if (skyboxLoaded) {
+        LOG_INFO("Skybox initialized successfully");
+        LOG_INFO("Controls: Press 4 to toggle skybox, 5/6 to adjust intensity");
+    } else {
+        LOG_WARNING("Skybox initialization failed - skybox will be disabled");
+        skybox.setEnabled(false);
+    }
+    
+    // Set global skybox pointer for keyboard callbacks
+    g_skybox = &skybox;
 
     // Initialize delta time demo
     IKore::DeltaTimeDemo deltaDemo;
@@ -295,15 +330,19 @@ int main() {
         // Begin post-processing frame (renders to framebuffer)
         postProcessor.beginFrame();
         
+        // Get camera matrices for this frame
+        glm::mat4 view = camera.getViewMatrix();
+        glm::mat4 projection = camera.getProjectionMatrix();
+        
+        // Render skybox first (as background)
+        skybox.render(view, projection);
+        
         if(shaderPtr) {
             shaderPtr->use();
             
             // Set up matrices using Camera class
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::rotate(model, (float)currentFrameTime * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
-            
-            glm::mat4 view = camera.getViewMatrix();
-            glm::mat4 projection = camera.getProjectionMatrix();
             
             glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(model)));
             
@@ -522,6 +561,25 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
                 ssao->setEnabled(!ssao->isEnabled());
                 LOG_INFO("SSAO effect " + std::string(ssao->isEnabled() ? "enabled" : "disabled"));
             }
+        }
+        else if (key == GLFW_KEY_4 && g_skybox) {
+            // Toggle Skybox
+            g_skybox->setEnabled(!g_skybox->isEnabled());
+            LOG_INFO("Skybox " + std::string(g_skybox->isEnabled() ? "enabled" : "disabled"));
+        }
+        else if (key == GLFW_KEY_5 && g_skybox) {
+            // Decrease skybox intensity
+            float currentIntensity = g_skybox->getIntensity();
+            float newIntensity = std::max(0.1f, currentIntensity - 0.1f);
+            g_skybox->setIntensity(newIntensity);
+            LOG_INFO("Skybox intensity decreased to: " + std::to_string(newIntensity));
+        }
+        else if (key == GLFW_KEY_6 && g_skybox) {
+            // Increase skybox intensity
+            float currentIntensity = g_skybox->getIntensity();
+            float newIntensity = std::min(3.0f, currentIntensity + 0.1f);
+            g_skybox->setIntensity(newIntensity);
+            LOG_INFO("Skybox intensity increased to: " + std::to_string(newIntensity));
         }
     }
 }
