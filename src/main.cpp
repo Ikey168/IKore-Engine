@@ -13,47 +13,26 @@
 #include "Texture.h"
 #include "Model.h"
 #include "PostProcessor.h"
+#include "Camera.h"
+#include "CameraController.h"
+
+// Global camera instance and controller
+IKore::Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+IKore::CameraController cameraController(camera);
 
 // Global post-processor pointer for keyboard callbacks
 IKore::PostProcessor* g_postProcessor = nullptr;
 
-// Window resize callback
-void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height) {
-    glViewport(0, 0, width, height);
-    if (g_postProcessor) {
-        g_postProcessor->resize(width, height);
-    }
-}
+// Mouse tracking variables
+bool firstMouse = true;
+float lastX = 1280.0f / 2.0f;
+float lastY = 720.0f / 2.0f;
 
-// Keyboard callback for toggling post-processing effects
-void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action, int /*mods*/) {
-    if (action == GLFW_PRESS) {
-        if (key == GLFW_KEY_1 && g_postProcessor) {
-            // Toggle Bloom
-            auto* bloom = g_postProcessor->getBloomEffect();
-            if (bloom) {
-                bloom->setEnabled(!bloom->isEnabled());
-                LOG_INFO("Bloom effect " + std::string(bloom->isEnabled() ? "enabled" : "disabled"));
-            }
-        }
-        else if (key == GLFW_KEY_2 && g_postProcessor) {
-            // Toggle FXAA
-            auto* fxaa = g_postProcessor->getFXAAEffect();
-            if (fxaa) {
-                fxaa->setEnabled(!fxaa->isEnabled());
-                LOG_INFO("FXAA effect " + std::string(fxaa->isEnabled() ? "enabled" : "disabled"));
-            }
-        }
-        else if (key == GLFW_KEY_3 && g_postProcessor) {
-            // Toggle SSAO
-            auto* ssao = g_postProcessor->getSSAOEffect();
-            if (ssao) {
-                ssao->setEnabled(!ssao->isEnabled());
-                LOG_INFO("SSAO effect " + std::string(ssao->isEnabled() ? "enabled" : "disabled"));
-            }
-        }
-    }
-}
+// Function declarations
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 int main() {
     // Initialize logging system
@@ -83,10 +62,18 @@ int main() {
     }
     LOG_INFO("Window created successfully");
     glfwMakeContextCurrent(window);
-    
-    // Set up keyboard callback
+
+    // Set up all callbacks
     glfwSetKeyCallback(window, key_callback);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
+
+    // Capture mouse cursor
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    // Set initial camera aspect ratio
+    camera.setAspectRatio(1280.0f / 720.0f);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         LOG_ERROR("Failed to initialize GLAD");
@@ -243,11 +230,6 @@ int main() {
         LOG_INFO("Successfully loaded model with " + std::to_string(cubeModel.getMeshes().size()) + " meshes");
     }
 
-    // Camera setup
-    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-    glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-    glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-
     // Delta time tracking
     double lastFrameTime = glfwGetTime();
     double deltaTime = 0.0;
@@ -280,6 +262,15 @@ int main() {
                     ", Avg Frame Time: " + std::to_string(avgFrameTime * 1000.0) + "ms" +
                     ", Current Delta: " + std::to_string(deltaTime * 1000.0) + "ms");
             
+            // Log camera status every 10 seconds
+            static int logCounter = 0;
+            logCounter++;
+            if (logCounter >= 5) { // Every 10 seconds (5 * 2 second intervals)
+                std::string cameraStatus = cameraController.getCameraStatus();
+                LOG_INFO("Camera Status Update:\n" + cameraStatus);
+                logCounter = 0;
+            }
+            
             // Reset statistics
             frameTimeAccumulator = 0.0;
             frameCount = 0;
@@ -288,6 +279,7 @@ int main() {
 
         // Input processing
         glfwPollEvents();
+        cameraController.processInput(window, static_cast<float>(deltaTime));
 
         // Update demo
         deltaDemo.update();
@@ -306,12 +298,12 @@ int main() {
         if(shaderPtr) {
             shaderPtr->use();
             
-            // Set up matrices
+            // Set up matrices using Camera class
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::rotate(model, (float)currentFrameTime * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
             
-            glm::mat4 view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
-            glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1280.0f / 720.0f, 0.1f, 100.0f);
+            glm::mat4 view = camera.getViewMatrix();
+            glm::mat4 projection = camera.getProjectionMatrix();
             
             glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(model)));
             
@@ -322,6 +314,7 @@ int main() {
             shaderPtr->setMat3("normalMatrix", glm::value_ptr(normalMatrix));
             
             // Set camera position
+            glm::vec3 cameraPos = camera.getPosition();
             shaderPtr->setVec3("viewPos", cameraPos.x, cameraPos.y, cameraPos.z);
             
             // Bind textures and set material properties
@@ -371,14 +364,72 @@ int main() {
             // No spot lights for now
             shaderPtr->setFloat("numSpotLights", 0.0f);
             
-            // Render models if available, otherwise fallback to primitive cube
+            // Render models if available, otherwise fallback to primitive cubes
             if (modelLoaded && !cubeModel.getMeshes().empty()) {
-                // Render the loaded model
-                cubeModel.render(shaderPtr);
+                // Render multiple model instances at different positions
+                glm::vec3 cubePositions[] = {
+                    glm::vec3( 0.0f,  0.0f,  0.0f),
+                    glm::vec3( 2.0f,  5.0f, -15.0f),
+                    glm::vec3(-1.5f, -2.2f, -2.5f),
+                    glm::vec3(-3.8f, -2.0f, -12.3f),
+                    glm::vec3( 2.4f, -0.4f, -3.5f),
+                    glm::vec3(-1.7f,  3.0f, -7.5f),
+                    glm::vec3( 1.3f, -2.0f, -2.5f),
+                    glm::vec3( 1.5f,  2.0f, -2.5f),
+                    glm::vec3( 1.5f,  0.2f, -1.5f),
+                    glm::vec3(-1.3f,  1.0f, -1.5f)
+                };
+                
+                for (size_t i = 0; i < 10; i++) {
+                    // Calculate individual model matrix for each cube
+                    glm::mat4 instanceModel = glm::mat4(1.0f);
+                    instanceModel = glm::translate(instanceModel, cubePositions[i]);
+                    float angle = 20.0f * i + (float)currentFrameTime * 30.0f;
+                    instanceModel = glm::rotate(instanceModel, glm::radians(angle), 
+                                          glm::vec3(1.0f, 0.3f, 0.5f));
+                    
+                    glm::mat3 cubeNormalMatrix = glm::mat3(glm::transpose(glm::inverse(instanceModel)));
+                    
+                    // Update matrices for this cube
+                    shaderPtr->setMat4("model", glm::value_ptr(instanceModel));
+                    shaderPtr->setMat3("normalMatrix", glm::value_ptr(cubeNormalMatrix));
+                    
+                    // Render the model instance
+                    cubeModel.render(shaderPtr);
+                }
             } else {
-                // Fallback: render primitive cube
+                // Fallback: render multiple primitive cubes
+                glm::vec3 cubePositions[] = {
+                    glm::vec3( 0.0f,  0.0f,  0.0f),
+                    glm::vec3( 2.0f,  5.0f, -15.0f),
+                    glm::vec3(-1.5f, -2.2f, -2.5f),
+                    glm::vec3(-3.8f, -2.0f, -12.3f),
+                    glm::vec3( 2.4f, -0.4f, -3.5f),
+                    glm::vec3(-1.7f,  3.0f, -7.5f),
+                    glm::vec3( 1.3f, -2.0f, -2.5f),
+                    glm::vec3( 1.5f,  2.0f, -2.5f),
+                    glm::vec3( 1.5f,  0.2f, -1.5f),
+                    glm::vec3(-1.3f,  1.0f, -1.5f)
+                };
+                
                 glBindVertexArray(VAO);
-                glDrawArrays(GL_TRIANGLES, 0, 36);
+                for (size_t i = 0; i < 10; i++) {
+                    // Calculate individual model matrix for each cube
+                    glm::mat4 instanceModel = glm::mat4(1.0f);
+                    instanceModel = glm::translate(instanceModel, cubePositions[i]);
+                    float angle = 20.0f * i + (float)currentFrameTime * 30.0f;
+                    instanceModel = glm::rotate(instanceModel, glm::radians(angle), 
+                                          glm::vec3(1.0f, 0.3f, 0.5f));
+                    
+                    glm::mat3 cubeNormalMatrix = glm::mat3(glm::transpose(glm::inverse(instanceModel)));
+                    
+                    // Update matrices for this cube
+                    shaderPtr->setMat4("model", glm::value_ptr(instanceModel));
+                    shaderPtr->setMat3("normalMatrix", glm::value_ptr(cubeNormalMatrix));
+                    
+                    // Render the cube
+                    glDrawArrays(GL_TRIANGLES, 0, 36);
+                }
                 glBindVertexArray(0);
             }
             
@@ -408,4 +459,69 @@ int main() {
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
+}
+
+// Mouse callback function
+void mouse_callback(GLFWwindow* /*window*/, double xpos, double ypos) {
+    if (!cameraController.isMouseLookEnabled()) {
+        return;
+    }
+
+    if (firstMouse) {
+        lastX = static_cast<float>(xpos);
+        lastY = static_cast<float>(ypos);
+        firstMouse = false;
+    }
+
+    float xoffset = static_cast<float>(xpos) - lastX;
+    float yoffset = lastY - static_cast<float>(ypos); // Reversed since y-coordinates go from bottom to top
+
+    lastX = static_cast<float>(xpos);
+    lastY = static_cast<float>(ypos);
+
+    camera.processMouseMovement(xoffset, yoffset);
+}
+
+// Scroll callback function
+void scroll_callback(GLFWwindow* /*window*/, double /*xoffset*/, double yoffset) {
+    camera.processMouseScroll(static_cast<float>(yoffset));
+}
+
+// Framebuffer size callback function
+void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height) {
+    glViewport(0, 0, width, height);
+    camera.setAspectRatio(static_cast<float>(width) / static_cast<float>(height));
+    if (g_postProcessor) {
+        g_postProcessor->resize(width, height);
+    }
+}
+
+// Keyboard callback for toggling post-processing effects
+void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action, int /*mods*/) {
+    if (action == GLFW_PRESS) {
+        if (key == GLFW_KEY_1 && g_postProcessor) {
+            // Toggle Bloom
+            auto* bloom = g_postProcessor->getBloomEffect();
+            if (bloom) {
+                bloom->setEnabled(!bloom->isEnabled());
+                LOG_INFO("Bloom effect " + std::string(bloom->isEnabled() ? "enabled" : "disabled"));
+            }
+        }
+        else if (key == GLFW_KEY_2 && g_postProcessor) {
+            // Toggle FXAA
+            auto* fxaa = g_postProcessor->getFXAAEffect();
+            if (fxaa) {
+                fxaa->setEnabled(!fxaa->isEnabled());
+                LOG_INFO("FXAA effect " + std::string(fxaa->isEnabled() ? "enabled" : "disabled"));
+            }
+        }
+        else if (key == GLFW_KEY_3 && g_postProcessor) {
+            // Toggle SSAO
+            auto* ssao = g_postProcessor->getSSAOEffect();
+            if (ssao) {
+                ssao->setEnabled(!ssao->isEnabled());
+                LOG_INFO("SSAO effect " + std::string(ssao->isEnabled() ? "enabled" : "disabled"));
+            }
+        }
+    }
 }
