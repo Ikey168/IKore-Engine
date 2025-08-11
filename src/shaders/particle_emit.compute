@@ -1,0 +1,126 @@
+#version 430
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+// Particle structure matching C++ struct
+struct Particle {
+    vec3 position;     // Current position
+    float life;        // Current life (0.0 to 1.0)
+    vec3 velocity;     // Current velocity
+    float size;        // Particle size
+    vec4 color;        // Particle color (RGBA)
+    vec3 acceleration; // Acceleration (gravity, forces)
+    float startLife;   // Initial life value
+    vec2 rotation;     // Rotation (angle, angular velocity)
+    float mass;        // Particle mass
+    float padding;     // Padding for alignment
+};
+
+// Emitter configuration structure
+struct EmitterConfig {
+    vec3 position;
+    float padding1;
+    vec3 positionVariance;
+    float padding2;
+    
+    vec3 velocity;
+    float padding3;
+    vec3 velocityVariance;
+    float padding4;
+    
+    vec3 acceleration;
+    float padding5;
+    vec3 accelerationVariance;
+    float padding6;
+    
+    vec4 startColor;
+    vec4 endColor;
+    vec4 colorVariance;
+    
+    float startSize;
+    float endSize;
+    float sizeVariance;
+    float padding7;
+    
+    float startLife;
+    float lifeVariance;
+    float emissionRate;
+    float maxParticles;
+    
+    float mass;
+    float massVariance;
+    float padding8;
+    float padding9;
+    
+    bool looping;
+    bool worldSpace;
+    float padding10;
+    float padding11;
+};
+
+// Buffers
+layout(std430, binding = 0) restrict buffer ParticleBuffer {
+    Particle particles[];
+};
+
+layout(std140, binding = 0) uniform EmitterBuffer {
+    EmitterConfig emitter;
+};
+
+// Uniforms
+uniform float time;
+uniform int particlesToEmit;
+
+// Simple pseudo-random function
+float random(float seed) {
+    return fract(sin(seed * 12.9898) * 43758.5453);
+}
+
+vec3 randomVec3(float seed, vec3 base, vec3 variance) {
+    return base + vec3(
+        random(seed) * 2.0 - 1.0,
+        random(seed + 1.0) * 2.0 - 1.0,
+        random(seed + 2.0) * 2.0 - 1.0
+    ) * variance;
+}
+
+vec4 randomVec4(float seed, vec4 base, vec4 variance) {
+    return base + vec4(
+        random(seed) * 2.0 - 1.0,
+        random(seed + 1.0) * 2.0 - 1.0,
+        random(seed + 2.0) * 2.0 - 1.0,
+        random(seed + 3.0) * 2.0 - 1.0
+    ) * variance;
+}
+
+float randomFloat(float seed, float base, float variance) {
+    return base + (random(seed) * 2.0 - 1.0) * variance;
+}
+
+void main() {
+    // Find dead particles and initialize them
+    int emitted = 0;
+    float baseSeed = time * 1000.0;
+    
+    for (uint i = 0; i < particles.length() && emitted < particlesToEmit; ++i) {
+        if (particles[i].life <= 0.0) {
+            float seed = baseSeed + float(i);
+            
+            // Initialize particle
+            particles[i].position = randomVec3(seed, emitter.position, emitter.positionVariance);
+            particles[i].velocity = randomVec3(seed + 10.0, emitter.velocity, emitter.velocityVariance);
+            particles[i].acceleration = randomVec3(seed + 20.0, emitter.acceleration, emitter.accelerationVariance);
+            particles[i].color = randomVec4(seed + 30.0, emitter.startColor, emitter.colorVariance);
+            particles[i].size = randomFloat(seed + 40.0, emitter.startSize, emitter.sizeVariance);
+            particles[i].startLife = randomFloat(seed + 50.0, emitter.startLife, emitter.lifeVariance);
+            particles[i].life = 1.0; // Full life
+            particles[i].rotation = vec2(
+                random(seed + 60.0) * 360.0,          // Initial rotation
+                randomFloat(seed + 70.0, 0.0, 180.0)  // Angular velocity
+            );
+            particles[i].mass = randomFloat(seed + 80.0, emitter.mass, emitter.massVariance);
+            
+            emitted++;
+        }
+    }
+}

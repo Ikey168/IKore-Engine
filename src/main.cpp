@@ -15,6 +15,7 @@
 #include "PostProcessor.h"
 #include "Camera.h"
 #include "CameraController.h"
+#include "ParticleSystem.h"
 
 // Global camera instance and controller
 IKore::Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
@@ -22,6 +23,9 @@ IKore::CameraController cameraController(camera);
 
 // Global post-processor pointer for keyboard callbacks
 IKore::PostProcessor* g_postProcessor = nullptr;
+
+// Global particle system manager for keyboard callbacks
+IKore::ParticleSystemManager* g_particleManager = nullptr;
 
 // Mouse tracking variables
 bool firstMouse = true;
@@ -111,6 +115,21 @@ int main() {
     
     LOG_INFO("Post-processing effects initialized");
     LOG_INFO("Controls: Press 1 to toggle Bloom, 2 to toggle FXAA, 3 to toggle SSAO");
+
+    // === Particle System Initialization ===
+    IKore::ParticleSystemManager particleManager;
+    g_particleManager = &particleManager; // Set global pointer for keyboard callbacks
+    
+    // Create some initial particle effects for demonstration
+    auto* fireSystem = particleManager.createFireEffect(glm::vec3(-2.0f, 0.0f, 0.0f));
+    auto* smokeSystem = particleManager.createSmokeEffect(glm::vec3(2.0f, 0.0f, 0.0f));
+    
+    // Start the effects
+    if (fireSystem) fireSystem->play();
+    if (smokeSystem) smokeSystem->play();
+    
+    LOG_INFO("Particle systems initialized");
+    LOG_INFO("Controls: Press 4 to toggle particles, 5 for fire, 6 for explosion, 7 for smoke, 8 for sparks");
 
     // Initialize delta time demo
     IKore::DeltaTimeDemo deltaDemo;
@@ -281,6 +300,9 @@ int main() {
         glfwPollEvents();
         cameraController.processInput(window, static_cast<float>(deltaTime));
 
+        // Update particle systems
+        particleManager.updateAll(static_cast<float>(deltaTime));
+
         // Update demo
         deltaDemo.update();
         deltaDemo.updateTestMovement();
@@ -437,6 +459,11 @@ int main() {
             textureManager.unbindAll();
         }
 
+        // Render particle systems
+        glm::mat4 view = camera.getViewMatrix();
+        glm::mat4 projection = camera.getProjectionMatrix();
+        particleManager.renderAll(view, projection);
+
         // End post-processing frame (applies effects and renders to screen)
         postProcessor.endFrame();
 
@@ -522,6 +549,35 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
                 ssao->setEnabled(!ssao->isEnabled());
                 LOG_INFO("SSAO effect " + std::string(ssao->isEnabled() ? "enabled" : "disabled"));
             }
+        }
+        else if (key == GLFW_KEY_4 && g_particleManager) {
+            // Toggle particle systems
+            g_particleManager->setGlobalEnabled(!g_particleManager->isGlobalEnabled());
+            LOG_INFO("Particle systems " + std::string(g_particleManager->isGlobalEnabled() ? "enabled" : "disabled"));
+        }
+        else if (key == GLFW_KEY_5 && g_particleManager) {
+            // Create fire effect at camera position
+            glm::vec3 firePos = camera.getPosition() + camera.getFront() * 2.0f;
+            g_particleManager->createFireEffect(firePos);
+            LOG_INFO("Fire effect created at camera position");
+        }
+        else if (key == GLFW_KEY_6 && g_particleManager) {
+            // Create explosion effect at camera position
+            glm::vec3 explosionPos = camera.getPosition() + camera.getFront() * 3.0f;
+            g_particleManager->createExplosionEffect(explosionPos);
+            LOG_INFO("Explosion effect created at camera position");
+        }
+        else if (key == GLFW_KEY_7 && g_particleManager) {
+            // Create smoke effect at camera position
+            glm::vec3 smokePos = camera.getPosition() + camera.getFront() * 2.0f;
+            g_particleManager->createSmokeEffect(smokePos);
+            LOG_INFO("Smoke effect created at camera position");
+        }
+        else if (key == GLFW_KEY_8 && g_particleManager) {
+            // Create sparks effect at camera position
+            glm::vec3 sparksPos = camera.getPosition() + camera.getFront() * 2.0f;
+            g_particleManager->createSparksEffect(sparksPos);
+            LOG_INFO("Sparks effect created at camera position");
         }
     }
 }
