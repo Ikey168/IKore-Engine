@@ -20,6 +20,7 @@
 #include "DeltaTimeDemo.h"
 #include "Skybox.h"
 #include "ParticleSystem.h"
+#include "Frustum.h"
 
 // Forward declarations for GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -39,6 +40,10 @@ IKore::Skybox* g_skybox = nullptr;
 
 // Global particle system manager for keyboard callbacks
 IKore::ParticleSystemManager* g_particleManager = nullptr;
+
+// Global frustum culler for rendering optimization
+IKore::FrustumCuller g_frustumCuller;
+bool g_frustumCullingEnabled = true;
 
 // Mouse tracking variables
 bool firstMouse = true;
@@ -362,6 +367,11 @@ int main() {
         glm::mat4 view = camera.getViewMatrix();
         glm::mat4 projection = camera.getProjectionMatrix();
         
+        // Update frustum for culling
+        if (g_frustumCullingEnabled) {
+            g_frustumCuller.updateFrustum(view, projection);
+        }
+        
         // Render skybox first (as background)
         skybox.render(view, projection);
         
@@ -433,21 +443,22 @@ int main() {
             
             // Render models if available, otherwise fallback to primitive cubes
             if (modelLoaded && !cubeModel.getMeshes().empty()) {
-                // Render multiple model instances at different positions
-                glm::vec3 cubePositions[] = {
-                    glm::vec3( 0.0f,  0.0f,  0.0f),
-                    glm::vec3( 2.0f,  5.0f, -15.0f),
-                    glm::vec3(-1.5f, -2.2f, -2.5f),
-                    glm::vec3(-3.8f, -2.0f, -12.3f),
-                    glm::vec3( 2.4f, -0.4f, -3.5f),
-                    glm::vec3(-1.7f,  3.0f, -7.5f),
-                    glm::vec3( 1.3f, -2.0f, -2.5f),
-                    glm::vec3( 1.5f,  2.0f, -2.5f),
-                    glm::vec3( 1.5f,  0.2f, -1.5f),
-                    glm::vec3(-1.3f,  1.0f, -1.5f)
-                };
+                // Create a larger grid of objects for better frustum culling demonstration
+                std::vector<glm::vec3> cubePositions;
                 
-                for (size_t i = 0; i < 10; i++) {
+                // Generate a 5x5x5 grid of cubes (125 total objects)
+                for (int x = -10; x <= 10; x += 4) {
+                    for (int y = -10; y <= 10; y += 4) {
+                        for (int z = -30; z <= 10; z += 8) {
+                            cubePositions.push_back(glm::vec3(x, y, z));
+                        }
+                    }
+                }
+                
+                int renderedObjects = 0;
+                int culledObjects = 0;
+                
+                for (size_t i = 0; i < cubePositions.size(); i++) {
                     // Calculate individual model matrix for each cube
                     glm::mat4 instanceModel = glm::mat4(1.0f);
                     instanceModel = glm::translate(instanceModel, cubePositions[i]);
@@ -455,6 +466,17 @@ int main() {
                     instanceModel = glm::rotate(instanceModel, glm::radians(angle), 
                                           glm::vec3(1.0f, 0.3f, 0.5f));
                     
+                    // Perform frustum culling if enabled
+                    bool shouldRender = true;
+                    if (g_frustumCullingEnabled) {
+                        shouldRender = g_frustumCuller.isVisible(cubeModel.getBoundingBox(), instanceModel);
+                        if (!shouldRender) {
+                            culledObjects++;
+                            continue; // Skip rendering this object
+                        }
+                    }
+                    
+                    renderedObjects++;
                     glm::mat3 cubeNormalMatrix = glm::mat3(glm::transpose(glm::inverse(instanceModel)));
                     
                     // Update matrices for this cube
@@ -464,23 +486,40 @@ int main() {
                     // Render the model instance
                     cubeModel.render(shaderPtr);
                 }
+                
+                // Log culling statistics periodically
+                static double lastCullingLog = 0.0;
+                if (currentFrameTime - lastCullingLog > 3.0) { // Every 3 seconds
+                    if (g_frustumCullingEnabled && (renderedObjects + culledObjects) > 0) {
+                        float cullingRatio = (float)culledObjects / (float)(renderedObjects + culledObjects);
+                        LOG_INFO("Frustum culling stats - Total: " + std::to_string(renderedObjects + culledObjects) +
+                                ", Rendered: " + std::to_string(renderedObjects) + 
+                                ", Culled: " + std::to_string(culledObjects) + 
+                                " (" + std::to_string(cullingRatio * 100.0f) + "% culled)");
+                    }
+                    lastCullingLog = currentFrameTime;
+                }
             } else {
-                // Fallback: render multiple primitive cubes
-                glm::vec3 cubePositions[] = {
-                    glm::vec3( 0.0f,  0.0f,  0.0f),
-                    glm::vec3( 2.0f,  5.0f, -15.0f),
-                    glm::vec3(-1.5f, -2.2f, -2.5f),
-                    glm::vec3(-3.8f, -2.0f, -12.3f),
-                    glm::vec3( 2.4f, -0.4f, -3.5f),
-                    glm::vec3(-1.7f,  3.0f, -7.5f),
-                    glm::vec3( 1.3f, -2.0f, -2.5f),
-                    glm::vec3( 1.5f,  2.0f, -2.5f),
-                    glm::vec3( 1.5f,  0.2f, -1.5f),
-                    glm::vec3(-1.3f,  1.0f, -1.5f)
-                };
+                // Fallback: render multiple primitive cubes with frustum culling
+                std::vector<glm::vec3> cubePositions;
+                
+                // Generate a 5x5x5 grid of cubes (125 total objects) for primitive fallback
+                for (int x = -10; x <= 10; x += 4) {
+                    for (int y = -10; y <= 10; y += 4) {
+                        for (int z = -30; z <= 10; z += 8) {
+                            cubePositions.push_back(glm::vec3(x, y, z));
+                        }
+                    }
+                }
+                
+                // Create a simple cube bounding box for primitive cubes
+                IKore::BoundingBox cubeBounds(glm::vec3(-0.5f), glm::vec3(0.5f));
+                
+                int renderedObjects = 0;
+                int culledObjects = 0;
                 
                 glBindVertexArray(VAO);
-                for (size_t i = 0; i < 10; i++) {
+                for (size_t i = 0; i < cubePositions.size(); i++) {
                     // Calculate individual model matrix for each cube
                     glm::mat4 instanceModel = glm::mat4(1.0f);
                     instanceModel = glm::translate(instanceModel, cubePositions[i]);
@@ -488,6 +527,17 @@ int main() {
                     instanceModel = glm::rotate(instanceModel, glm::radians(angle), 
                                           glm::vec3(1.0f, 0.3f, 0.5f));
                     
+                    // Perform frustum culling if enabled
+                    bool shouldRender = true;
+                    if (g_frustumCullingEnabled) {
+                        shouldRender = g_frustumCuller.isVisible(cubeBounds, instanceModel);
+                        if (!shouldRender) {
+                            culledObjects++;
+                            continue; // Skip rendering this object
+                        }
+                    }
+                    
+                    renderedObjects++;
                     glm::mat3 cubeNormalMatrix = glm::mat3(glm::transpose(glm::inverse(instanceModel)));
                     
                     // Update matrices for this cube
@@ -496,6 +546,19 @@ int main() {
                     
                     // Render the cube
                     glDrawArrays(GL_TRIANGLES, 0, 36);
+                }
+                
+                // Log culling statistics periodically
+                static double lastPrimitiveCullingLog = 0.0;
+                if (currentFrameTime - lastPrimitiveCullingLog > 3.0) { // Every 3 seconds
+                    if (g_frustumCullingEnabled && (renderedObjects + culledObjects) > 0) {
+                        float cullingRatio = (float)culledObjects / (float)(renderedObjects + culledObjects);
+                        LOG_INFO("Primitive frustum culling stats - Total: " + std::to_string(renderedObjects + culledObjects) +
+                                ", Rendered: " + std::to_string(renderedObjects) + 
+                                ", Culled: " + std::to_string(culledObjects) + 
+                                " (" + std::to_string(cullingRatio * 100.0f) + "% culled)");
+                    }
+                    lastPrimitiveCullingLog = currentFrameTime;
                 }
                 glBindVertexArray(0);
             }
@@ -640,6 +703,11 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
             glm::vec3 sparksPos = camera.getPosition() + camera.getFront() * 2.0f;
             g_particleManager->createSparksEffect(sparksPos);
             LOG_INFO("Sparks effect created at camera position");
+        }
+        else if (key == GLFW_KEY_C) {
+            // Toggle frustum culling
+            g_frustumCullingEnabled = !g_frustumCullingEnabled;
+            LOG_INFO("Frustum culling " + std::string(g_frustumCullingEnabled ? "enabled" : "disabled"));
         }
     }
 }
