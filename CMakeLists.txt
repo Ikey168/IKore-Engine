@@ -66,7 +66,7 @@ FetchContent_MakeAvailable(assimp)
 
 find_package(OpenGL REQUIRED)
 
-add_executable(IKore src/main.cpp src/Logger.cpp src/DeltaTimeDemo.cpp src/Shader.cpp src/Texture.cpp src/Model.cpp src/PostProcessor.cpp src/Camera.cpp src/CameraController.cpp src/Skybox.cpp src/ParticleSystem.cpp src/Frustum.cpp)
+add_executable(IKore src/main.cpp src/Logger.cpp src/DeltaTimeDemo.cpp src/Shader.cpp src/Texture.cpp src/Model.cpp src/PostProcessor.cpp src/Camera.cpp src/CameraController.cpp src/Skybox.cpp src/ParticleSystem.cpp src/ShadowMap.cpp src/Frustum.cpp)
 
 target_link_libraries(IKore PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
 
