@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Entity.h"
+#include "Serialization.h"
 #include <glm/glm.hpp>
 #include <string>
 
@@ -9,7 +10,7 @@ namespace IKore {
     /**
      * @brief Example GameObject entity with transform and basic properties
      */
-    class GameObject : public Entity {
+    class GameObject : public Entity, public ISerializable {
     public:
         GameObject(const std::string& name = "GameObject", const glm::vec3& position = glm::vec3(0.0f));
         virtual ~GameObject() = default;
@@ -45,6 +46,11 @@ namespace IKore {
 
         // Get world transform matrix
         glm::mat4 getTransformMatrix() const;
+
+        // ISerializable implementation
+        void serialize(SerializationData& data) const override;
+        bool deserialize(const SerializationData& data) override;
+        std::string getSerializationType() const override { return "GameObject"; }
 
     protected:
         std::string m_name;
@@ -90,6 +96,11 @@ namespace IKore {
         void update(float deltaTime) override;
         void initialize() override;
 
+        // ISerializable implementation
+        void serialize(SerializationData& data) const override;
+        bool deserialize(const SerializationData& data) override;
+        std::string getSerializationType() const override { return "LightEntity"; }
+
     private:
         LightType m_lightType;
         glm::vec3 m_color;
@@ -132,6 +143,11 @@ namespace IKore {
         void update(float deltaTime) override;
         void initialize() override;
 
+        // ISerializable implementation
+        void serialize(SerializationData& data) const override;
+        bool deserialize(const SerializationData& data) override;
+        std::string getSerializationType() const override { return "CameraEntity"; }
+
     private:
         float m_fieldOfView;
         float m_aspectRatio;
@@ -142,7 +158,7 @@ namespace IKore {
     /**
      * @brief Simple test entity for demonstration
      */
-    class TestEntity : public Entity {
+    class TestEntity : public Entity, public ISerializable {
     public:
         TestEntity(const std::string& message = "Test Entity");
         virtual ~TestEntity() = default;
@@ -160,6 +176,11 @@ namespace IKore {
         void update(float deltaTime) override;
         void initialize() override;
         void cleanup() override;
+
+        // ISerializable implementation
+        void serialize(SerializationData& data) const override;
+        bool deserialize(const SerializationData& data) override;
+        std::string getSerializationType() const override { return "TestEntity"; }
 
     private:
         std::string m_message;

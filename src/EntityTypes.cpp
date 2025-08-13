@@ -60,6 +60,44 @@ namespace IKore {
         return transform;
     }
 
+    void GameObject::serialize(SerializationData& data) const {
+        data.makeObject();
+        data["name"] = SerializationData(m_name);
+        data["position"].setVec3(m_position);
+        data["rotation"].setVec3(m_rotation);
+        data["scale"].setVec3(m_scale);
+        data["visible"] = SerializationData(m_visible);
+        data["active"] = SerializationData(m_active);
+    }
+
+    bool GameObject::deserialize(const SerializationData& data) {
+        if (!data.isObject()) {
+            LOG_ERROR("GameObject deserialize: data is not an object");
+            return false;
+        }
+
+        if (data.has("name")) {
+            m_name = data.get("name").asString();
+        }
+        if (data.has("position")) {
+            m_position = data.get("position").asVec3();
+        }
+        if (data.has("rotation")) {
+            m_rotation = data.get("rotation").asVec3();
+        }
+        if (data.has("scale")) {
+            m_scale = data.get("scale").asVec3();
+        }
+        if (data.has("visible")) {
+            m_visible = data.get("visible").asBool();
+        }
+        if (data.has("active")) {
+            m_active = data.get("active").asBool();
+        }
+
+        return true;
+    }
+
     // ============================================================================
     // LightEntity Implementation
     // ============================================================================
@@ -92,6 +130,43 @@ namespace IKore {
         }
         
         LOG_INFO("LightEntity '" + getName() + "' (" + typeStr + ") initialized");
+    }
+
+    void LightEntity::serialize(SerializationData& data) const {
+        // Serialize base GameObject data first
+        GameObject::serialize(data);
+
+        // Add light-specific data
+        data["lightType"] = SerializationData(static_cast<int64_t>(m_lightType));
+        data["color"].setVec3(m_color);
+        data["intensity"] = SerializationData(static_cast<double>(m_intensity));
+        data["range"] = SerializationData(static_cast<double>(m_range));
+        data["spotAngle"] = SerializationData(static_cast<double>(m_spotAngle));
+    }
+
+    bool LightEntity::deserialize(const SerializationData& data) {
+        // Deserialize base GameObject data first
+        if (!GameObject::deserialize(data)) {
+            return false;
+        }
+
+        if (data.has("lightType")) {
+            m_lightType = static_cast<LightType>(data.get("lightType").asInt());
+        }
+        if (data.has("color")) {
+            m_color = data.get("color").asVec3();
+        }
+        if (data.has("intensity")) {
+            m_intensity = static_cast<float>(data.get("intensity").asFloat());
+        }
+        if (data.has("range")) {
+            m_range = static_cast<float>(data.get("range").asFloat());
+        }
+        if (data.has("spotAngle")) {
+            m_spotAngle = static_cast<float>(data.get("spotAngle").asFloat());
+        }
+
+        return true;
     }
 
     // ============================================================================
@@ -150,6 +225,39 @@ namespace IKore {
                  std::to_string(m_fieldOfView) + ", Aspect: " + std::to_string(m_aspectRatio) + ")");
     }
 
+    void CameraEntity::serialize(SerializationData& data) const {
+        // Serialize base GameObject data first
+        GameObject::serialize(data);
+
+        // Add camera-specific data
+        data["fieldOfView"] = SerializationData(static_cast<double>(m_fieldOfView));
+        data["aspectRatio"] = SerializationData(static_cast<double>(m_aspectRatio));
+        data["nearPlane"] = SerializationData(static_cast<double>(m_nearPlane));
+        data["farPlane"] = SerializationData(static_cast<double>(m_farPlane));
+    }
+
+    bool CameraEntity::deserialize(const SerializationData& data) {
+        // Deserialize base GameObject data first
+        if (!GameObject::deserialize(data)) {
+            return false;
+        }
+
+        if (data.has("fieldOfView")) {
+            m_fieldOfView = static_cast<float>(data.get("fieldOfView").asFloat());
+        }
+        if (data.has("aspectRatio")) {
+            m_aspectRatio = static_cast<float>(data.get("aspectRatio").asFloat());
+        }
+        if (data.has("nearPlane")) {
+            m_nearPlane = static_cast<float>(data.get("nearPlane").asFloat());
+        }
+        if (data.has("farPlane")) {
+            m_farPlane = static_cast<float>(data.get("farPlane").asFloat());
+        }
+
+        return true;
+    }
+
     // ============================================================================
     // TestEntity Implementation
     // ============================================================================
@@ -180,6 +288,32 @@ namespace IKore {
     void TestEntity::cleanup() {
         Entity::cleanup();
         LOG_INFO("TestEntity '" + m_message + "' cleaned up after " + std::to_string(m_age) + " seconds");
+    }
+
+    void TestEntity::serialize(SerializationData& data) const {
+        data.makeObject();
+        data["message"] = SerializationData(m_message);
+        data["lifetime"] = SerializationData(static_cast<double>(m_lifetime));
+        data["age"] = SerializationData(static_cast<double>(m_age));
+    }
+
+    bool TestEntity::deserialize(const SerializationData& data) {
+        if (!data.isObject()) {
+            LOG_ERROR("TestEntity deserialize: data is not an object");
+            return false;
+        }
+
+        if (data.has("message")) {
+            m_message = data.get("message").asString();
+        }
+        if (data.has("lifetime")) {
+            m_lifetime = static_cast<float>(data.get("lifetime").asFloat());
+        }
+        if (data.has("age")) {
+            m_age = static_cast<float>(data.get("age").asFloat());
+        }
+
+        return true;
     }
 
 } // namespace IKore

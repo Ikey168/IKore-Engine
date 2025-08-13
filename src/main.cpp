@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 #include <filesystem>
+#include <fstream>
 #include <thread>
 
 #include "Logger.h"
@@ -30,6 +31,8 @@
 #include "ControllableEntities.h"
 #include "CameraComponent.h"
 #include "EnhancedCameraEntity.h"
+#include "Serialization.h"
+#include "EntityRegistration.h"
 
 // Forward declarations for GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -203,6 +206,10 @@ int main() {
     // === Entity System Initialization ===
     IKore::EntityManager& entityManager = IKore::getEntityManager();
     
+    // Register all serializable entity types for deserialization
+    IKore::registerAllEntityTypes();
+    LOG_INFO("Entity types registered for serialization");
+    
     // Create some test entities to demonstrate the system
     auto testEntity1 = entityManager.createEntity<IKore::TestEntity>("Entity System Test 1");
     testEntity1->setLifetime(10.0f); // This entity will expire after 10 seconds
@@ -289,6 +296,7 @@ int main() {
     LOG_INFO("Entity System initialized with " + std::to_string(stats.totalEntities) + " entities");
     LOG_INFO("Entity ID range: " + std::to_string(stats.lowestID) + " - " + std::to_string(stats.highestID));
     LOG_INFO("Controls: Press E to show entity stats, R to remove test entities, T to create new test entity");
+    LOG_INFO("Serialization Controls: F9 to load scene, F10 to clear scene, F11 to save as JSON, F12 to save as binary");
     LOG_INFO("Transform Controls: Y to rotate parent, U to scale parent, I to move light, O to move camera, P to print hierarchy");
 
     // === Input Component Demonstration ===
@@ -1324,6 +1332,58 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
             g_cameraTransitionDuration -= 0.5f;
             if (g_cameraTransitionDuration < 0.0f) g_cameraTransitionDuration = 0.0f;
             LOG_INFO("Camera transition duration: " + std::to_string(g_cameraTransitionDuration) + " seconds");
+        }
+        // Serialization controls
+        else if (key == GLFW_KEY_F11) {
+            // Save scene to JSON format
+            IKore::SerializationManager& manager = IKore::SerializationManager::getInstance();
+            try {
+                manager.saveScene("saved_scene.json");
+                LOG_INFO("Scene saved to saved_scene.json (JSON format)");
+            } catch (const std::exception& e) {
+                LOG_ERROR("Failed to save scene: " + std::string(e.what()));
+            }
+        }
+        else if (key == GLFW_KEY_F12) {
+            // Save scene to binary format
+            IKore::SerializationManager& manager = IKore::SerializationManager::getInstance();
+            try {
+                manager.saveScene("saved_scene.bin");
+                LOG_INFO("Scene saved to saved_scene.bin (Binary format)");
+            } catch (const std::exception& e) {
+                LOG_ERROR("Failed to save scene: " + std::string(e.what()));
+            }
+        }
+        else if (key == GLFW_KEY_F9) {
+            // Load scene (auto-detects format)
+            IKore::SerializationManager& manager = IKore::SerializationManager::getInstance();
+            std::string filename = "saved_scene.json"; // Default to JSON
+            
+            // Check if binary file exists
+            std::ifstream binFile("saved_scene.bin");
+            if (binFile.good()) {
+                binFile.close();
+                filename = "saved_scene.bin";
+            }
+            
+            try {
+                manager.loadScene(filename);
+                LOG_INFO("Scene loaded from " + filename);
+                
+                // Re-initialize all loaded entities
+                IKore::EntityManager& entityMgr = IKore::getEntityManager();
+                entityMgr.initializeAll();
+                LOG_INFO("All loaded entities initialized");
+            } catch (const std::exception& e) {
+                LOG_ERROR("Failed to load scene: " + std::string(e.what()));
+            }
+        }
+        else if (key == GLFW_KEY_F10) {
+            // Clear current scene
+            IKore::EntityManager& entityMgr = IKore::getEntityManager();
+            LOG_INFO("Clearing current scene...");
+            entityMgr.clear();
+            LOG_INFO("Scene cleared - all entities destroyed");
         }
     }
 }
