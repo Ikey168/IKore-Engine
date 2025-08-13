@@ -33,6 +33,7 @@
 #include "EnhancedCameraEntity.h"
 #include "Serialization.h"
 #include "EntityRegistration.h"
+#include "EntityDebugSystem.h"
 
 // Forward declarations for GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -297,6 +298,7 @@ int main() {
     LOG_INFO("Entity ID range: " + std::to_string(stats.lowestID) + " - " + std::to_string(stats.highestID));
     LOG_INFO("Controls: Press E to show entity stats, R to remove test entities, T to create new test entity");
     LOG_INFO("Serialization Controls: F9 to load scene, F10 to clear scene, F11 to save as JSON, F12 to save as binary");
+    LOG_INFO("Debug Controls: F8 to toggle Entity Debug System");
     LOG_INFO("Transform Controls: Y to rotate parent, U to scale parent, I to move light, O to move camera, P to print hierarchy");
 
     // === Input Component Demonstration ===
@@ -607,6 +609,9 @@ int main() {
 
         // Update entity system
         entityManager.updateAll(static_cast<float>(deltaTime));
+
+        // Update Entity Debug System
+        IKore::getEntityDebugSystem().update(static_cast<float>(deltaTime));
 
         // === Camera Component System Update ===
         if (g_enhancedCamera && g_followTarget) {
@@ -927,6 +932,9 @@ int main() {
 
         // End post-processing frame (applies effects and renders to screen)
         postProcessor.endFrame();
+
+        // Render Entity Debug Overlay (after all scene rendering)
+        IKore::getEntityDebugSystem().renderDebugOverlay();
 
         glfwSwapBuffers(window);
 
@@ -1384,6 +1392,10 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
             LOG_INFO("Clearing current scene...");
             entityMgr.clear();
             LOG_INFO("Scene cleared - all entities destroyed");
+        }
+        else if (key == GLFW_KEY_F8) {
+            // Toggle Entity Debug System
+            IKore::getEntityDebugSystem().toggleDebugMode();
         }
     }
 }
