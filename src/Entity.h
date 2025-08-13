@@ -7,6 +7,7 @@
 #include <atomic>
 #include <algorithm>
 #include <mutex>
+#include <glm/glm.hpp>
 
 namespace IKore {
 
@@ -90,6 +91,12 @@ namespace IKore {
          * @brief Virtual cleanup method
          */
         virtual void cleanup() {}
+
+        /**
+         * @brief Get entity position (override in derived classes with position)
+         * @return Entity position (default returns origin)
+         */
+        virtual glm::vec3 getPosition() const { return glm::vec3(0.0f); }
 
         /**
          * @brief Equality operator based on entity ID

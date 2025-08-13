@@ -28,6 +28,8 @@
 #include "TransformableEntities.h"
 #include "InputComponent.h"
 #include "ControllableEntities.h"
+#include "CameraComponent.h"
+#include "EnhancedCameraEntity.h"
 
 // Forward declarations for GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -58,6 +60,13 @@ IKore::ShadowMapManager* g_shadowManager = nullptr;
 // Global frustum culler for rendering optimization
 IKore::FrustumCuller g_frustumCuller;
 bool g_frustumCullingEnabled = true;
+
+// Camera Component demonstration variables
+std::shared_ptr<IKore::EnhancedCameraEntity> g_enhancedCamera = nullptr;
+std::shared_ptr<IKore::TransformableGameObject> g_followTarget = nullptr;
+int g_currentCameraMode = 0; // 0=FREE_CAMERA, 1=THIRD_PERSON, 2=ORBITAL, 3=FIRST_PERSON
+bool g_useCameraComponent = false; // Toggle between old and new camera system
+float g_cameraTransitionDuration = 2.0f; // Smooth transitions
 
 // Mouse tracking variables
 bool firstMouse = true;
@@ -210,7 +219,7 @@ int main() {
     light1->setColor(glm::vec3(1.0f, 0.9f, 0.8f));
     light1->setIntensity(1.5f);
     
-    auto camera1 = entityManager.createEntity<IKore::CameraEntity>("Entity Camera");
+    auto camera1 = entityManager.createEntity<IKore::EnhancedCameraEntity>("Entity Camera");
     camera1->setPosition(glm::vec3(0.0f, 0.0f, 5.0f));
     camera1->setFieldOfView(60.0f);
     
@@ -335,6 +344,51 @@ int main() {
     LOG_INFO("  1/2/3: Camera mode switching (when camera control active)");
     LOG_INFO("  Mouse: Look around (when mouse captured or camera control active)");
     LOG_INFO("  Scroll: Speed/zoom adjustment");
+
+    // === Camera Component Demonstration ===
+    LOG_INFO("=== Camera Component System Demonstration ===");
+    
+    // Create enhanced camera entity with Camera Component
+    g_enhancedCamera = entityManager.createEntity<IKore::EnhancedCameraEntity>(
+        "Enhanced Camera",
+        glm::vec3(0.0f, 5.0f, 10.0f),  // Initial position
+        glm::vec3(0.0f, 0.0f, 0.0f),   // Look at origin
+        IKore::CameraComponent::CameraType::FREE_CAMERA
+    );
+    g_enhancedCamera->setFieldOfView(45.0f);
+    g_enhancedCamera->setAspectRatio(800.0f / 600.0f);
+    
+    // Create a target object for the camera to follow
+    g_followTarget = entityManager.createEntity<IKore::TransformableGameObject>("Camera Follow Target");
+    g_followTarget->getTransform().setPosition(0.0f, 1.0f, 0.0f);
+    
+    // Configure third-person camera settings
+    IKore::CameraComponent::ThirdPersonConfig thirdPersonConfig;
+    thirdPersonConfig.distance = 8.0f;
+    thirdPersonConfig.height = 3.0f;
+    thirdPersonConfig.followSpeed = 3.0f;
+    thirdPersonConfig.rotationSpeed = 2.0f;
+    g_enhancedCamera->setThirdPersonConfig(thirdPersonConfig);
+    
+    // Configure orbital camera settings
+    IKore::CameraComponent::OrbitalConfig orbitalConfig;
+    orbitalConfig.radius = 12.0f;
+    orbitalConfig.elevation = 20.0f;
+    orbitalConfig.autoOrbit = true;
+    orbitalConfig.autoOrbitSpeed = 0.3f;
+    g_enhancedCamera->setOrbitalConfig(orbitalConfig);
+    
+    LOG_INFO("Created Camera Component entities:");
+    LOG_INFO("- Enhanced Camera with multiple modes");
+    LOG_INFO("- Follow Target for third-person mode");
+    LOG_INFO("Camera Component Controls:");
+    LOG_INFO("  4: Free Camera mode");
+    LOG_INFO("  5: Third-Person mode (follows target)");
+    LOG_INFO("  6: Orbital mode (orbits around target)");
+    LOG_INFO("  7: First-Person mode (attaches to target)");
+    LOG_INFO("  C: Toggle between old camera system and Camera Component");
+    LOG_INFO("  T: Increase transition duration");
+    LOG_INFO("  G: Decrease transition duration");
 
     // Initialize delta time demo
     IKore::DeltaTimeDemo deltaDemo;
@@ -546,6 +600,30 @@ int main() {
         // Update entity system
         entityManager.updateAll(static_cast<float>(deltaTime));
 
+        // === Camera Component System Update ===
+        if (g_enhancedCamera && g_followTarget) {
+            // Update the follow target position (simulate movement)
+            static float targetTimer = 0.0f;
+            targetTimer += static_cast<float>(deltaTime);
+            glm::vec3 targetPos = glm::vec3(
+                sin(targetTimer * 0.5f) * 3.0f,
+                1.0f + cos(targetTimer * 0.3f) * 0.5f,
+                cos(targetTimer * 0.4f) * 2.0f
+            );
+            g_followTarget->getTransform().setPosition(targetPos);
+            
+            // Update enhanced camera
+            g_enhancedCamera->update(static_cast<float>(deltaTime));
+            
+            // Update aspect ratio if needed (in case window was resized)
+            int width, height;
+            glfwGetFramebufferSize(window, &width, &height);
+            if (width > 0 && height > 0) {
+                float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+                g_enhancedCamera->setAspectRatio(aspectRatio);
+            }
+        }
+
         // Update demo
         deltaDemo.update();
         deltaDemo.updateTestMovement();
@@ -592,9 +670,15 @@ int main() {
         // Begin post-processing frame (renders to framebuffer)
         postProcessor.beginFrame();
         
-        // Get camera matrices for this frame
-        glm::mat4 view = camera.getViewMatrix();
-        glm::mat4 projection = camera.getProjectionMatrix();
+        // Get camera matrices for this frame - use Camera Component if enabled
+        glm::mat4 view, projection;
+        if (g_useCameraComponent && g_enhancedCamera) {
+            view = g_enhancedCamera->getViewMatrix();
+            projection = g_enhancedCamera->getProjectionMatrix();
+        } else {
+            view = camera.getViewMatrix();
+            projection = camera.getProjectionMatrix();
+        }
         
         // Update frustum for culling
         if (g_frustumCullingEnabled) {
@@ -1006,7 +1090,7 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
             // List all entities by type
             auto gameObjects = entityMgr.getEntitiesOfType<IKore::GameObject>();
             auto lights = entityMgr.getEntitiesOfType<IKore::LightEntity>();
-            auto cameras = entityMgr.getEntitiesOfType<IKore::CameraEntity>();
+            auto cameras = entityMgr.getEntitiesOfType<IKore::EnhancedCameraEntity>();
             auto testEntities = entityMgr.getEntitiesOfType<IKore::TestEntity>();
             
             LOG_INFO("  GameObjects: " + std::to_string(gameObjects.size()));
@@ -1191,6 +1275,55 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
                     }
                 }
             });
+        }
+        // Camera Component controls
+        else if (key == GLFW_KEY_4 && g_enhancedCamera) {
+            // Set Free Camera mode
+            g_enhancedCamera->setCameraType(IKore::CameraComponent::CameraType::FREE_CAMERA, g_cameraTransitionDuration);
+            g_currentCameraMode = 0;
+            LOG_INFO("Camera Component: Free Camera mode");
+        }
+        else if (key == GLFW_KEY_5 && g_enhancedCamera && g_followTarget) {
+            // Set Third-Person mode
+            g_enhancedCamera->setFollowTarget(g_followTarget);
+            g_enhancedCamera->setCameraType(IKore::CameraComponent::CameraType::THIRD_PERSON, g_cameraTransitionDuration);
+            g_currentCameraMode = 1;
+            LOG_INFO("Camera Component: Third-Person mode (following target)");
+        }
+        else if (key == GLFW_KEY_6 && g_enhancedCamera && g_followTarget) {
+            // Set Orbital mode
+            g_enhancedCamera->setFollowTarget(g_followTarget);
+            g_enhancedCamera->setCameraType(IKore::CameraComponent::CameraType::ORBITAL, g_cameraTransitionDuration);
+            g_currentCameraMode = 2;
+            LOG_INFO("Camera Component: Orbital mode (orbiting around target)");
+        }
+        else if (key == GLFW_KEY_7 && g_enhancedCamera && g_followTarget) {
+            // Set First-Person mode
+            g_enhancedCamera->setFollowTarget(g_followTarget);
+            g_enhancedCamera->setCameraType(IKore::CameraComponent::CameraType::FIRST_PERSON, g_cameraTransitionDuration);
+            g_currentCameraMode = 3;
+            LOG_INFO("Camera Component: First-Person mode (attached to target)");
+        }
+        else if (key == GLFW_KEY_C) {
+            // Toggle between old camera system and Camera Component
+            g_useCameraComponent = !g_useCameraComponent;
+            LOG_INFO("Camera System: " + std::string(g_useCameraComponent ? 
+                    "Using Camera Component" : "Using old camera system"));
+            if (g_useCameraComponent && g_enhancedCamera) {
+                LOG_INFO("Camera Component Debug Info:\n" + g_enhancedCamera->getDebugInfo());
+            }
+        }
+        else if (key == GLFW_KEY_T) {
+            // Increase transition duration
+            g_cameraTransitionDuration += 0.5f;
+            if (g_cameraTransitionDuration > 5.0f) g_cameraTransitionDuration = 5.0f;
+            LOG_INFO("Camera transition duration: " + std::to_string(g_cameraTransitionDuration) + " seconds");
+        }
+        else if (key == GLFW_KEY_G) {
+            // Decrease transition duration
+            g_cameraTransitionDuration -= 0.5f;
+            if (g_cameraTransitionDuration < 0.0f) g_cameraTransitionDuration = 0.0f;
+            LOG_INFO("Camera transition duration: " + std::to_string(g_cameraTransitionDuration) + " seconds");
         }
     }
 }

@@ -122,6 +122,12 @@ namespace IKore {
         glm::mat4 getWorldMatrix() const;
 
         /**
+         * @brief Get entity position (override from Entity)
+         * @return Entity position
+         */
+        glm::vec3 getPosition() const override;
+
+        /**
          * @brief Check if this object is visible (can be used for culling)
          * @return True if visible
          */
@@ -284,6 +290,12 @@ namespace IKore {
          * @return World position
          */
         glm::vec3 getWorldPosition() const;
+
+        /**
+         * @brief Get entity position (override from Entity)
+         * @return Entity position
+         */
+        glm::vec3 getPosition() const override;
 
         /**
          * @brief Check if light is enabled
@@ -504,6 +516,12 @@ namespace IKore {
          * @return World position
          */
         glm::vec3 getWorldPosition() const;
+
+        /**
+         * @brief Get entity position (override from Entity)
+         * @return Entity position
+         */
+        glm::vec3 getPosition() const override;
 
         /**
          * @brief Get forward direction
