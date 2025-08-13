@@ -22,6 +22,8 @@
 #include "ParticleSystem.h"
 #include "ShadowMap.h"
 #include "Frustum.h"
+#include "Entity.h"
+#include "EntityTypes.h"
 
 // Forward declarations for GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -184,6 +186,38 @@ int main() {
     
     LOG_INFO("Particle systems initialized");
     LOG_INFO("Controls: Press 4 to toggle skybox, 5/6 to adjust intensity, 7 to toggle particles, 8 for fire, 9 for explosion, 0 for smoke, - for sparks");
+
+    // === Entity System Initialization ===
+    IKore::EntityManager& entityManager = IKore::getEntityManager();
+    
+    // Create some test entities to demonstrate the system
+    auto testEntity1 = entityManager.createEntity<IKore::TestEntity>("Entity System Test 1");
+    testEntity1->setLifetime(10.0f); // This entity will expire after 10 seconds
+    
+    auto testEntity2 = entityManager.createEntity<IKore::TestEntity>("Entity System Test 2");
+    // testEntity2 has infinite lifetime
+    
+    auto gameObject1 = entityManager.createEntity<IKore::GameObject>("GameObject 1", glm::vec3(1.0f, 2.0f, 3.0f));
+    gameObject1->setRotation(glm::vec3(45.0f, 0.0f, 0.0f));
+    gameObject1->setScale(glm::vec3(2.0f, 1.0f, 1.0f));
+    
+    auto light1 = entityManager.createEntity<IKore::LightEntity>("Main Light", IKore::LightEntity::LightType::DIRECTIONAL);
+    light1->setPosition(glm::vec3(0.0f, 5.0f, 0.0f));
+    light1->setColor(glm::vec3(1.0f, 0.9f, 0.8f));
+    light1->setIntensity(1.5f);
+    
+    auto camera1 = entityManager.createEntity<IKore::CameraEntity>("Entity Camera");
+    camera1->setPosition(glm::vec3(0.0f, 0.0f, 5.0f));
+    camera1->setFieldOfView(60.0f);
+    
+    // Initialize all entities
+    entityManager.initializeAll();
+    
+    // Log entity system statistics
+    auto stats = entityManager.getStats();
+    LOG_INFO("Entity System initialized with " + std::to_string(stats.totalEntities) + " entities");
+    LOG_INFO("Entity ID range: " + std::to_string(stats.lowestID) + " - " + std::to_string(stats.highestID));
+    LOG_INFO("Controls: Press E to show entity stats, R to remove test entities, T to create new test entity");
 
     // Initialize delta time demo
     IKore::DeltaTimeDemo deltaDemo;
@@ -386,6 +420,9 @@ int main() {
 
         // Update particle systems
         particleManager.updateAll(static_cast<float>(deltaTime));
+
+        // Update entity system
+        entityManager.updateAll(static_cast<float>(deltaTime));
 
         // Update demo
         deltaDemo.update();
@@ -692,6 +729,13 @@ int main() {
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
 
+    // Cleanup entity system
+    LOG_INFO("Cleaning up Entity System...");
+    entityManager.cleanupAll();
+    auto finalStats = entityManager.getStats();
+    LOG_INFO("Final entity count: " + std::to_string(finalStats.totalEntities));
+    entityManager.clear();
+
     LOG_INFO("Shutting down IKore Engine");
     glfwDestroyWindow(window);
     glfwTerminate();
@@ -826,6 +870,53 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
             // Toggle frustum culling
             g_frustumCullingEnabled = !g_frustumCullingEnabled;
             LOG_INFO("Frustum culling " + std::string(g_frustumCullingEnabled ? "enabled" : "disabled"));
+        }
+        else if (key == GLFW_KEY_E) {
+            // Show entity system statistics
+            IKore::EntityManager& entityMgr = IKore::getEntityManager();
+            auto stats = entityMgr.getStats();
+            LOG_INFO("Entity System Statistics:");
+            LOG_INFO("  Total entities: " + std::to_string(stats.totalEntities));
+            LOG_INFO("  Valid entities: " + std::to_string(stats.validEntities));
+            LOG_INFO("  Invalid entities: " + std::to_string(stats.invalidEntities));
+            LOG_INFO("  ID range: " + std::to_string(stats.lowestID) + " - " + std::to_string(stats.highestID));
+            
+            // List all entities by type
+            auto gameObjects = entityMgr.getEntitiesOfType<IKore::GameObject>();
+            auto lights = entityMgr.getEntitiesOfType<IKore::LightEntity>();
+            auto cameras = entityMgr.getEntitiesOfType<IKore::CameraEntity>();
+            auto testEntities = entityMgr.getEntitiesOfType<IKore::TestEntity>();
+            
+            LOG_INFO("  GameObjects: " + std::to_string(gameObjects.size()));
+            LOG_INFO("  Lights: " + std::to_string(lights.size()));
+            LOG_INFO("  Cameras: " + std::to_string(cameras.size()));
+            LOG_INFO("  Test entities: " + std::to_string(testEntities.size()));
+        }
+        else if (key == GLFW_KEY_R) {
+            // Remove test entities
+            IKore::EntityManager& entityMgr = IKore::getEntityManager();
+            auto testEntities = entityMgr.getEntitiesOfType<IKore::TestEntity>();
+            size_t removed = 0;
+            
+            for (auto& entity : testEntities) {
+                if (entityMgr.removeEntity(entity)) {
+                    removed++;
+                }
+            }
+            
+            LOG_INFO("Removed " + std::to_string(removed) + " test entities");
+        }
+        else if (key == GLFW_KEY_T) {
+            // Create new test entity
+            IKore::EntityManager& entityMgr = IKore::getEntityManager();
+            static int testCounter = 0;
+            testCounter++;
+            
+            auto newEntity = entityMgr.createEntity<IKore::TestEntity>("Dynamic Test Entity " + std::to_string(testCounter));
+            newEntity->setLifetime(5.0f + (testCounter % 5)); // Varying lifetimes
+            newEntity->initialize();
+            
+            LOG_INFO("Created new test entity with ID: " + std::to_string(newEntity->getID()));
         }
     }
 }
