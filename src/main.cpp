@@ -24,6 +24,8 @@
 #include "Frustum.h"
 #include "Entity.h"
 #include "EntityTypes.h"
+#include "Transform.h"
+#include "TransformableEntities.h"
 
 // Forward declarations for GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -213,11 +215,70 @@ int main() {
     // Initialize all entities
     entityManager.initializeAll();
     
+    // === Transform Component Demonstration ===
+    LOG_INFO("=== Transform Component System Demonstration ===");
+    
+    // Create parent-child hierarchy with transformable entities
+    auto parentObject = entityManager.createEntity<IKore::TransformableGameObject>("Parent Object");
+    parentObject->getTransform().setPosition(5.0f, 0.0f, 0.0f);
+    parentObject->getTransform().setRotation(0.0f, 45.0f, 0.0f);
+    parentObject->getTransform().setScale(2.0f);
+    
+    auto childObject1 = entityManager.createEntity<IKore::TransformableGameObject>("Child Object 1");
+    childObject1->getTransform().setPosition(0.0f, 2.0f, 0.0f); // Local position relative to parent
+    childObject1->getTransform().setScale(0.5f);
+    childObject1->setParent(parentObject.get());
+    
+    auto childObject2 = entityManager.createEntity<IKore::TransformableGameObject>("Child Object 2");
+    childObject2->getTransform().setPosition(0.0f, -2.0f, 0.0f); // Local position relative to parent
+    childObject2->getTransform().setRotation(0.0f, 0.0f, 90.0f);
+    childObject2->setParent(parentObject.get());
+    
+    // Create transformable light
+    auto transformableLight = entityManager.createEntity<IKore::TransformableLight>(
+        "Transformable Point Light", 
+        IKore::TransformableLight::LightType::POINT,
+        glm::vec3(-3.0f, 2.0f, 0.0f), // Position
+        glm::vec3(0.8f, 0.6f, 1.0f),  // Purple-ish color
+        2.0f  // Intensity
+    );
+    
+    // Create transformable camera
+    auto transformableCamera = entityManager.createEntity<IKore::TransformableCamera>(
+        "Transformable Camera",
+        glm::vec3(0.0f, 3.0f, 8.0f), // Position
+        glm::vec3(-15.0f, 0.0f, 0.0f), // Rotation (looking slightly down)
+        45.0f,  // FOV
+        800.0f / 600.0f,  // Aspect ratio
+        0.1f,   // Near plane
+        100.0f  // Far plane
+    );
+    
+    // Make the transformable camera look at the parent object
+    transformableCamera->lookAt(parentObject->getTransform().getWorldPosition());
+    
+    LOG_INFO("Created hierarchical transform system:");
+    LOG_INFO("- Parent Object at world pos: (" + 
+             std::to_string(parentObject->getTransform().getWorldPosition().x) + ", " +
+             std::to_string(parentObject->getTransform().getWorldPosition().y) + ", " +
+             std::to_string(parentObject->getTransform().getWorldPosition().z) + ")");
+    
+    LOG_INFO("- Child 1 local pos: (" + 
+             std::to_string(childObject1->getTransform().getPosition().x) + ", " +
+             std::to_string(childObject1->getTransform().getPosition().y) + ", " +
+             std::to_string(childObject1->getTransform().getPosition().z) + ")");
+    
+    LOG_INFO("- Child 1 world pos: (" + 
+             std::to_string(childObject1->getTransform().getWorldPosition().x) + ", " +
+             std::to_string(childObject1->getTransform().getWorldPosition().y) + ", " +
+             std::to_string(childObject1->getTransform().getWorldPosition().z) + ")");
+    
     // Log entity system statistics
     auto stats = entityManager.getStats();
     LOG_INFO("Entity System initialized with " + std::to_string(stats.totalEntities) + " entities");
     LOG_INFO("Entity ID range: " + std::to_string(stats.lowestID) + " - " + std::to_string(stats.highestID));
     LOG_INFO("Controls: Press E to show entity stats, R to remove test entities, T to create new test entity");
+    LOG_INFO("Transform Controls: Y to rotate parent, U to scale parent, I to move light, O to move camera, P to print hierarchy");
 
     // Initialize delta time demo
     IKore::DeltaTimeDemo deltaDemo;
@@ -917,6 +978,80 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
             newEntity->initialize();
             
             LOG_INFO("Created new test entity with ID: " + std::to_string(newEntity->getID()));
+        }
+        // Transform Component controls
+        else if (key == GLFW_KEY_Y) {
+            // Rotate parent object
+            static IKore::EntityManager& entityMgr = IKore::getEntityManager();
+            entityMgr.forEach([](std::shared_ptr<IKore::Entity> entity) {
+                auto transformableObj = std::dynamic_pointer_cast<IKore::TransformableGameObject>(entity);
+                if (transformableObj && transformableObj->getName() == "Parent Object") {
+                    transformableObj->getTransform().rotate(0.0f, 15.0f, 0.0f);
+                    glm::vec3 pos = transformableObj->getTransform().getWorldPosition();
+                    LOG_INFO("Rotated parent object - World position: (" + 
+                            std::to_string(pos.x) + ", " + std::to_string(pos.y) + ", " + std::to_string(pos.z) + ")");
+                }
+            });
+        }
+        else if (key == GLFW_KEY_U) {
+            // Scale parent object
+            static IKore::EntityManager& entityMgr = IKore::getEntityManager();
+            entityMgr.forEach([](std::shared_ptr<IKore::Entity> entity) {
+                auto transformableObj = std::dynamic_pointer_cast<IKore::TransformableGameObject>(entity);
+                if (transformableObj && transformableObj->getName() == "Parent Object") {
+                    glm::vec3 currentScale = transformableObj->getTransform().getScale();
+                    float newScale = currentScale.x > 3.0f ? 0.5f : currentScale.x * 1.2f;
+                    transformableObj->getTransform().setScale(newScale);
+                    LOG_INFO("Scaled parent object to: " + std::to_string(newScale));
+                }
+            });
+        }
+        else if (key == GLFW_KEY_I) {
+            // Move transformable light
+            static IKore::EntityManager& entityMgr = IKore::getEntityManager();
+            entityMgr.forEach([](std::shared_ptr<IKore::Entity> entity) {
+                auto light = std::dynamic_pointer_cast<IKore::TransformableLight>(entity);
+                if (light && light->getName() == "Transformable Point Light") {
+                    light->getTransform().translate(1.0f, 0.0f, 0.0f);
+                    glm::vec3 pos = light->getTransform().getWorldPosition();
+                    LOG_INFO("Moved light to: (" + 
+                            std::to_string(pos.x) + ", " + std::to_string(pos.y) + ", " + std::to_string(pos.z) + ")");
+                }
+            });
+        }
+        else if (key == GLFW_KEY_O) {
+            // Move transformable camera
+            static IKore::EntityManager& entityMgr = IKore::getEntityManager();
+            entityMgr.forEach([](std::shared_ptr<IKore::Entity> entity) {
+                auto camera = std::dynamic_pointer_cast<IKore::TransformableCamera>(entity);
+                if (camera && camera->getName() == "Transformable Camera") {
+                    camera->getTransform().translate(0.0f, 0.0f, -1.0f);
+                    glm::vec3 pos = camera->getTransform().getWorldPosition();
+                    LOG_INFO("Moved camera to: (" + 
+                            std::to_string(pos.x) + ", " + std::to_string(pos.y) + ", " + std::to_string(pos.z) + ")");
+                }
+            });
+        }
+        else if (key == GLFW_KEY_P) {
+            // Print transform hierarchy information
+            static IKore::EntityManager& entityMgr = IKore::getEntityManager();
+            LOG_INFO("=== Transform Hierarchy Status ===");
+            entityMgr.forEach([](std::shared_ptr<IKore::Entity> entity) {
+                auto transformableObj = std::dynamic_pointer_cast<IKore::TransformableGameObject>(entity);
+                if (transformableObj) {
+                    glm::vec3 localPos = transformableObj->getTransform().getPosition();
+                    glm::vec3 worldPos = transformableObj->getTransform().getWorldPosition();
+                    glm::vec3 scale = transformableObj->getTransform().getScale();
+                    glm::vec3 rotation = transformableObj->getTransform().getRotation();
+                    
+                    LOG_INFO("Object: " + transformableObj->getName());
+                    LOG_INFO("  Local Pos: (" + std::to_string(localPos.x) + ", " + std::to_string(localPos.y) + ", " + std::to_string(localPos.z) + ")");
+                    LOG_INFO("  World Pos: (" + std::to_string(worldPos.x) + ", " + std::to_string(worldPos.y) + ", " + std::to_string(worldPos.z) + ")");
+                    LOG_INFO("  Scale: (" + std::to_string(scale.x) + ", " + std::to_string(scale.y) + ", " + std::to_string(scale.z) + ")");
+                    LOG_INFO("  Rotation: (" + std::to_string(rotation.x) + ", " + std::to_string(rotation.y) + ", " + std::to_string(rotation.z) + ")");
+                    LOG_INFO("  Children: " + std::to_string(transformableObj->getChildren().size()));
+                }
+            });
         }
     }
 }
