@@ -293,7 +293,7 @@ std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     
     // Process material
     Material material;
-    if (mesh->mMaterialIndex >= 0) {
+    if (mesh->mMaterialIndex < scene->mNumMaterials && scene->mMaterials) {
         aiMaterial* mat = scene->mMaterials[mesh->mMaterialIndex];
         material = loadMaterial(mat);
     }
