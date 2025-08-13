@@ -26,6 +26,8 @@
 #include "EntityTypes.h"
 #include "Transform.h"
 #include "TransformableEntities.h"
+#include "InputComponent.h"
+#include "ControllableEntities.h"
 
 // Forward declarations for GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -280,6 +282,60 @@ int main() {
     LOG_INFO("Controls: Press E to show entity stats, R to remove test entities, T to create new test entity");
     LOG_INFO("Transform Controls: Y to rotate parent, U to scale parent, I to move light, O to move camera, P to print hierarchy");
 
+    // === Input Component Demonstration ===
+    LOG_INFO("=== Input Component System Demonstration ===");
+    
+    // Initialize Input Manager with the GLFW window
+    IKore::InputManager& inputManager = IKore::InputManager::getInstance();
+    inputManager.initialize(window);
+    
+    // Create controllable entities to demonstrate Input Component
+    auto controllablePlayer = entityManager.createEntity<IKore::ControllableGameObject>(
+        "Controllable Player",
+        glm::vec3(0.0f, 0.0f, -5.0f),  // Start behind origin
+        IKore::ControllableGameObject::MovementMode::CAMERA_STYLE
+    );
+    controllablePlayer->setMovementSpeed(8.0f);
+    controllablePlayer->setRotationSpeed(0.15f);
+    controllablePlayer->setMouseCapture(false); // Start with free cursor
+    
+    auto controllableCamera = entityManager.createEntity<IKore::ControllableCamera>(
+        "FPS Camera",
+        glm::vec3(0.0f, 2.0f, 10.0f),
+        IKore::ControllableCamera::CameraMode::FIRST_PERSON
+    );
+    controllableCamera->setMovementSpeed(6.0f);
+    controllableCamera->setMouseSensitivity(0.1f);
+    controllableCamera->setInputEnabled(false); // Start disabled to avoid conflicts
+    
+    auto controllableLight = entityManager.createEntity<IKore::ControllableLight>(
+        "Controllable Light",
+        IKore::ControllableLight::LightType::POINT,
+        glm::vec3(3.0f, 3.0f, 0.0f),
+        glm::vec3(1.0f, 0.8f, 0.6f),  // Warm white
+        3.0f
+    );
+    controllableLight->setMovementSpeed(4.0f);
+    controllableLight->setInputEnabled(false); // Start disabled to avoid conflicts
+    
+    LOG_INFO("Created Input Component entities:");
+    LOG_INFO("- Controllable Player (WASD movement, mouse look with ESC toggle)");
+    LOG_INFO("- FPS Camera (press F1 to activate, 1/2/3 to switch modes)");
+    LOG_INFO("- Controllable Light (press F2 to activate, arrows to move, +/- intensity, C to cycle color)");
+    LOG_INFO("Input Controls:");
+    LOG_INFO("  F1: Toggle FPS Camera control");
+    LOG_INFO("  F2: Toggle Light control");
+    LOG_INFO("  F3: Toggle Player control");
+    LOG_INFO("  ESC: Toggle mouse capture (when player control active)");
+    LOG_INFO("  WASD: Movement");
+    LOG_INFO("  Space/Shift: Up/Down movement");
+    LOG_INFO("  Arrow Keys: Light movement (when light control active)");
+    LOG_INFO("  +/-: Light intensity adjustment");
+    LOG_INFO("  C: Cycle light color");
+    LOG_INFO("  1/2/3: Camera mode switching (when camera control active)");
+    LOG_INFO("  Mouse: Look around (when mouse captured or camera control active)");
+    LOG_INFO("  Scroll: Speed/zoom adjustment");
+
     // Initialize delta time demo
     IKore::DeltaTimeDemo deltaDemo;
     deltaDemo.initialize();
@@ -477,6 +533,11 @@ int main() {
 
         // Input processing
         glfwPollEvents();
+        
+        // Update Input Manager to process all registered callbacks
+        IKore::InputManager& inputManager = IKore::InputManager::getInstance();
+        inputManager.update(static_cast<float>(deltaTime));
+        
         cameraController.processInput(window, static_cast<float>(deltaTime));
 
         // Update particle systems
@@ -1050,6 +1111,84 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
                     LOG_INFO("  Scale: (" + std::to_string(scale.x) + ", " + std::to_string(scale.y) + ", " + std::to_string(scale.z) + ")");
                     LOG_INFO("  Rotation: (" + std::to_string(rotation.x) + ", " + std::to_string(rotation.y) + ", " + std::to_string(rotation.z) + ")");
                     LOG_INFO("  Children: " + std::to_string(transformableObj->getChildren().size()));
+                }
+            });
+        }
+        // Input Component controls
+        else if (key == GLFW_KEY_F1) {
+            // Toggle FPS Camera control
+            static IKore::EntityManager& entityMgr = IKore::getEntityManager();
+            entityMgr.forEach([](std::shared_ptr<IKore::Entity> entity) {
+                auto camera = std::dynamic_pointer_cast<IKore::ControllableCamera>(entity);
+                if (camera && camera->getName() == "FPS Camera") {
+                    camera->setInputEnabled(!camera->isInputEnabled());
+                    LOG_INFO("FPS Camera control " + std::string(camera->isInputEnabled() ? "enabled" : "disabled"));
+                    
+                    // Disable other controllers when this is enabled
+                    if (camera->isInputEnabled()) {
+                        entityMgr.forEach([](std::shared_ptr<IKore::Entity> other) {
+                            auto player = std::dynamic_pointer_cast<IKore::ControllableGameObject>(other);
+                            if (player && player->getName() == "Controllable Player") {
+                                player->setInputEnabled(false);
+                                player->setMouseCapture(false);
+                            }
+                            auto light = std::dynamic_pointer_cast<IKore::ControllableLight>(other);
+                            if (light && light->getName() == "Controllable Light") {
+                                light->setInputEnabled(false);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+        else if (key == GLFW_KEY_F2) {
+            // Toggle Light control
+            static IKore::EntityManager& entityMgr = IKore::getEntityManager();
+            entityMgr.forEach([](std::shared_ptr<IKore::Entity> entity) {
+                auto light = std::dynamic_pointer_cast<IKore::ControllableLight>(entity);
+                if (light && light->getName() == "Controllable Light") {
+                    light->setInputEnabled(!light->isInputEnabled());
+                    LOG_INFO("Controllable Light control " + std::string(light->isInputEnabled() ? "enabled" : "disabled"));
+                    
+                    // Disable other controllers when this is enabled
+                    if (light->isInputEnabled()) {
+                        entityMgr.forEach([](std::shared_ptr<IKore::Entity> other) {
+                            auto player = std::dynamic_pointer_cast<IKore::ControllableGameObject>(other);
+                            if (player && player->getName() == "Controllable Player") {
+                                player->setInputEnabled(false);
+                                player->setMouseCapture(false);
+                            }
+                            auto camera = std::dynamic_pointer_cast<IKore::ControllableCamera>(other);
+                            if (camera && camera->getName() == "FPS Camera") {
+                                camera->setInputEnabled(false);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+        else if (key == GLFW_KEY_F3) {
+            // Toggle Player control
+            static IKore::EntityManager& entityMgr = IKore::getEntityManager();
+            entityMgr.forEach([](std::shared_ptr<IKore::Entity> entity) {
+                auto player = std::dynamic_pointer_cast<IKore::ControllableGameObject>(entity);
+                if (player && player->getName() == "Controllable Player") {
+                    player->setInputEnabled(!player->isInputEnabled());
+                    LOG_INFO("Controllable Player control " + std::string(player->isInputEnabled() ? "enabled" : "disabled"));
+                    
+                    // Disable other controllers when this is enabled
+                    if (player->isInputEnabled()) {
+                        entityMgr.forEach([](std::shared_ptr<IKore::Entity> other) {
+                            auto camera = std::dynamic_pointer_cast<IKore::ControllableCamera>(other);
+                            if (camera && camera->getName() == "FPS Camera") {
+                                camera->setInputEnabled(false);
+                            }
+                            auto light = std::dynamic_pointer_cast<IKore::ControllableLight>(other);
+                            if (light && light->getName() == "Controllable Light") {
+                                light->setInputEnabled(false);
+                            }
+                        });
+                    }
                 }
             });
         }
