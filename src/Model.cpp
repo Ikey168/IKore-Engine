@@ -11,6 +11,7 @@ namespace IKore {
 Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, Material material)
     : m_vertices(std::move(vertices)), m_indices(std::move(indices)), m_material(std::move(material)),
       m_VAO(0), m_VBO(0), m_EBO(0), m_isSetup(false) {
+    calculateBoundingBox();
     setupMesh();
 }
 
@@ -22,8 +23,8 @@ Mesh::~Mesh() {
 
 Mesh::Mesh(Mesh&& other) noexcept 
     : m_vertices(std::move(other.m_vertices)), m_indices(std::move(other.m_indices)),
-      m_material(std::move(other.m_material)), m_VAO(other.m_VAO), m_VBO(other.m_VBO),
-      m_EBO(other.m_EBO), m_isSetup(other.m_isSetup) {
+      m_material(std::move(other.m_material)), m_boundingBox(other.m_boundingBox),
+      m_VAO(other.m_VAO), m_VBO(other.m_VBO), m_EBO(other.m_EBO), m_isSetup(other.m_isSetup) {
     other.m_VAO = other.m_VBO = other.m_EBO = 0;
     other.m_isSetup = false;
 }
@@ -39,6 +40,7 @@ Mesh& Mesh::operator=(Mesh&& other) noexcept {
         m_vertices = std::move(other.m_vertices);
         m_indices = std::move(other.m_indices);
         m_material = std::move(other.m_material);
+        m_boundingBox = other.m_boundingBox;
         m_VAO = other.m_VAO;
         m_VBO = other.m_VBO;
         m_EBO = other.m_EBO;
@@ -88,6 +90,25 @@ void Mesh::setupMesh() {
     
     glBindVertexArray(0);
     m_isSetup = true;
+}
+
+void Mesh::calculateBoundingBox() {
+    if (m_vertices.empty()) {
+        m_boundingBox = BoundingBox();
+        return;
+    }
+    
+    // Initialize with first vertex
+    glm::vec3 minPoint = m_vertices[0].position;
+    glm::vec3 maxPoint = m_vertices[0].position;
+    
+    // Find min and max coordinates
+    for (const auto& vertex : m_vertices) {
+        minPoint = glm::min(minPoint, vertex.position);
+        maxPoint = glm::max(maxPoint, vertex.position);
+    }
+    
+    m_boundingBox = BoundingBox(minPoint, maxPoint);
 }
 
 void Mesh::render(std::shared_ptr<Shader> shader) const {
@@ -143,7 +164,8 @@ void Mesh::render(std::shared_ptr<Shader> shader) const {
 // Model Implementation
 Model::Model(Model&& other) noexcept 
     : m_meshes(std::move(other.m_meshes)), m_directory(std::move(other.m_directory)),
-      m_path(std::move(other.m_path)), m_textureCache(std::move(other.m_textureCache)) {
+      m_path(std::move(other.m_path)), m_boundingBox(other.m_boundingBox),
+      m_textureCache(std::move(other.m_textureCache)) {
 }
 
 Model& Model::operator=(Model&& other) noexcept {
@@ -151,6 +173,7 @@ Model& Model::operator=(Model&& other) noexcept {
         m_meshes = std::move(other.m_meshes);
         m_directory = std::move(other.m_directory);
         m_path = std::move(other.m_path);
+        m_boundingBox = other.m_boundingBox;
         m_textureCache = std::move(other.m_textureCache);
     }
     return *this;
@@ -169,6 +192,7 @@ bool Model::loadFromFile(const std::string& path) {
     
     try {
         loadModel(path);
+        calculateModelBoundingBox();
         LOG_INFO("Successfully loaded model: " + path + " with " + std::to_string(m_meshes.size()) + " meshes");
         return true;
     } catch (const std::exception& e) {
@@ -385,6 +409,29 @@ std::shared_ptr<Model> Model::loadFromFileShared(const std::string& path) {
 
 std::string Model::getSupportedFormats() {
     return "OBJ, FBX, GLTF/GLB, 3DS, DAE (Collada), PLY, STL, and many others supported by Assimp";
+}
+
+void Model::calculateModelBoundingBox() {
+    if (m_meshes.empty()) {
+        m_boundingBox = BoundingBox();
+        return;
+    }
+    
+    // Initialize with first mesh bounding box
+    m_boundingBox = m_meshes[0]->getBoundingBox();
+    
+    // Expand to include all mesh bounding boxes
+    for (size_t i = 1; i < m_meshes.size(); ++i) {
+        m_boundingBox.expand(m_meshes[i]->getBoundingBox());
+    }
+    
+    LOG_INFO("Model bounding box calculated: min(" + 
+             std::to_string(m_boundingBox.min.x) + ", " + 
+             std::to_string(m_boundingBox.min.y) + ", " + 
+             std::to_string(m_boundingBox.min.z) + ") max(" + 
+             std::to_string(m_boundingBox.max.x) + ", " + 
+             std::to_string(m_boundingBox.max.y) + ", " + 
+             std::to_string(m_boundingBox.max.z) + ")");
 }
 
 } // namespace IKore

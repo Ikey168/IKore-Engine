@@ -12,6 +12,7 @@
 #include <assimp/postprocess.h>
 
 #include "Texture.h"
+#include "Frustum.h"
 
 namespace IKore {
 
@@ -52,11 +53,13 @@ private:
     std::vector<Vertex> m_vertices;
     std::vector<unsigned int> m_indices;
     Material m_material;
+    BoundingBox m_boundingBox;
     
     GLuint m_VAO, m_VBO, m_EBO;
     bool m_isSetup;
     
     void setupMesh();
+    void calculateBoundingBox();
 
 public:
     Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, Material material);
@@ -76,6 +79,7 @@ public:
     const std::vector<Vertex>& getVertices() const { return m_vertices; }
     const std::vector<unsigned int>& getIndices() const { return m_indices; }
     const Material& getMaterial() const { return m_material; }
+    const BoundingBox& getBoundingBox() const { return m_boundingBox; }
     bool isSetup() const { return m_isSetup; }
 };
 
@@ -84,6 +88,7 @@ private:
     std::vector<std::unique_ptr<Mesh>> m_meshes;
     std::string m_directory;
     std::string m_path;
+    BoundingBox m_boundingBox;
     
     // Texture cache to avoid loading duplicate textures
     std::unordered_map<std::string, std::shared_ptr<Texture>> m_textureCache;
@@ -99,6 +104,7 @@ private:
     // Helper functions
     std::string getTextureFilename(aiMaterial* mat, aiTextureType type, unsigned int index = 0);
     Texture::Type aiTextureTypeToTextureType(aiTextureType type);
+    void calculateModelBoundingBox();
 
 public:
     Model() = default;
@@ -122,6 +128,7 @@ public:
     const std::vector<std::unique_ptr<Mesh>>& getMeshes() const { return m_meshes; }
     const std::string& getPath() const { return m_path; }
     const std::string& getDirectory() const { return m_directory; }
+    const BoundingBox& getBoundingBox() const { return m_boundingBox; }
     size_t getMeshCount() const { return m_meshes.size(); }
     bool isEmpty() const { return m_meshes.empty(); }
     
