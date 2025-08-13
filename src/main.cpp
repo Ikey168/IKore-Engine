@@ -862,7 +862,7 @@ void renderSceneObjects(std::shared_ptr<IKore::Shader> shader, GLuint VAO, bool 
             shader->setMat3("normalMatrix", glm::value_ptr(cubeNormalMatrix));
             
             // Render the model
-            cubeModel.render();
+            cubeModel.render(shader);
         }
     } else {
         // Fallback: render primitive cubes using VAO
