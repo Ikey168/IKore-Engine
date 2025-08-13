@@ -19,7 +19,7 @@ namespace IKore {
         void setRotation(const glm::vec3& rotation) { m_rotation = rotation; }
         void setScale(const glm::vec3& scale) { m_scale = scale; }
 
-        const glm::vec3& getPosition() const { return m_position; }
+        glm::vec3 getPosition() const override { return m_position; }
         const glm::vec3& getRotation() const { return m_rotation; }
         const glm::vec3& getScale() const { return m_scale; }
 

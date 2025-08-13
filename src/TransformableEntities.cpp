@@ -106,6 +106,10 @@ namespace IKore {
         return getTransform().getWorldMatrix();
     }
 
+    glm::vec3 TransformableGameObject::getPosition() const {
+        return getTransform().getWorldPosition();
+    }
+
     // ============================================================================
     // TransformableLight Implementation
     // ============================================================================
@@ -160,6 +164,10 @@ namespace IKore {
 
     glm::vec3 TransformableLight::getWorldPosition() const {
         return getTransform().getWorldPosition();
+    }
+
+    glm::vec3 TransformableLight::getPosition() const {
+        return getWorldPosition();
     }
 
     std::string TransformableLight::getTypeString() const {
@@ -238,6 +246,10 @@ namespace IKore {
 
     glm::vec3 TransformableCamera::getWorldPosition() const {
         return getTransform().getWorldPosition();
+    }
+
+    glm::vec3 TransformableCamera::getPosition() const {
+        return getWorldPosition();
     }
 
     glm::vec3 TransformableCamera::getForward() const {
