@@ -42,12 +42,9 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/nothings/stb.git
   GIT_TAG        f58f558c120e9b32c217290b80bad1a0729fbb2c
 )
-FetchContent_GetProperties(stb)
-if(NOT stb_POPULATED)
-  FetchContent_Populate(stb)
-  add_library(stb_image INTERFACE)
-  target_include_directories(stb_image INTERFACE ${stb_SOURCE_DIR})
-endif()
+FetchContent_MakeAvailable(stb)
+add_library(stb_image INTERFACE)
+target_include_directories(stb_image INTERFACE ${stb_SOURCE_DIR})
 
 # Assimp
 set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -66,9 +63,70 @@ FetchContent_MakeAvailable(assimp)
 
 find_package(OpenGL REQUIRED)
 
-add_executable(IKore src/main.cpp src/Logger.cpp src/DeltaTimeDemo.cpp src/Shader.cpp src/Texture.cpp src/Model.cpp src/PostProcessor.cpp src/Camera.cpp src/CameraController.cpp src/Skybox.cpp src/ParticleSystem.cpp src/ShadowMap.cpp src/Frustum.cpp src/Entity.cpp src/EntityTypes.cpp src/Transform.cpp src/TransformableEntities.cpp src/InputComponent.cpp src/ControllableEntities.cpp src/CameraComponent.cpp src/EnhancedCameraEntity.cpp src/Serialization.cpp src/EntityDebugSystem.cpp)
+# Add include directories for the new folder structure
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+# Define source files explicitly
+set(CORE_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityTypes.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Transform.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/TransformableEntities.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityDebugSystem.cpp
+)
+
+set(SCENE_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/scene/SceneGraphSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/scene/SceneManager.cpp
+)
+
+set(ENGINE_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/DeltaTimeDemo.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PostProcessor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Camera.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CameraController.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Skybox.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ParticleSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ShadowMap.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Frustum.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/InputComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ControllableEntities.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CameraComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EnhancedCameraEntity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Serialization.cpp
+)
+
+add_executable(IKore ${ENGINE_SOURCES} ${CORE_SOURCES} ${SCENE_SOURCES})
+
+# Scene Graph Test executable
+add_executable(test_scene_graph 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/test_scene_graph.cpp 
+    ${CORE_SOURCES}
+    ${SCENE_SOURCES}
+)
+
+# Scene Graph Demo executable
+add_executable(scene_graph_demo 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/demos/scene_graph_demo.cpp 
+    ${CORE_SOURCES}
+    ${SCENE_SOURCES}
+)
+
+# Note: Placeholder test files removed from build until implemented
+# These were causing linker errors due to missing main() functions:
+# - simple_scene_test.cpp
+# - logger_test.cpp 
+# - filesystem_test.cpp
+# - debug_logger_test.cpp
 
 target_link_libraries(IKore PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
+target_link_libraries(test_scene_graph PRIVATE glm)
+target_link_libraries(scene_graph_demo PRIVATE glm)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)

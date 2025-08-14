@@ -1,5 +1,5 @@
 #pragma once
-#include "EntityTypes.h"
+#include "core/EntityTypes.h"
 #include "Serialization.h"
 
 namespace IKore {

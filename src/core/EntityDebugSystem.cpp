@@ -1,6 +1,6 @@
-#include "EntityDebugSystem.h"
-#include "EntityTypes.h"
-#include "Logger.h"
+#include "core/EntityDebugSystem.h"
+#include "core/EntityTypes.h"
+#include "core/Logger.h"
 #include <chrono>
 #include <algorithm>
 #include <sstream>

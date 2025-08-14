@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Entity.h"
+#include "core/Entity.h"
 #include <glm/glm.hpp>
 #include <vector>
 #include <string>

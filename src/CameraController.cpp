@@ -1,5 +1,5 @@
 #include "CameraController.h"
-#include "Logger.h"
+#include "core/Logger.h"
 #include <sstream>
 #include <iomanip>
 

@@ -1,5 +1,5 @@
-#include "EntityTypes.h"
-#include "Logger.h"
+#include "core/EntityTypes.h"
+#include "core/Logger.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 

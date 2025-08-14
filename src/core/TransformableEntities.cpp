@@ -1,5 +1,5 @@
-#include "TransformableEntities.h"
-#include "Logger.h"
+#include "core/TransformableEntities.h"
+#include "core/Logger.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
 

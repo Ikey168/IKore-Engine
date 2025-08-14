@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Entity.h"
-#include "Transform.h"
+#include "core/Entity.h"
+#include "core/Transform.h"
 #include <glm/glm.hpp>
 #include <string>
 #include <memory>

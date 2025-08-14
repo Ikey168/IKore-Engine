@@ -5,7 +5,7 @@
 #include <glm/gtx/quaternion.hpp>
 #include <memory>
 #include <functional>
-#include "Entity.h"
+#include "core/Entity.h"
 
 namespace IKore {
 

@@ -1,4 +1,4 @@
-#include "Logger.h"
+#include "core/Logger.h"
 #include <filesystem>
 
 namespace IKore {
@@ -32,15 +32,16 @@ void Logger::initialize(const std::string& logFilePath) {
     
     m_initialized = true;
     
-    // Log initialization message
-    log(LogLevel::INFO, "Logger initialized - IKore Engine");
+    // Note: Don't log during initialization to avoid deadlock
+    // since log() also tries to acquire the same mutex
 }
 
 void Logger::shutdown() {
     std::lock_guard<std::mutex> lock(m_mutex);
     
     if (m_initialized) {
-        log(LogLevel::INFO, "Logger shutting down");
+        // Note: Don't log during shutdown to avoid deadlock
+        // since log() also tries to acquire the same mutex
         m_logFile.close();
         m_initialized = false;
     }

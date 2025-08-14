@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Entity.h"
+#include "core/Entity.h"
 #include "InputComponent.h"
-#include "Transform.h"
-#include "TransformableEntities.h"
+#include "core/Transform.h"
+#include "core/TransformableEntities.h"
 #include <glm/glm.hpp>
 #include <string>
 #include <memory>

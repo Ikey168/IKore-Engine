@@ -10,8 +10,8 @@
 #include <type_traits>
 #include <typeinfo>
 #include <glm/glm.hpp>
-#include "Entity.h"
-#include "Logger.h"
+#include "core/Entity.h"
+#include "core/Logger.h"
 
 namespace IKore {
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Entity.h"
+#include "core/Entity.h"
 #include "Serialization.h"
 #include <glm/glm.hpp>
 #include <string>

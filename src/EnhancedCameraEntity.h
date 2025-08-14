@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Entity.h"
+#include "core/Entity.h"
 #include "CameraComponent.h"
-#include "TransformableEntities.h"
+#include "core/TransformableEntities.h"
 #include <memory>
 #include <string>
 
