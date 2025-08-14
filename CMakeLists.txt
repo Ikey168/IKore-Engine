@@ -64,83 +64,82 @@ FetchContent_MakeAvailable(assimp)
 find_package(OpenGL REQUIRED)
 
 # Add include directories for the new folder structure
-include_directories(src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-add_executable(IKore 
-    src/main.cpp 
-    src/core/Logger.cpp 
-    src/DeltaTimeDemo.cpp 
-    src/Shader.cpp 
-    src/Texture.cpp 
-    src/Model.cpp 
-    src/PostProcessor.cpp 
-    src/Camera.cpp 
-    src/CameraController.cpp 
-    src/Skybox.cpp 
-    src/ParticleSystem.cpp 
-    src/ShadowMap.cpp 
-    src/Frustum.cpp 
-    src/core/Entity.cpp 
-    src/core/EntityTypes.cpp 
-    src/core/Transform.cpp 
-    src/core/TransformableEntities.cpp 
-    src/InputComponent.cpp 
-    src/ControllableEntities.cpp 
-    src/CameraComponent.cpp 
-    src/EnhancedCameraEntity.cpp 
-    src/Serialization.cpp 
-    src/core/EntityDebugSystem.cpp 
-    src/scene/SceneGraphSystem.cpp 
-    src/scene/SceneManager.cpp
+# Define source files explicitly
+set(CORE_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityTypes.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Transform.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/TransformableEntities.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityDebugSystem.cpp
 )
+
+set(SCENE_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/scene/SceneGraphSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/scene/SceneManager.cpp
+)
+
+set(ENGINE_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/DeltaTimeDemo.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PostProcessor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Camera.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CameraController.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Skybox.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ParticleSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ShadowMap.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Frustum.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/InputComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ControllableEntities.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CameraComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EnhancedCameraEntity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Serialization.cpp
+)
+
+add_executable(IKore ${ENGINE_SOURCES} ${CORE_SOURCES} ${SCENE_SOURCES})
 
 # Scene Graph Test executable
 add_executable(test_scene_graph 
-    src/tests/test_scene_graph.cpp 
-    src/core/Logger.cpp 
-    src/core/Entity.cpp 
-    src/core/EntityTypes.cpp 
-    src/core/Transform.cpp 
-    src/core/TransformableEntities.cpp 
-    src/scene/SceneGraphSystem.cpp 
-    src/scene/SceneManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/test_scene_graph.cpp 
+    ${CORE_SOURCES}
+    ${SCENE_SOURCES}
 )
 
 # Scene Graph Demo executable
 add_executable(scene_graph_demo 
-    src/demos/scene_graph_demo.cpp 
-    src/core/Logger.cpp 
-    src/core/Entity.cpp 
-    src/core/EntityTypes.cpp 
-    src/core/Transform.cpp 
-    src/core/TransformableEntities.cpp 
-    src/scene/SceneGraphSystem.cpp 
-    src/scene/SceneManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/demos/scene_graph_demo.cpp 
+    ${CORE_SOURCES}
+    ${SCENE_SOURCES}
 )
 
 # Simple Scene Graph Test (minimal)
 add_executable(simple_scene_test 
-    src/tests/simple_scene_test.cpp 
-    src/core/Entity.cpp 
-    src/core/EntityTypes.cpp 
-    src/core/Transform.cpp 
-    src/core/TransformableEntities.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/simple_scene_test.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityTypes.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Transform.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/TransformableEntities.cpp
 )
 
 # Logger Test (minimal)
 add_executable(logger_test 
-    src/tests/logger_test.cpp 
-    src/core/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/logger_test.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
 )
 
 # Filesystem Test (debug)
 add_executable(filesystem_test 
-    src/tests/filesystem_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/filesystem_test.cpp
 )
 
 # Debug Logger Test
 add_executable(debug_logger_test 
-    src/tests/debug_logger_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/debug_logger_test.cpp
 )
 
 target_link_libraries(IKore PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
