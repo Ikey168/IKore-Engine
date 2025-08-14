@@ -62,6 +62,34 @@ jobs:
     - name: Create build directory
       run: cmake -E make_directory ${{github.workspace}}/build
 
+    - name: Debug source files (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        echo "=== Source File Debug Information ==="
+        echo "Current working directory: $(pwd)"
+        echo "Date: $(date)"
+        echo ""
+        echo "=== Directory Structure Check ==="
+        echo "src/ directory exists: $(test -d src && echo 'YES' || echo 'NO')"
+        echo "src/core/ directory exists: $(test -d src/core && echo 'YES' || echo 'NO')"
+        echo "src/scene/ directory exists: $(test -d src/scene && echo 'YES' || echo 'NO')"
+        echo ""
+        echo "=== Core Source Files Check ==="
+        for file in "src/core/Logger.cpp" "src/core/Entity.cpp" "src/core/EntityTypes.cpp" "src/core/Transform.cpp"; do
+            if [ -f "$file" ]; then
+                echo "✓ $file exists ($(wc -l < "$file") lines)"
+            else
+                echo "✗ $file MISSING"
+            fi
+        done
+        echo ""
+        echo "=== Git Status ==="
+        git status --porcelain
+        echo ""
+        echo "=== Recent Commits ==="
+        git log --oneline -3
+        echo ""
+
     - name: Configure CMake (Unix)
       if: matrix.os != 'windows-latest'
       working-directory: ${{github.workspace}}/build
