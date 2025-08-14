@@ -117,6 +117,12 @@ add_executable(scene_graph_demo
     ${SCENE_SOURCES}
 )
 
+# Component System Test executable
+add_executable(test_component_system 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/test_component_system.cpp 
+    ${CORE_SOURCES}
+)
+
 # Note: Placeholder test files removed from build until implemented
 # These were causing linker errors due to missing main() functions:
 # - simple_scene_test.cpp
@@ -127,6 +133,7 @@ add_executable(scene_graph_demo
 target_link_libraries(IKore PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
 target_link_libraries(test_scene_graph PRIVATE glm)
 target_link_libraries(scene_graph_demo PRIVATE glm)
+target_link_libraries(test_component_system PRIVATE glm)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
