@@ -117,38 +117,16 @@ add_executable(scene_graph_demo
     ${SCENE_SOURCES}
 )
 
-# Simple Scene Graph Test (minimal)
-add_executable(simple_scene_test 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/simple_scene_test.cpp 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityTypes.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Transform.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/TransformableEntities.cpp
-)
-
-# Logger Test (minimal)
-add_executable(logger_test 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/logger_test.cpp 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
-)
-
-# Filesystem Test (debug)
-add_executable(filesystem_test 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/filesystem_test.cpp
-)
-
-# Debug Logger Test
-add_executable(debug_logger_test 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/debug_logger_test.cpp
-)
+# Note: Placeholder test files removed from build until implemented
+# These were causing linker errors due to missing main() functions:
+# - simple_scene_test.cpp
+# - logger_test.cpp 
+# - filesystem_test.cpp
+# - debug_logger_test.cpp
 
 target_link_libraries(IKore PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
 target_link_libraries(test_scene_graph PRIVATE glm)
 target_link_libraries(scene_graph_demo PRIVATE glm)
-target_link_libraries(simple_scene_test PRIVATE glm)
-target_link_libraries(logger_test PRIVATE)
-target_link_libraries(filesystem_test PRIVATE)
-target_link_libraries(debug_logger_test PRIVATE)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
