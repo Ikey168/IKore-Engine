@@ -253,7 +253,7 @@ logs/
 
 # Crash dumps
 *.dmp
-core
+/core
 core.*
 
 # Temporary files
