@@ -42,12 +42,9 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/nothings/stb.git
   GIT_TAG        f58f558c120e9b32c217290b80bad1a0729fbb2c
 )
-FetchContent_GetProperties(stb)
-if(NOT stb_POPULATED)
-  FetchContent_Populate(stb)
-  add_library(stb_image INTERFACE)
-  target_include_directories(stb_image INTERFACE ${stb_SOURCE_DIR})
-endif()
+FetchContent_MakeAvailable(stb)
+add_library(stb_image INTERFACE)
+target_include_directories(stb_image INTERFACE ${stb_SOURCE_DIR})
 
 # Assimp
 set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -69,25 +66,82 @@ find_package(OpenGL REQUIRED)
 # Add include directories for the new folder structure
 include_directories(src)
 
-add_executable(IKore src/main.cpp src/core/Logger.cpp src/DeltaTimeDemo.cpp src/Shader.cpp src/Texture.cpp src/Model.cpp src/PostProcessor.cpp src/Camera.cpp src/CameraController.cpp src/Skybox.cpp src/ParticleSystem.cpp src/ShadowMap.cpp src/Frustum.cpp src/core/Entity.cpp src/core/EntityTypes.cpp src/core/Transform.cpp src/core/TransformableEntities.cpp src/InputComponent.cpp src/ControllableEntities.cpp src/CameraComponent.cpp src/EnhancedCameraEntity.cpp src/Serialization.cpp src/core/EntityDebugSystem.cpp src/scene/SceneGraphSystem.cpp src/scene/SceneManager.cpp)
+add_executable(IKore 
+    src/main.cpp 
+    src/core/Logger.cpp 
+    src/DeltaTimeDemo.cpp 
+    src/Shader.cpp 
+    src/Texture.cpp 
+    src/Model.cpp 
+    src/PostProcessor.cpp 
+    src/Camera.cpp 
+    src/CameraController.cpp 
+    src/Skybox.cpp 
+    src/ParticleSystem.cpp 
+    src/ShadowMap.cpp 
+    src/Frustum.cpp 
+    src/core/Entity.cpp 
+    src/core/EntityTypes.cpp 
+    src/core/Transform.cpp 
+    src/core/TransformableEntities.cpp 
+    src/InputComponent.cpp 
+    src/ControllableEntities.cpp 
+    src/CameraComponent.cpp 
+    src/EnhancedCameraEntity.cpp 
+    src/Serialization.cpp 
+    src/core/EntityDebugSystem.cpp 
+    src/scene/SceneGraphSystem.cpp 
+    src/scene/SceneManager.cpp
+)
 
 # Scene Graph Test executable
-add_executable(test_scene_graph src/tests/test_scene_graph.cpp src/core/Logger.cpp src/core/Entity.cpp src/core/EntityTypes.cpp src/core/Transform.cpp src/core/TransformableEntities.cpp src/scene/SceneGraphSystem.cpp src/scene/SceneManager.cpp)
+add_executable(test_scene_graph 
+    src/tests/test_scene_graph.cpp 
+    src/core/Logger.cpp 
+    src/core/Entity.cpp 
+    src/core/EntityTypes.cpp 
+    src/core/Transform.cpp 
+    src/core/TransformableEntities.cpp 
+    src/scene/SceneGraphSystem.cpp 
+    src/scene/SceneManager.cpp
+)
 
 # Scene Graph Demo executable
-add_executable(scene_graph_demo src/demos/scene_graph_demo.cpp src/core/Logger.cpp src/core/Entity.cpp src/core/EntityTypes.cpp src/core/Transform.cpp src/core/TransformableEntities.cpp src/scene/SceneGraphSystem.cpp src/scene/SceneManager.cpp)
+add_executable(scene_graph_demo 
+    src/demos/scene_graph_demo.cpp 
+    src/core/Logger.cpp 
+    src/core/Entity.cpp 
+    src/core/EntityTypes.cpp 
+    src/core/Transform.cpp 
+    src/core/TransformableEntities.cpp 
+    src/scene/SceneGraphSystem.cpp 
+    src/scene/SceneManager.cpp
+)
 
 # Simple Scene Graph Test (minimal)
-add_executable(simple_scene_test src/tests/simple_scene_test.cpp src/core/Entity.cpp src/core/EntityTypes.cpp src/core/Transform.cpp src/core/TransformableEntities.cpp)
+add_executable(simple_scene_test 
+    src/tests/simple_scene_test.cpp 
+    src/core/Entity.cpp 
+    src/core/EntityTypes.cpp 
+    src/core/Transform.cpp 
+    src/core/TransformableEntities.cpp
+)
 
 # Logger Test (minimal)
-add_executable(logger_test src/tests/logger_test.cpp src/core/Logger.cpp)
+add_executable(logger_test 
+    src/tests/logger_test.cpp 
+    src/core/Logger.cpp
+)
 
 # Filesystem Test (debug)
-add_executable(filesystem_test src/tests/filesystem_test.cpp)
+add_executable(filesystem_test 
+    src/tests/filesystem_test.cpp
+)
 
 # Debug Logger Test
-add_executable(debug_logger_test src/tests/debug_logger_test.cpp)
+add_executable(debug_logger_test 
+    src/tests/debug_logger_test.cpp
+)
 
 target_link_libraries(IKore PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
 target_link_libraries(test_scene_graph PRIVATE glm)
