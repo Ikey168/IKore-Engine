@@ -1,5 +1,5 @@
 #include "EnhancedCameraEntity.h"
-#include "Logger.h"
+#include "core/Logger.h"
 #include <sstream>
 
 namespace IKore {

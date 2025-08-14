@@ -1,6 +1,6 @@
 #include "Serialization.h"
-#include "Entity.h"
-#include "EntityTypes.h"
+#include "core/Entity.h"
+#include "core/EntityTypes.h"
 #include <sstream>
 #include <cctype>
 #include <algorithm>

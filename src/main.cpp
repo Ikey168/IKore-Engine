@@ -10,7 +10,7 @@
 #include <fstream>
 #include <thread>
 
-#include "Logger.h"
+#include "core/Logger.h"
 #include "Camera.h"
 #include "CameraController.h"
 #include "Shader.h"
@@ -23,17 +23,17 @@
 #include "ParticleSystem.h"
 #include "ShadowMap.h"
 #include "Frustum.h"
-#include "Entity.h"
-#include "EntityTypes.h"
-#include "Transform.h"
-#include "TransformableEntities.h"
+#include "core/Entity.h"
+#include "core/EntityTypes.h"
+#include "core/Transform.h"
+#include "core/TransformableEntities.h"
 #include "InputComponent.h"
 #include "ControllableEntities.h"
 #include "CameraComponent.h"
 #include "EnhancedCameraEntity.h"
 #include "Serialization.h"
-#include "EntityRegistration.h"
-#include "EntityDebugSystem.h"
+#include "core/EntityRegistration.h"
+#include "core/EntityDebugSystem.h"
 
 // Forward declarations for GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);

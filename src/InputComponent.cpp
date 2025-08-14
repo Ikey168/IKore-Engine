@@ -1,5 +1,5 @@
 #include "InputComponent.h"
-#include "Logger.h"
+#include "core/Logger.h"
 #include <algorithm>
 #include <cmath>
 

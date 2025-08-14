@@ -1,5 +1,5 @@
-#include "Entity.h"
-#include "Logger.h"
+#include "core/Entity.h"
+#include "core/Logger.h"
 #include <mutex>
 
 namespace IKore {

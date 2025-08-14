@@ -1,5 +1,5 @@
 #include "Camera.h"
-#include "Logger.h"
+#include "core/Logger.h"
 #include <algorithm>
 
 namespace IKore {

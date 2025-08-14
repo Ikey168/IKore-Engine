@@ -66,6 +66,9 @@ FetchContent_MakeAvailable(assimp)
 
 find_package(OpenGL REQUIRED)
 
+# Add include directories for the new folder structure
+include_directories(src)
+
 add_executable(IKore src/main.cpp src/core/Logger.cpp src/DeltaTimeDemo.cpp src/Shader.cpp src/Texture.cpp src/Model.cpp src/PostProcessor.cpp src/Camera.cpp src/CameraController.cpp src/Skybox.cpp src/ParticleSystem.cpp src/ShadowMap.cpp src/Frustum.cpp src/core/Entity.cpp src/core/EntityTypes.cpp src/core/Transform.cpp src/core/TransformableEntities.cpp src/InputComponent.cpp src/ControllableEntities.cpp src/CameraComponent.cpp src/EnhancedCameraEntity.cpp src/Serialization.cpp src/core/EntityDebugSystem.cpp src/scene/SceneGraphSystem.cpp src/scene/SceneManager.cpp)
 
 # Scene Graph Test executable

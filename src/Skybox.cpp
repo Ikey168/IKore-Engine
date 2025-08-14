@@ -1,5 +1,5 @@
 #include "Skybox.h"
-#include "Logger.h"
+#include "core/Logger.h"
 #include <stb_image.h>
 #include <iostream>
 #include <filesystem>

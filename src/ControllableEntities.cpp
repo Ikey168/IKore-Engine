@@ -1,5 +1,5 @@
 #include "ControllableEntities.h"
-#include "Logger.h"
+#include "core/Logger.h"
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>

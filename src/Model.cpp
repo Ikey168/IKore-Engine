@@ -1,6 +1,6 @@
 #include "Model.h"
 #include "Shader.h"
-#include "Logger.h"
+#include "core/Logger.h"
 
 #include <iostream>
 #include <filesystem>
