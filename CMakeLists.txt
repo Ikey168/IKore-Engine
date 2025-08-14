@@ -66,9 +66,33 @@ FetchContent_MakeAvailable(assimp)
 
 find_package(OpenGL REQUIRED)
 
-add_executable(IKore src/main.cpp src/Logger.cpp src/DeltaTimeDemo.cpp src/Shader.cpp src/Texture.cpp src/Model.cpp src/PostProcessor.cpp src/Camera.cpp src/CameraController.cpp src/Skybox.cpp src/ParticleSystem.cpp src/ShadowMap.cpp src/Frustum.cpp src/Entity.cpp src/EntityTypes.cpp src/Transform.cpp src/TransformableEntities.cpp src/InputComponent.cpp src/ControllableEntities.cpp src/CameraComponent.cpp src/EnhancedCameraEntity.cpp src/Serialization.cpp src/EntityDebugSystem.cpp)
+add_executable(IKore src/main.cpp src/Logger.cpp src/DeltaTimeDemo.cpp src/Shader.cpp src/Texture.cpp src/Model.cpp src/PostProcessor.cpp src/Camera.cpp src/CameraController.cpp src/Skybox.cpp src/ParticleSystem.cpp src/ShadowMap.cpp src/Frustum.cpp src/Entity.cpp src/EntityTypes.cpp src/Transform.cpp src/TransformableEntities.cpp src/InputComponent.cpp src/ControllableEntities.cpp src/CameraComponent.cpp src/EnhancedCameraEntity.cpp src/Serialization.cpp src/EntityDebugSystem.cpp src/SceneGraphSystem.cpp src/SceneManager.cpp)
+
+# Scene Graph Test executable
+add_executable(test_scene_graph src/test_scene_graph.cpp src/Logger.cpp src/Entity.cpp src/EntityTypes.cpp src/Transform.cpp src/TransformableEntities.cpp src/SceneGraphSystem.cpp src/SceneManager.cpp)
+
+# Scene Graph Demo executable
+add_executable(scene_graph_demo src/scene_graph_demo.cpp src/Logger.cpp src/Entity.cpp src/EntityTypes.cpp src/Transform.cpp src/TransformableEntities.cpp src/SceneGraphSystem.cpp src/SceneManager.cpp)
+
+# Simple Scene Graph Test (minimal)
+add_executable(simple_scene_test src/simple_scene_test.cpp src/Entity.cpp src/EntityTypes.cpp src/Transform.cpp src/TransformableEntities.cpp)
+
+# Logger Test (minimal)
+add_executable(logger_test src/logger_test.cpp src/Logger.cpp)
+
+# Filesystem Test (debug)
+add_executable(filesystem_test src/filesystem_test.cpp)
+
+# Debug Logger Test
+add_executable(debug_logger_test src/debug_logger_test.cpp)
 
 target_link_libraries(IKore PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
+target_link_libraries(test_scene_graph PRIVATE glm)
+target_link_libraries(scene_graph_demo PRIVATE glm)
+target_link_libraries(simple_scene_test PRIVATE glm)
+target_link_libraries(logger_test PRIVATE)
+target_link_libraries(filesystem_test PRIVATE)
+target_link_libraries(debug_logger_test PRIVATE)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
