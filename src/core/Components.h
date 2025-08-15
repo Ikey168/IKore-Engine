@@ -9,8 +9,16 @@
  */
 
 #include "Component.h"
+#include "components/TransformComponent.h"
+#include "components/RenderableComponent.h"
+#include "components/VelocityComponent.h"
 
 namespace IKore {
+
+    // Type aliases for convenience
+    using Transform = TransformComponent;
+    using Renderable = RenderableComponent;
+    using Velocity = VelocityComponent;
 
     /**
      * @brief Component System Usage Examples
