@@ -51,7 +51,7 @@ namespace IKore {
          * @return Shared pointer to created entity
          */
         std::shared_ptr<TransformableGameObject> createGameObject(const std::string& name, 
-                                                                 std::shared_ptr<Entity> parent = nullptr);
+                                                                 std::shared_ptr<IKore::Entity> parent = nullptr);
 
         /**
          * @brief Create a new transformable light in the scene
@@ -60,7 +60,7 @@ namespace IKore {
          * @return Shared pointer to created light
          */
         std::shared_ptr<TransformableLight> createLight(const std::string& name, 
-                                                       std::shared_ptr<Entity> parent = nullptr);
+                                                       std::shared_ptr<IKore::Entity> parent = nullptr);
 
         /**
          * @brief Create a new transformable camera in the scene
@@ -69,7 +69,7 @@ namespace IKore {
          * @return Shared pointer to created camera
          */
         std::shared_ptr<TransformableCamera> createCamera(const std::string& name, 
-                                                         std::shared_ptr<Entity> parent = nullptr);
+                                                         std::shared_ptr<IKore::Entity> parent = nullptr);
 
         /**
          * @brief Add an existing entity to the scene
@@ -77,15 +77,15 @@ namespace IKore {
          * @param parent Parent entity (nullptr for root)
          * @return Scene node for the added entity
          */
-        std::shared_ptr<SceneNode> addEntity(std::shared_ptr<Entity> entity, 
-                                           std::shared_ptr<Entity> parent = nullptr);
+        std::shared_ptr<SceneNode> addEntity(std::shared_ptr<IKore::Entity> entity, 
+                                           std::shared_ptr<IKore::Entity> parent = nullptr);
 
         /**
          * @brief Remove an entity from the scene
          * @param entity Entity to remove
          * @return True if entity was removed successfully
          */
-        bool removeEntity(std::shared_ptr<Entity> entity);
+        bool removeEntity(std::shared_ptr<IKore::Entity> entity);
 
         /**
          * @brief Remove an entity by name
@@ -103,33 +103,33 @@ namespace IKore {
          * @param entityID Entity ID to find
          * @return Shared pointer to entity (nullptr if not found)
          */
-        std::shared_ptr<Entity> findEntity(EntityID entityID);
+        std::shared_ptr<IKore::Entity> findEntity(IKore::EntityID entityID);
 
         /**
          * @brief Find entities by name
          * @param name Name to search for
          * @return Vector of matching entities
          */
-        std::vector<std::shared_ptr<Entity>> findEntitiesByName(const std::string& name);
+        std::vector<std::shared_ptr<IKore::Entity>> findEntitiesByName(const std::string& name);
 
         /**
          * @brief Find the first entity with the given name
          * @param name Name to search for
          * @return Shared pointer to first matching entity (nullptr if not found)
          */
-        std::shared_ptr<Entity> findFirstEntityByName(const std::string& name);
+        std::shared_ptr<IKore::Entity> findFirstEntityByName(const std::string& name);
 
         /**
          * @brief Get all root entities (entities without parents)
          * @return Vector of root entities
          */
-        std::vector<std::shared_ptr<Entity>> getRootEntities();
+        std::vector<std::shared_ptr<IKore::Entity>> getRootEntities();
 
         /**
          * @brief Get all entities in the scene
          * @return Vector of all entities
          */
-        std::vector<std::shared_ptr<Entity>> getAllEntities();
+        std::vector<std::shared_ptr<IKore::Entity>> getAllEntities();
 
         /**
          * @brief Get all transformable game objects in the scene
@@ -159,28 +159,28 @@ namespace IKore {
          * @param parent Parent entity (nullptr to make root)
          * @return True if relationship was established successfully
          */
-        bool setParent(std::shared_ptr<Entity> child, std::shared_ptr<Entity> parent);
+        bool setParent(std::shared_ptr<IKore::Entity> child, std::shared_ptr<IKore::Entity> parent);
 
         /**
          * @brief Get children of an entity
          * @param entity Parent entity
          * @return Vector of child entities
          */
-        std::vector<std::shared_ptr<Entity>> getChildren(std::shared_ptr<Entity> entity);
+        std::vector<std::shared_ptr<IKore::Entity>> getChildren(std::shared_ptr<IKore::Entity> entity);
 
         /**
          * @brief Get all descendants of an entity (recursive)
          * @param entity Root entity
          * @return Vector of descendant entities
          */
-        std::vector<std::shared_ptr<Entity>> getDescendants(std::shared_ptr<Entity> entity);
+        std::vector<std::shared_ptr<IKore::Entity>> getDescendants(std::shared_ptr<IKore::Entity> entity);
 
         /**
          * @brief Get the parent of an entity
          * @param entity Child entity
          * @return Shared pointer to parent (nullptr if root)
          */
-        std::shared_ptr<Entity> getParent(std::shared_ptr<Entity> entity);
+        std::shared_ptr<IKore::Entity> getParent(std::shared_ptr<IKore::Entity> entity);
 
         // ============================================================================
         // Scene Traversal
@@ -191,7 +191,7 @@ namespace IKore {
          * @param visitor Function to call for each entity
          * @param rootsOnly If true, only traverse from root entities
          */
-        void forEachEntity(std::function<void(std::shared_ptr<Entity>)> visitor, bool rootsOnly = true);
+        void forEachEntity(std::function<void(std::shared_ptr<IKore::Entity>)> visitor, bool rootsOnly = true);
 
         /**
          * @brief Visit all transformable game objects in the scene
@@ -224,7 +224,7 @@ namespace IKore {
          * @brief Mark an entity's transform as dirty for efficient updates
          * @param entity Entity whose transform changed
          */
-        void markTransformDirty(std::shared_ptr<Entity> entity);
+        void markTransformDirty(std::shared_ptr<IKore::Entity> entity);
 
         // ============================================================================
         // Visibility and State Management
@@ -236,7 +236,7 @@ namespace IKore {
          * @param visible Visibility state
          * @param recursive Apply to children as well
          */
-        void setVisibility(std::shared_ptr<Entity> entity, bool visible, bool recursive = false);
+        void setVisibility(std::shared_ptr<IKore::Entity> entity, bool visible, bool recursive = false);
 
         /**
          * @brief Set active state of an entity and optionally its children
@@ -244,33 +244,33 @@ namespace IKore {
          * @param active Active state
          * @param recursive Apply to children as well
          */
-        void setActive(std::shared_ptr<Entity> entity, bool active, bool recursive = false);
+        void setActive(std::shared_ptr<IKore::Entity> entity, bool active, bool recursive = false);
 
         /**
          * @brief Get all visible entities in the scene
          * @return Vector of visible entities
          */
-        std::vector<std::shared_ptr<Entity>> getVisibleEntities();
+        std::vector<std::shared_ptr<IKore::Entity>> getVisibleEntities();
 
         /**
          * @brief Get all active entities in the scene
          * @return Vector of active entities
          */
-        std::vector<std::shared_ptr<Entity>> getActiveEntities();
+        std::vector<std::shared_ptr<IKore::Entity>> getActiveEntities();
 
         /**
          * @brief Check if an entity is visible
          * @param entity Entity to check
          * @return True if entity is visible
          */
-        bool isVisible(std::shared_ptr<Entity> entity);
+        bool isVisible(std::shared_ptr<IKore::Entity> entity);
 
         /**
          * @brief Check if an entity is active
          * @param entity Entity to check
          * @return True if entity is active
          */
-        bool isActive(std::shared_ptr<Entity> entity);
+        bool isActive(std::shared_ptr<IKore::Entity> entity);
 
         // ============================================================================
         // Scene Information and Debug
@@ -308,7 +308,7 @@ namespace IKore {
          * @brief Create a basic scene with default lighting
          * @return Vector of created entities (camera, light, etc.)
          */
-        std::vector<std::shared_ptr<Entity>> createBasicScene();
+        std::vector<std::shared_ptr<IKore::Entity>> createBasicScene();
 
         /**
          * @brief Create a simple hierarchy demonstration

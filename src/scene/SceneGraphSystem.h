@@ -15,13 +15,13 @@ namespace IKore {
      * @brief Scene graph node representing an entity in the hierarchy
      */
     struct SceneNode {
-        std::shared_ptr<Entity> entity;
+        std::shared_ptr<IKore::Entity> entity;
         std::shared_ptr<SceneNode> parent;
         std::vector<std::shared_ptr<SceneNode>> children;
         bool isActive = true;
         bool isVisible = true;
         
-        SceneNode(std::shared_ptr<Entity> ent) : entity(ent) {}
+        SceneNode(std::shared_ptr<IKore::Entity> ent) : entity(ent) {}
     };
 
     /**
@@ -67,7 +67,7 @@ namespace IKore {
          * @param parent Parent node (nullptr for root)
          * @return Shared pointer to the created scene node
          */
-        std::shared_ptr<SceneNode> addEntity(std::shared_ptr<Entity> entity, 
+        std::shared_ptr<SceneNode> addEntity(std::shared_ptr<IKore::Entity> entity, 
                                            std::shared_ptr<SceneNode> parent = nullptr);
 
         /**
@@ -75,7 +75,7 @@ namespace IKore {
          * @param entity Entity to remove
          * @return True if entity was found and removed
          */
-        bool removeEntity(std::shared_ptr<Entity> entity);
+        bool removeEntity(std::shared_ptr<IKore::Entity> entity);
 
         /**
          * @brief Remove a scene node from the scene graph
@@ -89,14 +89,14 @@ namespace IKore {
          * @param entity Entity to find
          * @return Shared pointer to scene node (nullptr if not found)
          */
-        std::shared_ptr<SceneNode> findNode(std::shared_ptr<Entity> entity);
+        std::shared_ptr<SceneNode> findNode(std::shared_ptr<IKore::Entity> entity);
 
         /**
          * @brief Find a scene node by entity ID
          * @param entityID Entity ID to find
          * @return Shared pointer to scene node (nullptr if not found)
          */
-        std::shared_ptr<SceneNode> findNode(EntityID entityID);
+        std::shared_ptr<SceneNode> findNode(IKore::EntityID entityID);
 
         /**
          * @brief Find scene nodes by name (searches transformable entities)
@@ -115,7 +115,7 @@ namespace IKore {
          * @param parent Parent entity (nullptr to make root)
          * @return True if relationship was established successfully
          */
-        bool setParent(std::shared_ptr<Entity> child, std::shared_ptr<Entity> parent);
+        bool setParent(std::shared_ptr<IKore::Entity> child, std::shared_ptr<IKore::Entity> parent);
 
         /**
          * @brief Set parent-child relationship between nodes
@@ -142,14 +142,14 @@ namespace IKore {
          * @param entity Parent entity
          * @return Vector of child scene nodes
          */
-        std::vector<std::shared_ptr<SceneNode>> getChildren(std::shared_ptr<Entity> entity);
+        std::vector<std::shared_ptr<SceneNode>> getChildren(std::shared_ptr<IKore::Entity> entity);
 
         /**
          * @brief Get all descendants of a specific entity (recursive)
          * @param entity Root entity
          * @return Vector of descendant scene nodes
          */
-        std::vector<std::shared_ptr<SceneNode>> getDescendants(std::shared_ptr<Entity> entity);
+        std::vector<std::shared_ptr<SceneNode>> getDescendants(std::shared_ptr<IKore::Entity> entity);
 
         // ============================================================================
         // Traversal Methods
@@ -199,7 +199,7 @@ namespace IKore {
          * @brief Mark transform hierarchy as dirty for efficient updates
          * @param entity Entity whose transform changed
          */
-        void markTransformDirty(std::shared_ptr<Entity> entity);
+        void markTransformDirty(std::shared_ptr<IKore::Entity> entity);
 
         // ============================================================================
         // Visibility and State Management
@@ -301,8 +301,8 @@ namespace IKore {
 
         // Core data structures
         std::vector<std::shared_ptr<SceneNode>> m_rootNodes;
-        std::unordered_map<EntityID, std::shared_ptr<SceneNode>> m_nodeMap;
-        std::unordered_set<EntityID> m_dirtyTransforms;
+        std::unordered_map<IKore::EntityID, std::shared_ptr<SceneNode>> m_nodeMap;
+        std::unordered_set<IKore::EntityID> m_dirtyTransforms;
 
         // Helper methods
         void removeNodeFromParent(std::shared_ptr<SceneNode> node);
