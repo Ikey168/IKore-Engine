@@ -1,8 +1,8 @@
 #pragma once
 
-#include "scene/SceneGraphSystem.h"
-#include "core/Entity.h"
-#include "core/TransformableEntities.h"
+#include "SceneGraphSystem.h"
+#include "Entity.h"
+#include "TransformableEntities.h"
 #include <memory>
 #include <string>
 #include <vector>

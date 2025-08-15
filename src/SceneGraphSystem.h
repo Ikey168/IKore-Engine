@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/Entity.h"
-#include "core/TransformableEntities.h"
+#include "Entity.h"
+#include "TransformableEntities.h"
 #include <memory>
 #include <vector>
 #include <unordered_map>
