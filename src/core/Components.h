@@ -9,16 +9,8 @@
  */
 
 #include "Component.h"
-#include "components/TransformComponent.h"
-#include "components/RenderableComponent.h"
-#include "components/VelocityComponent.h"
 
 namespace IKore {
-
-    // Type aliases for convenience
-    using Transform = TransformComponent;
-    using Renderable = RenderableComponent;
-    using Velocity = VelocityComponent;
 
     /**
      * @brief Component System Usage Examples
@@ -29,40 +21,20 @@ namespace IKore {
      * // Create an entity
      * auto entity = std::make_shared<Entity>();
      * 
-     * // Add components
-     * auto transform = entity->addComponent<TransformComponent>();
-     * auto renderable = entity->addComponent<RenderableComponent>();
-     * auto velocity = entity->addComponent<VelocityComponent>();
+     * // Add components (using custom component classes)
+     * auto testComp = entity->addComponent<TestComponent>();
      * 
      * // Configure components
-     * transform->position = glm::vec3(0.0f, 0.0f, 0.0f);
-     * transform->scale = glm::vec3(1.0f);
-     * 
-     * renderable->meshPath = "assets/models/player.obj";
-     * renderable->texturePath = "assets/textures/player_diffuse.png";
-     * renderable->visible = true;
-     * 
-     * velocity->velocity = glm::vec3(5.0f, 0.0f, 0.0f);
-     * velocity->maxSpeed = 10.0f;
+     * testComp->value = 100;
      * 
      * // Query components
-     * if (entity->hasComponent<VelocityComponent>()) {
-     *     auto vel = entity->getComponent<VelocityComponent>();
-     *     vel->integrate(deltaTime);
-     * }
-     * 
-     * // Update transform based on velocity
-     * if (entity->hasComponent<TransformComponent>() && 
-     *     entity->hasComponent<VelocityComponent>()) {
-     *     
-     *     auto transform = entity->getComponent<TransformComponent>();
-     *     auto velocity = entity->getComponent<VelocityComponent>();
-     *     
-     *     transform->position += velocity->velocity * deltaTime;
+     * if (entity->hasComponent<TestComponent>()) {
+     *     auto comp = entity->getComponent<TestComponent>();
+     *     comp->doSomething();
      * }
      * 
      * // Remove components when no longer needed
-     * entity->removeComponent<VelocityComponent>();
+     * entity->removeComponent<TestComponent>();
      * @endcode
      */
 
