@@ -7,12 +7,7 @@
 #include <atomic>
 #include <algorithm>
 #include <mutex>
-#include <typeindex>
-#include <type_traits>
 #include <glm/glm.hpp>
-
-// Forward declarations
-class Component;
 
 namespace IKore {
 
@@ -32,7 +27,7 @@ namespace IKore {
      * This is the base class for all entities in the IKore Engine.
      * Each entity has a unique ID that persists throughout its lifetime.
      */
-    class Entity : public std::enable_shared_from_this<Entity> {
+    class Entity {
     public:
         /**
          * @brief Constructor that assigns a unique ID
@@ -118,57 +113,8 @@ namespace IKore {
          */
         bool operator<(const Entity& other) const { return m_id < other.m_id; }
 
-        // Component System Methods
-        template<typename T, typename... Args>
-        std::shared_ptr<T> addComponent(Args&&... args) {
-            std::type_index typeIndex(typeid(T));
-            
-            auto it = m_components.find(typeIndex);
-            if (it != m_components.end()) {
-                return std::static_pointer_cast<T>(it->second);
-            }
-            
-            auto component = std::make_shared<T>(std::forward<Args>(args)...);
-            if constexpr (std::is_base_of_v<Component, T>) {
-                component->setEntity(weak_from_this());
-            }
-            
-            m_components[typeIndex] = component;
-            return component;
-        }
-
-        template<typename T>
-        void removeComponent() {
-            std::type_index typeIndex(typeid(T));
-            auto it = m_components.find(typeIndex);
-            if (it != m_components.end()) {
-                if constexpr (std::is_base_of_v<Component, T>) {
-                    auto component = std::static_pointer_cast<T>(it->second);
-                    component->onDetach();
-                }
-                m_components.erase(it);
-            }
-        }
-
-        template<typename T>
-        std::shared_ptr<T> getComponent() {
-            std::type_index typeIndex(typeid(T));
-            auto it = m_components.find(typeIndex);
-            if (it != m_components.end()) {
-                return std::static_pointer_cast<T>(it->second);
-            }
-            return nullptr;
-        }
-
-        template<typename T>
-        bool hasComponent() const {
-            std::type_index typeIndex(typeid(T));
-            return m_components.find(typeIndex) != m_components.end();
-        }
-
     private:
         EntityID m_id;
-        std::unordered_map<std::type_index, std::shared_ptr<void>> m_components;
         static std::atomic<EntityID> s_nextID;
 
         /**
