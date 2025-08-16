@@ -74,6 +74,8 @@ set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Transform.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/TransformableEntities.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityDebugSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/MeshComponent.cpp
 )
 
 set(SCENE_SOURCES
@@ -108,6 +110,10 @@ add_executable(test_scene_graph
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/test_scene_graph.cpp 
     ${CORE_SOURCES}
     ${SCENE_SOURCES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Frustum.cpp
 )
 
 # Scene Graph Demo executable
@@ -115,6 +121,40 @@ add_executable(scene_graph_demo
     ${CMAKE_CURRENT_SOURCE_DIR}/src/demos/scene_graph_demo.cpp 
     ${CORE_SOURCES}
     ${SCENE_SOURCES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Frustum.cpp
+)
+
+# MeshComponent Test executable
+add_executable(test_mesh_component 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/test_mesh_component.cpp 
+    ${CORE_SOURCES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Frustum.cpp
+)
+
+# MeshComponent Minimal Test executable  
+add_executable(test_mesh_component_minimal 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/test_mesh_component_minimal.cpp 
+    ${CORE_SOURCES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Frustum.cpp
+)
+
+# MeshComponent Geometry Test executable  
+add_executable(test_mesh_component_geometry 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/test_mesh_component_geometry.cpp 
+    ${CORE_SOURCES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Frustum.cpp
 )
 
 # Note: Placeholder test files removed from build until implemented
@@ -125,8 +165,11 @@ add_executable(scene_graph_demo
 # - debug_logger_test.cpp
 
 target_link_libraries(IKore PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
-target_link_libraries(test_scene_graph PRIVATE glm)
-target_link_libraries(scene_graph_demo PRIVATE glm)
+target_link_libraries(test_scene_graph PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
+target_link_libraries(scene_graph_demo PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
+target_link_libraries(test_mesh_component PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
+target_link_libraries(test_mesh_component_minimal PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
+target_link_libraries(test_mesh_component_geometry PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)

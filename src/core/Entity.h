@@ -10,9 +10,7 @@
 #include <typeindex>
 #include <type_traits>
 #include <glm/glm.hpp>
-
-// Forward declarations
-class Component;
+#include "Component.h"
 
 namespace IKore {
 
@@ -143,7 +141,7 @@ namespace IKore {
             auto it = m_components.find(typeIndex);
             if (it != m_components.end()) {
                 if constexpr (std::is_base_of_v<Component, T>) {
-                    auto component = std::static_pointer_cast<T>(it->second);
+                    auto component = std::static_pointer_cast<Component>(it->second);
                     component->onDetach();
                 }
                 m_components.erase(it);
