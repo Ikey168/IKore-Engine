@@ -13,11 +13,13 @@
 #include "components/RenderableComponent.h"
 #include "components/VelocityComponent.h"
 #include "components/MeshComponent.h"
+#include "components/MaterialComponent.h"
 
 namespace IKore {
 
     // Type aliases for convenience
     using Transform = TransformComponent;
+    using MaterialComp = MaterialComponent;
     using Renderable = RenderableComponent;
     using Velocity = VelocityComponent;
     using MeshComp = MeshComponent;  // Avoid conflict with IKore::Mesh class
@@ -51,11 +53,29 @@ namespace IKore {
      * auto cubeMesh = MeshComponent::createCube(2.0f);
      * entity->addComponent<MeshComponent>()->setMeshData(*cubeMesh->getPrimaryMesh());
      * 
+     * // Configure material component
+     * auto material = entity->addComponent<MaterialComponent>();
+     * material->setDiffuseTexture("assets/textures/diffuse.png");
+     * material->setNormalTexture("assets/textures/normal.png");
+     * material->setSpecularTexture("assets/textures/specular.png");
+     * material->loadShader("shaders/vertex.glsl", "shaders/fragment.glsl");
+     * material->setDiffuseColor(glm::vec3(0.8f, 0.6f, 0.4f));
+     * material->setShininess(64.0f);
+     * material->setShaderParameter("metallic", 0.5f);
+     * 
+     * // Or create material presets
+     * auto coloredMaterial = MaterialComponent::createColoredMaterial(
+     *     glm::vec3(1.0f, 0.0f, 0.0f), // red diffuse
+     *     glm::vec3(0.5f), // specular
+     *     32.0f // shininess
+     * );
+     * entity->addComponent<MaterialComponent>(*coloredMaterial);
+     * 
      * // Or create custom mesh data
      * std::vector<Vertex> vertices = {}; // vertex data
      * std::vector<unsigned int> indices = {}; // index data
-     * Material material{}; // Set up material properties
-     * mesh->setMeshData(vertices, indices, material);
+     * Material meshMaterial{}; // Set up material properties
+     * mesh->setMeshData(vertices, indices, meshMaterial);
      * 
      * // Configure velocity
      * velocity->velocity = glm::vec3(5.0f, 0.0f, 0.0f);
@@ -65,6 +85,11 @@ namespace IKore {
      * if (entity->hasComponent<MeshComponent>()) {
      *     auto meshComp = entity->getComponent<MeshComponent>();
      *     if (meshComp->hasMeshes()) {
+     *         // Apply material before rendering
+     *         if (entity->hasComponent<MaterialComponent>()) {
+     *             auto matComp = entity->getComponent<MaterialComponent>();
+     *             matComp->apply();
+     *         }
      *         // Render the mesh
      *         meshComp->render(shader);
      *     }
@@ -81,29 +106,34 @@ namespace IKore {
      *    - TransformComponent: Only spatial data (position, rotation, scale)
      *    - RenderableComponent: File-based rendering data (mesh paths, texture paths)
      *    - MeshComponent: Direct mesh data storage (vertices, indices, materials)
+     *    - MaterialComponent: Material properties, textures, and shader parameters
      *    - VelocityComponent: Only movement data (velocity, acceleration)
      * 
      * 2. **Entity Composition**: Combine components to create different entity types
      *    - Static File-based Object: Transform + Renderable
-     *    - Static Procedural Object: Transform + MeshComponent
+     *    - Static Procedural Object: Transform + MeshComponent + MaterialComponent
+     *    - Advanced Rendered Object: Transform + MeshComponent + MaterialComponent
      *    - Moving File-based Object: Transform + Renderable + Velocity
-     *    - Moving Procedural Object: Transform + MeshComponent + Velocity
+     *    - Moving Procedural Object: Transform + MeshComponent + MaterialComponent + Velocity
      *    - Invisible Trigger: Transform + Velocity (no rendering components)
      * 
      * 3. **Rendering Component Choice**:
      *    - Use RenderableComponent for models loaded from files (efficient for static assets)
      *    - Use MeshComponent for procedural geometry, runtime-generated meshes, or dynamic modifications
-     *    - MeshComponent provides direct mesh data access for advanced use cases
+     *    - Use MaterialComponent for advanced material control (PBR, custom shaders, dynamic properties)
+     *    - MeshComponent + MaterialComponent provides maximum rendering control
      * 
      * 4. **Performance**: Cache component pointers when accessing frequently
      *    - Store component references in systems that update them every frame
      *    - Use hasComponent<T>() before getComponent<T>() for safety
+     *    - For MaterialComponent, cache shader references and avoid redundant texture bindings
      *    - For MeshComponent, consider caching mesh pointers for repeated rendering
      * 
      * 5. **Memory Management**: Components are automatically managed
      *    - Use shared_ptr for components returned by addComponent<T>()
      *    - Components are automatically destroyed when entity is destroyed
      *    - Use weak_ptr in components to reference the owning entity
+     *    - MaterialComponent uses texture caching to optimize memory usage
      *    - MeshComponent owns its mesh data and handles cleanup automatically
      */
 

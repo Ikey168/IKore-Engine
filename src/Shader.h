@@ -3,6 +3,8 @@
 #include <string>
 #include <memory>
 #include <glad/glad.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 // Forward declares for containers
 #include <unordered_map>
@@ -21,6 +23,10 @@ public:
 
     // Cached load: returns shared_ptr that reuses existing compiled program if sources unchanged
     static std::shared_ptr<Shader> loadFromFilesCached(const std::string& vertexPath, const std::string& fragmentPath, std::string& outError);
+    
+    // Convenience method that returns nullptr on error instead of throwing
+    static std::shared_ptr<Shader> loadFromFilesCached(const std::string& vertexPath, const std::string& fragmentPath);
+    
     static void clearCache();
 
     void use() const { glUseProgram(m_program); }
@@ -31,9 +37,13 @@ public:
     // Uniform setters
     void setInt(const std::string& name, int value) const;
     void setFloat(const std::string& name, float value) const;
+    void setBool(const std::string& name, bool value) const;
     void setVec3(const std::string& name, float x, float y, float z) const;
     void setVec3(const std::string& name, const float* value) const;
+    void setVec3(const std::string& name, const glm::vec3& value) const;
+    void setVec4(const std::string& name, const glm::vec4& value) const;
     void setMat4(const std::string& name, const float* value) const;
+    void setMat4(const std::string& name, const glm::mat4& value) const;
     void setMat3(const std::string& name, const float* value) const;
 
 private:

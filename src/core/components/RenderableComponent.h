@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Component.h"
+#include <string>
 
 namespace IKore {
     class RenderableComponent : public Component {

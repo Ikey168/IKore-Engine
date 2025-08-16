@@ -135,6 +135,11 @@ std::shared_ptr<Shader> Shader::loadFromFilesCached(const std::string& vertexPat
     return shader;
 }
 
+std::shared_ptr<Shader> Shader::loadFromFilesCached(const std::string& vertexPath, const std::string& fragmentPath) {
+    std::string error;
+    return loadFromFilesCached(vertexPath, fragmentPath, error);
+}
+
 void Shader::clearCache(){
     std::lock_guard<std::mutex> lock(s_cacheMutex);
     s_cache.clear();
@@ -148,6 +153,10 @@ void Shader::setFloat(const std::string& name, float value) const {
     glUniform1f(glGetUniformLocation(m_program, name.c_str()), value);
 }
 
+void Shader::setBool(const std::string& name, bool value) const {
+    glUniform1i(glGetUniformLocation(m_program, name.c_str()), value ? 1 : 0);
+}
+
 void Shader::setVec3(const std::string& name, float x, float y, float z) const {
     glUniform3f(glGetUniformLocation(m_program, name.c_str()), x, y, z);
 }
@@ -156,8 +165,20 @@ void Shader::setVec3(const std::string& name, const float* value) const {
     glUniform3fv(glGetUniformLocation(m_program, name.c_str()), 1, value);
 }
 
+void Shader::setVec3(const std::string& name, const glm::vec3& value) const {
+    glUniform3fv(glGetUniformLocation(m_program, name.c_str()), 1, glm::value_ptr(value));
+}
+
+void Shader::setVec4(const std::string& name, const glm::vec4& value) const {
+    glUniform4fv(glGetUniformLocation(m_program, name.c_str()), 1, glm::value_ptr(value));
+}
+
 void Shader::setMat4(const std::string& name, const float* value) const {
     glUniformMatrix4fv(glGetUniformLocation(m_program, name.c_str()), 1, GL_FALSE, value);
+}
+
+void Shader::setMat4(const std::string& name, const glm::mat4& value) const {
+    glUniformMatrix4fv(glGetUniformLocation(m_program, name.c_str()), 1, GL_FALSE, glm::value_ptr(value));
 }
 
 void Shader::setMat3(const std::string& name, const float* value) const {
