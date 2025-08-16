@@ -14,6 +14,7 @@
 #include "components/VelocityComponent.h"
 #include "components/MeshComponent.h"
 #include "components/MaterialComponent.h"
+#include "components/PhysicsComponent.h"
 
 namespace IKore {
 
@@ -23,6 +24,7 @@ namespace IKore {
     using Renderable = RenderableComponent;
     using Velocity = VelocityComponent;
     using MeshComp = MeshComponent;  // Avoid conflict with IKore::Mesh class
+    using Physics = PhysicsComponent;
 
     /**
      * @brief Component System Usage Examples
@@ -38,6 +40,7 @@ namespace IKore {
      * auto renderable = entity->addComponent<RenderableComponent>();
      * auto mesh = entity->addComponent<MeshComponent>();
      * auto velocity = entity->addComponent<VelocityComponent>();
+     * auto physics = entity->addComponent<PhysicsComponent>();
      * 
      * // Configure transform
      * transform->position = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -81,6 +84,17 @@ namespace IKore {
      * velocity->velocity = glm::vec3(5.0f, 0.0f, 0.0f);
      * velocity->maxSpeed = 10.0f;
      * 
+     * // Configure physics component
+     * physics->initializeRigidBody(BodyType::DYNAMIC, ColliderType::BOX, 
+     *                             glm::vec3(2.0f, 2.0f, 2.0f), 10.0f);
+     * physics->setFriction(0.8f);
+     * physics->setRestitution(0.3f);
+     * physics->applyForce(glm::vec3(0.0f, 100.0f, 0.0f)); // Jump force
+     * 
+     * // Or use factory methods for common configurations
+     * auto dynamicBox = PhysicsComponent::createDynamicBox(glm::vec3(1.0f), 5.0f);
+     * entity->addComponent<PhysicsComponent>(*dynamicBox);
+     * 
      * // Query components
      * if (entity->hasComponent<MeshComponent>()) {
      *     auto meshComp = entity->getComponent<MeshComponent>();
@@ -116,6 +130,9 @@ namespace IKore {
      *    - Moving File-based Object: Transform + Renderable + Velocity
      *    - Moving Procedural Object: Transform + MeshComponent + MaterialComponent + Velocity
      *    - Invisible Trigger: Transform + Velocity (no rendering components)
+     *    - Physics Object: Transform + PhysicsComponent (+ optional rendering)
+     *    - Dynamic Physics Entity: Transform + PhysicsComponent + MeshComponent + MaterialComponent
+     *    - Character Controller: Transform + PhysicsComponent + Velocity + Input handling
      * 
      * 3. **Rendering Component Choice**:
      *    - Use RenderableComponent for models loaded from files (efficient for static assets)
@@ -128,6 +145,7 @@ namespace IKore {
      *    - Use hasComponent<T>() before getComponent<T>() for safety
      *    - For MaterialComponent, cache shader references and avoid redundant texture bindings
      *    - For MeshComponent, consider caching mesh pointers for repeated rendering
+     *    - For PhysicsComponent, physics updates are handled by the physics system automatically
      * 
      * 5. **Memory Management**: Components are automatically managed
      *    - Use shared_ptr for components returned by addComponent<T>()
@@ -135,6 +153,7 @@ namespace IKore {
      *    - Use weak_ptr in components to reference the owning entity
      *    - MaterialComponent uses texture caching to optimize memory usage
      *    - MeshComponent owns its mesh data and handles cleanup automatically
+     *    - PhysicsComponent integrates with Bullet Physics and requires physics world management
      */
 
 } // namespace IKore
