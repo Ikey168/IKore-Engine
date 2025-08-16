@@ -96,6 +96,7 @@ set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/MeshComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/MaterialComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/PhysicsComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/ECSBenchmark.cpp
 )
 
 set(SCENE_SOURCES
@@ -207,6 +208,19 @@ add_executable(test_physics_simple
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/PhysicsComponent.cpp
 )
 
+# ECS Benchmark Test executable
+add_executable(test_ecs_benchmark 
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_ecs_benchmark.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityTypes.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Transform.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/TransformableEntities.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityDebugSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/ECSBenchmark.cpp
+)
+
 # Note: Placeholder test files removed from build until implemented
 # These were causing linker errors due to missing main() functions:
 # - simple_scene_test.cpp
@@ -223,6 +237,7 @@ target_link_libraries(test_mesh_component_geometry PRIVATE glfw glad glm stb_ima
 target_link_libraries(test_material_component PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
 target_link_libraries(test_physics_component PRIVATE BulletDynamics BulletCollision LinearMath glm)
 target_link_libraries(test_physics_simple PRIVATE BulletDynamics BulletCollision LinearMath glm)
+target_link_libraries(test_ecs_benchmark PRIVATE glm)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
