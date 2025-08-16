@@ -441,7 +441,7 @@ namespace IKore {
 
     void AudioComponent::syncPositionWithEntity() {
         // Get the entity this component belongs to
-        if (auto entity = getEntity()) {
+        if (auto entity = getEntity().lock()) {
             // Try to get transform component
             if (auto transform = entity->getComponent<TransformComponent>()) {
                 setPosition(transform->position);
@@ -544,7 +544,7 @@ namespace IKore {
 
     void AudioListenerComponent::syncPositionWithEntity() {
         // Get the entity this component belongs to
-        if (auto entity = getEntity()) {
+        if (auto entity = getEntity().lock()) {
             // Try to get transform component
             if (auto transform = entity->getComponent<TransformComponent>()) {
                 setPosition(transform->position);

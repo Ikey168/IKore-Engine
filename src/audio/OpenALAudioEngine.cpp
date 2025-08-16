@@ -17,6 +17,8 @@
 
 namespace IKore {
 
+#if OPENAL_AVAILABLE
+    // Full OpenAL implementation when available
     OpenALAudioEngine::OpenALAudioEngine() 
         : m_device(nullptr)
         , m_context(nullptr)
@@ -827,6 +829,244 @@ namespace IKore {
             std::cerr << "OpenAL Context Error (" << errorString << ") in operation: " << operation << std::endl;
         }
     }
+
+#else
+    // Fallback implementation when OpenAL is not available
+    
+    OpenALAudioEngine::OpenALAudioEngine() 
+        : m_device(nullptr), m_context(nullptr), m_initialized(false), 
+          m_nextSourceId(1), m_maxConcurrentSources(32), m_globalVolume(1.0f), 
+          m_streamingActive(false) {
+        m_listener = std::make_unique<AudioListener>();
+        std::cout << "OpenAL Audio Engine: Fallback mode (OpenAL not available)" << std::endl;
+    }
+
+    OpenALAudioEngine::~OpenALAudioEngine() {
+        shutdown();
+    }
+
+    bool OpenALAudioEngine::initialize() {
+        std::cout << "OpenAL Audio Engine: Initialize called (OpenAL not available - using fallback)" << std::endl;
+        m_initialized = true;
+        return true;
+    }
+
+    void OpenALAudioEngine::shutdown() {
+        if (m_initialized) {
+            std::cout << "OpenAL Audio Engine: Shutdown called (fallback mode)" << std::endl;
+            m_initialized = false;
+        }
+    }
+
+    uint32_t OpenALAudioEngine::loadSound(const std::string& filename) {
+        std::cout << "OpenAL Audio Engine: loadSound(" << filename << ") - fallback mode, returning dummy ID" << std::endl;
+        return m_nextSourceId++;
+    }
+
+    uint32_t OpenALAudioEngine::loadStreamingSound(const std::string& filename) {
+        std::cout << "OpenAL Audio Engine: loadStreamingSound(" << filename << ") - fallback mode" << std::endl;
+        return m_nextSourceId++;
+    }
+
+    void OpenALAudioEngine::unloadSound(uint32_t sourceId) {
+        std::cout << "OpenAL Audio Engine: unloadSound(" << sourceId << ") - fallback mode" << std::endl;
+    }
+
+    void OpenALAudioEngine::unloadAllSounds() {
+        std::cout << "OpenAL Audio Engine: unloadAllSounds() - fallback mode" << std::endl;
+    }
+
+    void OpenALAudioEngine::playSound(uint32_t sourceId) {
+        std::cout << "OpenAL Audio Engine: playSound(" << sourceId << ") - fallback mode" << std::endl;
+    }
+
+    void OpenALAudioEngine::pauseSound(uint32_t sourceId) {
+        std::cout << "OpenAL Audio Engine: pauseSound(" << sourceId << ") - fallback mode" << std::endl;
+    }
+
+    void OpenALAudioEngine::stopSound(uint32_t sourceId) {
+        std::cout << "OpenAL Audio Engine: stopSound(" << sourceId << ") - fallback mode" << std::endl;
+    }
+
+    void OpenALAudioEngine::stopAllSounds() {
+        std::cout << "OpenAL Audio Engine: stopAllSounds() - fallback mode" << std::endl;
+    }
+
+    void OpenALAudioEngine::playStreamingSound(uint32_t sourceId, bool loop) {
+        std::cout << "OpenAL Audio Engine: playStreamingSound(" << sourceId << ", " << loop << ") - fallback mode" << std::endl;
+    }
+
+    void OpenALAudioEngine::pauseStreamingSound(uint32_t sourceId) {
+        std::cout << "OpenAL Audio Engine: pauseStreamingSound(" << sourceId << ") - fallback mode" << std::endl;
+    }
+
+    void OpenALAudioEngine::stopStreamingSound(uint32_t sourceId) {
+        std::cout << "OpenAL Audio Engine: stopStreamingSound(" << sourceId << ") - fallback mode" << std::endl;
+    }
+
+    void OpenALAudioEngine::setSourcePosition(uint32_t sourceId, const glm::vec3& position) {
+        // Silent fallback - position changes are common and don't need logging
+    }
+
+    void OpenALAudioEngine::setSourceVelocity(uint32_t sourceId, const glm::vec3& velocity) {
+        // Silent fallback
+    }
+
+    void OpenALAudioEngine::setSourceDirection(uint32_t sourceId, const glm::vec3& direction) {
+        // Silent fallback
+    }
+
+    glm::vec3 OpenALAudioEngine::getSourcePosition(uint32_t sourceId) const {
+        return glm::vec3(0.0f);
+    }
+
+    void OpenALAudioEngine::setSourceGain(uint32_t sourceId, float gain) {
+        // Silent fallback
+    }
+
+    void OpenALAudioEngine::setSourcePitch(uint32_t sourceId, float pitch) {
+        // Silent fallback
+    }
+
+    void OpenALAudioEngine::setSourceLooping(uint32_t sourceId, bool looping) {
+        // Silent fallback
+    }
+
+    void OpenALAudioEngine::setSourceRolloffFactor(uint32_t sourceId, float rolloff) {
+        // Silent fallback
+    }
+
+    void OpenALAudioEngine::setSourceMaxDistance(uint32_t sourceId, float maxDistance) {
+        // Silent fallback
+    }
+
+    void OpenALAudioEngine::setSourceReferenceDistance(uint32_t sourceId, float refDistance) {
+        // Silent fallback
+    }
+
+    void OpenALAudioEngine::setListenerPosition(const glm::vec3& position) {
+        if (m_listener) {
+            m_listener->position = position;
+        }
+    }
+
+    void OpenALAudioEngine::setListenerVelocity(const glm::vec3& velocity) {
+        if (m_listener) {
+            m_listener->velocity = velocity;
+        }
+    }
+
+    void OpenALAudioEngine::setListenerOrientation(const glm::vec3& at, const glm::vec3& up) {
+        if (m_listener) {
+            m_listener->orientation[0] = at;
+            m_listener->orientation[1] = up;
+        }
+    }
+
+    void OpenALAudioEngine::setListenerGain(float gain) {
+        if (m_listener) {
+            m_listener->gain = gain;
+        }
+    }
+
+    glm::vec3 OpenALAudioEngine::getListenerPosition() const {
+        return m_listener ? m_listener->position : glm::vec3(0.0f);
+    }
+
+    bool OpenALAudioEngine::isPlaying(uint32_t sourceId) const {
+        return false;
+    }
+
+    bool OpenALAudioEngine::isPaused(uint32_t sourceId) const {
+        return false;
+    }
+
+    float OpenALAudioEngine::getSourceGain(uint32_t sourceId) const {
+        return 1.0f;
+    }
+
+    void OpenALAudioEngine::update() {
+        // Silent fallback - no update needed
+    }
+
+    size_t OpenALAudioEngine::getActiveSources() const {
+        return 0;
+    }
+
+    void OpenALAudioEngine::setGlobalVolume(float volume) {
+        m_globalVolume = std::max(0.0f, std::min(1.0f, volume));
+    }
+
+    float OpenALAudioEngine::getGlobalVolume() const {
+        return m_globalVolume;
+    }
+
+    std::string OpenALAudioEngine::getLastError() const {
+        return m_lastError;
+    }
+
+    void OpenALAudioEngine::clearErrors() {
+        m_lastError.clear();
+    }
+
+    // Helper methods - keep the mathematical functions working
+    float OpenALAudioEngine::calculateDistanceAttenuation(const glm::vec3& sourcePos, const glm::vec3& listenerPos, 
+                                                         float referenceDistance, float maxDistance, float rolloffFactor) {
+        float distance = glm::length(sourcePos - listenerPos);
+        
+        if (distance <= referenceDistance) {
+            return 1.0f;
+        }
+        
+        if (distance >= maxDistance) {
+            return 0.0f;
+        }
+        
+        return referenceDistance / (referenceDistance + rolloffFactor * (distance - referenceDistance));
+    }
+
+    glm::vec3 OpenALAudioEngine::calculateDopplerEffect(const glm::vec3& sourceVel, const glm::vec3& listenerVel,
+                                                       const glm::vec3& sourcePos, const glm::vec3& listenerPos) {
+        return glm::vec3(0.0f); // No Doppler effect in fallback mode
+    }
+
+    void OpenALAudioEngine::logALError(int error, const std::string& operation) const {
+        // Fallback error logging
+        if (error != 0) {
+            std::cerr << "Audio Error (" << error << ") in operation: " << operation << " (OpenAL not available)" << std::endl;
+        }
+    }
+
+    void OpenALAudioEngine::logALCError(void* device, const std::string& operation) const {
+        // Fallback context error logging
+        std::cerr << "Audio Context Error in operation: " << operation << " (OpenAL not available)" << std::endl;
+    }
+
+    void OpenALAudioEngine::printAudioDeviceInfo() const {
+        std::cout << "OpenAL Device Info: Fallback mode (OpenAL not available)" << std::endl;
+    }
+
+    void OpenALAudioEngine::setDopplerFactor(float factor) {
+        // Fallback stub
+    }
+
+    void OpenALAudioEngine::setSpeedOfSound(float speed) {
+        // Fallback stub
+    }
+
+    size_t OpenALAudioEngine::getActiveSourceCount() const {
+        return 0;
+    }
+
+    std::vector<std::string> OpenALAudioEngine::getLoadedSounds() const {
+        return {};
+    }
+
+    size_t OpenALAudioEngine::getLoadedBufferCount() const {
+        return 0;
+    }
+
+#endif // OPENAL_AVAILABLE
 
     // AudioSystem singleton implementation
     AudioSystem& AudioSystem::getInstance() {

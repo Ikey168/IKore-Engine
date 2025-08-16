@@ -108,11 +108,14 @@ endif()
 
 if(OPENAL_FOUND)
     message(STATUS "Found OpenAL: ${OPENAL_LIBRARIES}")
+    # Set preprocessor definition for conditional compilation
+    add_definitions(-DOPENAL_FOUND=1)
 else()
-    message(WARNING "OpenAL not found. Audio system will be compiled but may not function without OpenAL libraries.")
+    message(WARNING "OpenAL not found. Audio system will be compiled in fallback mode without OpenAL libraries.")
     # Create dummy variables for compilation
     set(OPENAL_LIBRARIES "")
     set(OPENAL_INCLUDE_DIRS "")
+    add_definitions(-DOPENAL_FOUND=0)
 endif()
 
 find_package(OpenGL REQUIRED)
@@ -274,7 +277,15 @@ add_executable(test_ecs_benchmark
 # OpenAL 3D Audio Test executable
 add_executable(test_openal_3d_audio 
     ${CMAKE_CURRENT_SOURCE_DIR}/test_openal_3d_audio.cpp 
-    ${CORE_SOURCES}
+    # Minimal core sources needed for audio testing (excluding graphics dependencies)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityTypes.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Transform.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/TransformableEntities.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityDebugSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AudioComponent.cpp
     ${AUDIO_SOURCES}
 )
 

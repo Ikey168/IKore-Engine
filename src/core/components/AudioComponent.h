@@ -4,6 +4,8 @@
 #include <glm/glm.hpp>
 #include <string>
 #include <vector>
+#include <unordered_map>
+#include <memory>
 
 namespace IKore {
 
@@ -99,7 +101,7 @@ namespace IKore {
         float getRolloffFactor() const { return m_rolloffFactor; }
         
         // Update method (called by AudioSystem)
-        void update() override;
+        void update();
         
         // Position synchronization with entity transform
         void setPosition(const glm::vec3& position);
@@ -187,7 +189,7 @@ namespace IKore {
         glm::vec3 getVelocity() const { return m_velocity; }
         
         // Update method
-        void update() override;
+        void update();
         
         // Position and orientation sync
         void setPosition(const glm::vec3& position);

@@ -1,10 +1,11 @@
 #pragma once
 
-#include "audio/OpenALAudioEngine.h"
+#include "OpenALAudioEngine.h"
 #include "core/Entity.h"
 #include <memory>
 #include <vector>
-#include <unordered_set>
+#include <set>
+#include <string>
 
 namespace IKore {
 
@@ -91,8 +92,8 @@ namespace IKore {
         bool m_initialized;
         
         // Entity tracking
-        std::unordered_set<std::weak_ptr<Entity>, std::owner_less<std::weak_ptr<Entity>>> m_audioEntities;
-        std::unordered_set<std::weak_ptr<Entity>, std::owner_less<std::weak_ptr<Entity>>> m_listenerEntities;
+        std::set<std::weak_ptr<Entity>, std::owner_less<std::weak_ptr<Entity>>> m_audioEntities;
+        std::set<std::weak_ptr<Entity>, std::owner_less<std::weak_ptr<Entity>>> m_listenerEntities;
         std::weak_ptr<Entity> m_activeListener;
         
         // Performance tracking

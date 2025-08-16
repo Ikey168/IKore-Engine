@@ -67,7 +67,7 @@ namespace IKore {
         // Check if entity has AudioComponent
         if (entity->getComponent<AudioComponent>()) {
             m_audioEntities.insert(entity);
-            std::cout << "Registered audio entity (ID: " << entity->getId() << ")" << std::endl;
+            std::cout << "Registered audio entity (ID: " << entity->getID() << ")" << std::endl;
         } else {
             std::cerr << "Warning: Attempted to register entity without AudioComponent" << std::endl;
         }
@@ -86,7 +86,7 @@ namespace IKore {
 
         if (it != m_audioEntities.end()) {
             m_audioEntities.erase(it);
-            std::cout << "Unregistered audio entity (ID: " << entity->getId() << ")" << std::endl;
+            std::cout << "Unregistered audio entity (ID: " << entity->getID() << ")" << std::endl;
         }
     }
 
@@ -104,7 +104,7 @@ namespace IKore {
                 setActiveListener(entity);
             }
             
-            std::cout << "Registered audio listener entity (ID: " << entity->getId() << ")" << std::endl;
+            std::cout << "Registered audio listener entity (ID: " << entity->getID() << ")" << std::endl;
         } else {
             std::cerr << "Warning: Attempted to register entity without AudioListenerComponent" << std::endl;
         }
@@ -139,7 +139,7 @@ namespace IKore {
                 }
             }
             
-            std::cout << "Unregistered audio listener entity (ID: " << entity->getId() << ")" << std::endl;
+            std::cout << "Unregistered audio listener entity (ID: " << entity->getID() << ")" << std::endl;
         }
     }
 
@@ -225,7 +225,7 @@ namespace IKore {
         m_activeListener = listenerEntity;
         listenerComponent->setActive(true);
         
-        std::cout << "Set active audio listener to entity (ID: " << listenerEntity->getId() << ")" << std::endl;
+        std::cout << "Set active audio listener to entity (ID: " << listenerEntity->getID() << ")" << std::endl;
     }
 
     uint32_t AudioSystem3D::playSound3D(const std::string& filename, const glm::vec3& position, 

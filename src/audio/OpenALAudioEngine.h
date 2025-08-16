@@ -1,7 +1,25 @@
 #pragma once
 
-#include <AL/al.h>
-#include <AL/alc.h>
+// OpenAL availability check
+#ifdef __has_include
+    #if __has_include(<AL/al.h>) && __has_include(<AL/alc.h>)
+        #define OPENAL_AVAILABLE 1
+        #include <AL/al.h>
+        #include <AL/alc.h>
+    #else
+        #define OPENAL_AVAILABLE 0
+    #endif
+#else
+    // Use CMake-defined flag for older compilers
+    #if defined(OPENAL_FOUND) && OPENAL_FOUND
+        #define OPENAL_AVAILABLE 1
+        #include <AL/al.h>
+        #include <AL/alc.h>
+    #else
+        #define OPENAL_AVAILABLE 0
+    #endif
+#endif
+
 #include <memory>
 #include <unordered_map>
 #include <string>
@@ -13,12 +31,22 @@
 
 namespace IKore {
 
+#if OPENAL_AVAILABLE
+    // Use real OpenAL types when available
+    using AudioSourceId = ALuint;
+    using AudioBufferId = ALuint;
+#else
+    // Fallback types for compilation without OpenAL
+    using AudioSourceId = unsigned int;
+    using AudioBufferId = unsigned int;
+#endif
+
     /**
      * @brief 3D Audio source configuration and state
      */
     struct AudioSource {
-        ALuint sourceId;
-        ALuint bufferId;
+        AudioSourceId sourceId;
+        AudioBufferId bufferId;
         glm::vec3 position;
         glm::vec3 velocity;
         glm::vec3 direction;
@@ -60,14 +88,24 @@ namespace IKore {
      * @brief Audio buffer management for loaded sounds
      */
     struct AudioBuffer {
-        ALuint bufferId;
+        AudioBufferId bufferId;
         std::string filename;
+#if OPENAL_AVAILABLE
         ALenum format;
         ALsizei size;
         ALsizei frequency;
+#else
+        int format;
+        int size;
+        int frequency;
+#endif
         bool isLoaded = false;
         
+#if OPENAL_AVAILABLE
         AudioBuffer() : bufferId(0), format(AL_FORMAT_MONO16), size(0), frequency(44100) {}
+#else
+        AudioBuffer() : bufferId(0), format(1), size(0), frequency(44100) {}
+#endif
     };
 
     /**
@@ -174,15 +212,25 @@ namespace IKore {
         void setDopplerFactor(float factor);
         void setSpeedOfSound(float speed);
         
+        // Statistics and performance monitoring
+        size_t getActiveSources() const;
+        
         // Error handling and diagnostics
         std::string getLastError() const;
+        void clearErrors();
         bool checkALError(const std::string& operation = "");
         void printAudioDeviceInfo() const;
 
     private:
+#if OPENAL_AVAILABLE
         // OpenAL context and device
         ALCdevice* m_device;
         ALCcontext* m_context;
+#else
+        // Fallback placeholders when OpenAL is not available
+        void* m_device;
+        void* m_context;
+#endif
         bool m_initialized;
         
         // Audio data management
@@ -222,9 +270,15 @@ namespace IKore {
         glm::vec3 calculateDopplerEffect(const glm::vec3& sourceVel, const glm::vec3& listenerVel,
                                        const glm::vec3& sourcePos, const glm::vec3& listenerPos);
         
+#if OPENAL_AVAILABLE
         // OpenAL error checking
         void logALError(ALenum error, const std::string& operation) const;
         void logALCError(ALCdevice* device, const std::string& operation) const;
+#else
+        // Fallback error checking methods
+        void logALError(int error, const std::string& operation) const;
+        void logALCError(void* device, const std::string& operation) const;
+#endif
     };
 
     /**
