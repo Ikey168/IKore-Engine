@@ -10,9 +10,7 @@
 #include <typeindex>
 #include <type_traits>
 #include <glm/glm.hpp>
-
-// Forward declarations
-class Component;
+#include "Component.h"
 
 namespace IKore {
 
