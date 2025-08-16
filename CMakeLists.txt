@@ -76,6 +76,7 @@ set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityDebugSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/MeshComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/MaterialComponent.cpp
 )
 
 set(SCENE_SOURCES
@@ -157,6 +158,16 @@ add_executable(test_mesh_component_geometry
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Frustum.cpp
 )
 
+# MaterialComponent Test executable
+add_executable(test_material_component 
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_material_component.cpp 
+    ${CORE_SOURCES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Frustum.cpp
+)
+
 # Note: Placeholder test files removed from build until implemented
 # These were causing linker errors due to missing main() functions:
 # - simple_scene_test.cpp
@@ -170,6 +181,7 @@ target_link_libraries(scene_graph_demo PRIVATE glfw glad glm stb_image assimp Op
 target_link_libraries(test_mesh_component PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
 target_link_libraries(test_mesh_component_minimal PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
 target_link_libraries(test_mesh_component_geometry PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
+target_link_libraries(test_material_component PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
