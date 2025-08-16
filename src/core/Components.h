@@ -19,7 +19,7 @@ namespace IKore {
 
     // Type aliases for convenience
     using Transform = TransformComponent;
-    using Material = MaterialComponent;
+    using MaterialComp = MaterialComponent;
     using Renderable = RenderableComponent;
     using Velocity = VelocityComponent;
     using MeshComp = MeshComponent;  // Avoid conflict with IKore::Mesh class
