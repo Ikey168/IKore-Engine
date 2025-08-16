@@ -76,6 +76,45 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(bullet3)
 
+# OpenAL for 3D Audio
+find_package(PkgConfig)
+if(PkgConfig_FOUND)
+    pkg_check_modules(OPENAL openal)
+endif()
+
+if(NOT OPENAL_FOUND)
+    # Try to find OpenAL manually
+    find_path(OPENAL_INCLUDE_DIR AL/al.h
+        HINTS
+        /usr/include
+        /usr/local/include
+        /opt/local/include
+    )
+    
+    find_library(OPENAL_LIBRARY
+        NAMES openal OpenAL32
+        HINTS
+        /usr/lib
+        /usr/local/lib
+        /opt/local/lib
+    )
+    
+    if(OPENAL_INCLUDE_DIR AND OPENAL_LIBRARY)
+        set(OPENAL_FOUND TRUE)
+        set(OPENAL_LIBRARIES ${OPENAL_LIBRARY})
+        set(OPENAL_INCLUDE_DIRS ${OPENAL_INCLUDE_DIR})
+    endif()
+endif()
+
+if(OPENAL_FOUND)
+    message(STATUS "Found OpenAL: ${OPENAL_LIBRARIES}")
+else()
+    message(WARNING "OpenAL not found. Audio system will be compiled but may not function without OpenAL libraries.")
+    # Create dummy variables for compilation
+    set(OPENAL_LIBRARIES "")
+    set(OPENAL_INCLUDE_DIRS "")
+endif()
+
 find_package(OpenGL REQUIRED)
 
 # Add include directories for the new folder structure
@@ -83,6 +122,11 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Add Bullet Physics include directories
 include_directories(${bullet3_SOURCE_DIR}/src)
+
+# Add OpenAL include directories
+if(OPENAL_FOUND)
+    include_directories(${OPENAL_INCLUDE_DIRS})
+endif()
 
 # Define source files explicitly
 set(CORE_SOURCES
@@ -96,7 +140,13 @@ set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/MeshComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/MaterialComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/PhysicsComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AudioComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/ECSBenchmark.cpp
+)
+
+set(AUDIO_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/audio/OpenALAudioEngine.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/audio/AudioSystem3D.cpp
 )
 
 set(SCENE_SOURCES
@@ -124,7 +174,7 @@ set(ENGINE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Serialization.cpp
 )
 
-add_executable(IKore ${ENGINE_SOURCES} ${CORE_SOURCES} ${SCENE_SOURCES})
+add_executable(IKore ${ENGINE_SOURCES} ${CORE_SOURCES} ${SCENE_SOURCES} ${AUDIO_SOURCES})
 
 # Scene Graph Test executable
 add_executable(test_scene_graph 
@@ -221,6 +271,13 @@ add_executable(test_ecs_benchmark
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/ECSBenchmark.cpp
 )
 
+# OpenAL 3D Audio Test executable
+add_executable(test_openal_3d_audio 
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_openal_3d_audio.cpp 
+    ${CORE_SOURCES}
+    ${AUDIO_SOURCES}
+)
+
 # Note: Placeholder test files removed from build until implemented
 # These were causing linker errors due to missing main() functions:
 # - simple_scene_test.cpp
@@ -228,16 +285,17 @@ add_executable(test_ecs_benchmark
 # - filesystem_test.cpp
 # - debug_logger_test.cpp
 
-target_link_libraries(IKore PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
-target_link_libraries(test_scene_graph PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
-target_link_libraries(scene_graph_demo PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
-target_link_libraries(test_mesh_component PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
-target_link_libraries(test_mesh_component_minimal PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
-target_link_libraries(test_mesh_component_geometry PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
-target_link_libraries(test_material_component PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
+target_link_libraries(IKore PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
+target_link_libraries(test_scene_graph PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
+target_link_libraries(scene_graph_demo PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
+target_link_libraries(test_mesh_component PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
+target_link_libraries(test_mesh_component_minimal PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
+target_link_libraries(test_mesh_component_geometry PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
+target_link_libraries(test_material_component PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
 target_link_libraries(test_physics_component PRIVATE BulletDynamics BulletCollision LinearMath glm)
 target_link_libraries(test_physics_simple PRIVATE BulletDynamics BulletCollision LinearMath glm)
 target_link_libraries(test_ecs_benchmark PRIVATE glm)
+target_link_libraries(test_openal_3d_audio PRIVATE glm ${OPENAL_LIBRARIES})
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
