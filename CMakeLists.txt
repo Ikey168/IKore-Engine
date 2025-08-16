@@ -61,10 +61,28 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(assimp)
 
+# Bullet Physics
+set(BUILD_BULLET2_DEMOS OFF CACHE BOOL "" FORCE)
+set(BUILD_BULLET3 OFF CACHE BOOL "" FORCE)
+set(BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
+set(BUILD_OPENGL3_DEMOS OFF CACHE BOOL "" FORCE)
+set(BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+set(BUILD_CPU_DEMOS OFF CACHE BOOL "" FORCE)
+set(INSTALL_LIBS ON CACHE BOOL "" FORCE)
+FetchContent_Declare(
+  bullet3
+  GIT_REPOSITORY https://github.com/bulletphysics/bullet3.git
+  GIT_TAG        3.25
+)
+FetchContent_MakeAvailable(bullet3)
+
 find_package(OpenGL REQUIRED)
 
 # Add include directories for the new folder structure
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+# Add Bullet Physics include directories
+include_directories(${bullet3_SOURCE_DIR}/src)
 
 # Define source files explicitly
 set(CORE_SOURCES
@@ -77,6 +95,7 @@ set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/MeshComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/MaterialComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/PhysicsComponent.cpp
 )
 
 set(SCENE_SOURCES
@@ -168,6 +187,26 @@ add_executable(test_material_component
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Frustum.cpp
 )
 
+# PhysicsComponent Test executable
+add_executable(test_physics_component 
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_physics_component.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityTypes.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Transform.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/TransformableEntities.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityDebugSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/PhysicsComponent.cpp
+)
+
+# PhysicsComponent Simple Test executable
+add_executable(test_physics_simple 
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_physics_simple.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/PhysicsComponent.cpp
+)
+
 # Note: Placeholder test files removed from build until implemented
 # These were causing linker errors due to missing main() functions:
 # - simple_scene_test.cpp
@@ -175,13 +214,15 @@ add_executable(test_material_component
 # - filesystem_test.cpp
 # - debug_logger_test.cpp
 
-target_link_libraries(IKore PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
-target_link_libraries(test_scene_graph PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
-target_link_libraries(scene_graph_demo PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
-target_link_libraries(test_mesh_component PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
-target_link_libraries(test_mesh_component_minimal PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
-target_link_libraries(test_mesh_component_geometry PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
-target_link_libraries(test_material_component PRIVATE glfw glad glm stb_image assimp OpenGL::GL)
+target_link_libraries(IKore PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
+target_link_libraries(test_scene_graph PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
+target_link_libraries(scene_graph_demo PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
+target_link_libraries(test_mesh_component PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
+target_link_libraries(test_mesh_component_minimal PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
+target_link_libraries(test_mesh_component_geometry PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
+target_link_libraries(test_material_component PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath)
+target_link_libraries(test_physics_component PRIVATE BulletDynamics BulletCollision LinearMath glm)
+target_link_libraries(test_physics_simple PRIVATE BulletDynamics BulletCollision LinearMath glm)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
