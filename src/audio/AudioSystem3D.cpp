@@ -14,6 +14,7 @@ namespace IKore {
 
     AudioSystem3D::~AudioSystem3D() {
         shutdown();
+        delete m_ambientZoneManager;
     }
 
     bool AudioSystem3D::initialize() {

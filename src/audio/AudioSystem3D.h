@@ -11,6 +11,10 @@ namespace IKore {
 
     class AudioComponent;
     class AudioListenerComponent;
+    
+    // Forward declaration for ambient sound zones
+    struct AmbientSoundZone;
+    class AmbientSoundZoneManager;
 
     /**
      * @brief Audio System for managing 3D positional audio in the ECS
@@ -88,6 +92,10 @@ namespace IKore {
         OpenALAudioEngine& getAudioEngine() { return AudioSystem::getInstance().getEngine(); }
         const OpenALAudioEngine& getAudioEngine() const { return AudioSystem::getInstance().getEngine(); }
 
+        // Ambient zone API
+        void addAmbientZone(const AmbientSoundZone& zone);
+        void clearAmbientZones();
+
     private:
         bool m_initialized;
         
@@ -99,6 +107,9 @@ namespace IKore {
         // Performance tracking
         float m_updateTimer;
         size_t m_frameCount;
+        
+        // Ambient sound zones
+        AmbientSoundZoneManager* m_ambientZoneManager;
         
         // Internal helpers
         void updateAudioComponents();
