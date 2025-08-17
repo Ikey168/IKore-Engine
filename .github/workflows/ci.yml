@@ -48,12 +48,18 @@ jobs:
           libglu1-mesa-dev \
           libopenal-dev \
           pkg-config
+        # Verify OpenAL installation
+        pkg-config --exists openal && echo "OpenAL found via pkg-config" || echo "OpenAL not found via pkg-config"
+        ls -la /usr/lib/*/libopenal* || ls -la /usr/lib/libopenal* || echo "OpenAL library files not found"
 
     - name: Install dependencies (macOS)
       if: matrix.os == 'macos-latest'
       run: |
         # Install OpenAL and required dependencies
+        brew update
         brew install openal-soft pkg-config
+        # Verify installation
+        ls -la /opt/homebrew/lib/libopenal* || ls -la /usr/local/lib/libopenal* || echo "OpenAL not found in expected locations"
 
     - name: Setup vcpkg (Windows)
       if: matrix.os == 'windows-latest'
@@ -62,6 +68,7 @@ jobs:
         vcpkgDirectory: '${{ github.workspace }}/vcpkg'
         vcpkgGitCommitId: '2024.11.16'
         vcpkgJsonGlob: 'vcpkg.json'
+        appendedCacheKey: 'openal-audio'
 
     - name: Install dependencies (Windows)
       if: matrix.os == 'windows-latest'
@@ -104,6 +111,10 @@ jobs:
       if: matrix.os != 'windows-latest'
       working-directory: ${{github.workspace}}/build
       run: |
+        echo "=== CMake Configuration Debug ==="
+        echo "PKG_CONFIG_PATH: $PKG_CONFIG_PATH"
+        pkg-config --exists openal && echo "pkg-config found OpenAL" || echo "pkg-config did NOT find OpenAL"
+        echo ""
         cmake .. \
           -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
           -G "${{ matrix.cmake_generator }}"
@@ -112,6 +123,15 @@ jobs:
       if: matrix.os == 'windows-latest'
       working-directory: ${{github.workspace}}/build
       run: |
+        echo "=== Windows CMake Configuration Debug ==="
+        echo "VCPKG_ROOT: $env:VCPKG_ROOT"
+        echo "Checking vcpkg toolchain file..."
+        if (Test-Path "${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake") {
+          echo "vcpkg toolchain file found"
+        } else {
+          echo "vcpkg toolchain file NOT found"
+        }
+        echo ""
         cmake .. -G "${{ matrix.cmake_generator }}" -A x64 -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake"
 
     - name: Build project (Unix)
