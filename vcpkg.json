@@ -1,0 +1,19 @@
+{
+  "name": "ikore-engine",
+  "version": "1.0.0",
+  "description": "IKore Game Engine with OpenAL 3D Audio Support",
+  "dependencies": [
+    "openal-soft",
+    "glfw3",
+    "glm",
+    "assimp"
+  ],
+  "features": {
+    "audio": {
+      "description": "3D Audio support with OpenAL",
+      "dependencies": [
+        "openal-soft"
+      ]
+    }
+  }
+}
