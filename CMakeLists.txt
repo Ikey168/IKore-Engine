@@ -184,6 +184,7 @@ add_executable(test_scene_graph
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/test_scene_graph.cpp 
     ${CORE_SOURCES}
     ${SCENE_SOURCES}
+    ${AUDIO_SOURCES}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
@@ -195,6 +196,7 @@ add_executable(scene_graph_demo
     ${CMAKE_CURRENT_SOURCE_DIR}/src/demos/scene_graph_demo.cpp 
     ${CORE_SOURCES}
     ${SCENE_SOURCES}
+    ${AUDIO_SOURCES}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
@@ -205,6 +207,7 @@ add_executable(scene_graph_demo
 add_executable(test_mesh_component 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/test_mesh_component.cpp 
     ${CORE_SOURCES}
+    ${AUDIO_SOURCES}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
@@ -215,6 +218,7 @@ add_executable(test_mesh_component
 add_executable(test_mesh_component_minimal 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/test_mesh_component_minimal.cpp 
     ${CORE_SOURCES}
+    ${AUDIO_SOURCES}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
@@ -225,6 +229,7 @@ add_executable(test_mesh_component_minimal
 add_executable(test_mesh_component_geometry 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/test_mesh_component_geometry.cpp 
     ${CORE_SOURCES}
+    ${AUDIO_SOURCES}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
@@ -235,6 +240,7 @@ add_executable(test_mesh_component_geometry
 add_executable(test_material_component 
     ${CMAKE_CURRENT_SOURCE_DIR}/test_material_component.cpp 
     ${CORE_SOURCES}
+    ${AUDIO_SOURCES}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
