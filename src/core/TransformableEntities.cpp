@@ -40,7 +40,7 @@ namespace IKore {
     void TransformableGameObject::cleanup() {
         // Remove from parent
         if (m_parent) {
-            m_parent->removeChild(std::shared_ptr<TransformableGameObject>(this));
+            m_parent->removeChild(std::static_pointer_cast<TransformableGameObject>(shared_from_this()));
         }
         
         // Clean up children
@@ -62,7 +62,7 @@ namespace IKore {
         
         // Remove from current parent
         if (m_parent) {
-            m_parent->removeChild(std::shared_ptr<TransformableGameObject>(this));
+            m_parent->removeChild(std::static_pointer_cast<TransformableGameObject>(shared_from_this()));
         }
         
         m_parent = parent;
