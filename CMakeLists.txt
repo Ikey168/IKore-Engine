@@ -150,6 +150,7 @@ set(CORE_SOURCES
 set(AUDIO_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/audio/OpenALAudioEngine.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/audio/AudioSystem3D.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/audio/AmbientSoundZone.cpp
 )
 
 set(SCENE_SOURCES
@@ -285,6 +286,21 @@ add_executable(test_openal_3d_audio
     ${AUDIO_SOURCES}
 )
 
+# Ambient Sound Zones Test executable
+add_executable(test_ambient_zones 
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_ambient_zones.cpp 
+    # Minimal core sources needed for ambient zones testing
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityTypes.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Transform.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/TransformableEntities.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityDebugSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AudioComponent.cpp
+    ${AUDIO_SOURCES}
+)
+
 # Note: Placeholder test files removed from build until implemented
 # These were causing linker errors due to missing main() functions:
 # - simple_scene_test.cpp
@@ -303,6 +319,7 @@ target_link_libraries(test_physics_component PRIVATE glm)
 target_link_libraries(test_physics_simple PRIVATE BulletDynamics BulletCollision LinearMath glm)
 target_link_libraries(test_ecs_benchmark PRIVATE glm)
 target_link_libraries(test_openal_3d_audio PRIVATE glm ${OPENAL_LIBRARIES})
+target_link_libraries(test_ambient_zones PRIVATE glm ${OPENAL_LIBRARIES})
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
