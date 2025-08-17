@@ -16,9 +16,10 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, Mate
 }
 
 Mesh::~Mesh() {
-    if (m_VAO) glDeleteVertexArrays(1, &m_VAO);
-    if (m_VBO) glDeleteBuffers(1, &m_VBO);
-    if (m_EBO) glDeleteBuffers(1, &m_EBO);
+    // Check if OpenGL functions are available before cleanup
+    if (m_VAO && glDeleteVertexArrays) glDeleteVertexArrays(1, &m_VAO);
+    if (m_VBO && glDeleteBuffers) glDeleteBuffers(1, &m_VBO);
+    if (m_EBO && glDeleteBuffers) glDeleteBuffers(1, &m_EBO);
 }
 
 Mesh::Mesh(Mesh&& other) noexcept 
@@ -54,6 +55,13 @@ Mesh& Mesh::operator=(Mesh&& other) noexcept {
 }
 
 void Mesh::setupMesh() {
+    // Check if OpenGL functions are available (for headless testing environments)
+    if (!glGenVertexArrays) {
+        LOG_WARNING("OpenGL not available - mesh setup skipped (headless mode)");
+        m_isSetup = false;
+        return;
+    }
+    
     glGenVertexArrays(1, &m_VAO);
     glGenBuffers(1, &m_VBO);
     glGenBuffers(1, &m_EBO);
