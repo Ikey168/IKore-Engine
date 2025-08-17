@@ -45,19 +45,28 @@ jobs:
           libx11-dev \
           mesa-common-dev \
           libgl1-mesa-dev \
-          libglu1-mesa-dev
+          libglu1-mesa-dev \
+          libopenal-dev \
+          pkg-config
 
     - name: Install dependencies (macOS)
       if: matrix.os == 'macos-latest'
       run: |
-        # macOS comes with OpenGL framework, no additional packages needed
-        echo "macOS dependencies are built-in"
+        # Install OpenAL and required dependencies
+        brew install openal-soft pkg-config
+
+    - name: Setup vcpkg (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+        C:\vcpkg\bootstrap-vcpkg.bat
+        C:\vcpkg\vcpkg install openal-soft:x64-windows
 
     - name: Install dependencies (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        # Windows dependencies will be handled by vcpkg or CMake FetchContent
-        echo "Windows dependencies handled by CMake"
+        # OpenAL installed via vcpkg above
+        echo "Windows OpenAL dependencies handled by vcpkg"
 
     - name: Create build directory
       run: cmake -E make_directory ${{github.workspace}}/build
@@ -102,7 +111,7 @@ jobs:
       if: matrix.os == 'windows-latest'
       working-directory: ${{github.workspace}}/build
       run: |
-        cmake .. -G "${{ matrix.cmake_generator }}" -A x64
+        cmake .. -G "${{ matrix.cmake_generator }}" -A x64 -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake
 
     - name: Build project (Unix)
       if: matrix.os != 'windows-latest'
