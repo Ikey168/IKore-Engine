@@ -304,25 +304,6 @@ target_link_libraries(test_physics_simple PRIVATE BulletDynamics BulletCollision
 target_link_libraries(test_ecs_benchmark PRIVATE glm)
 target_link_libraries(test_openal_3d_audio PRIVATE glm ${OPENAL_LIBRARIES})
 
-# Simple transform test
-add_executable(simple_transform_test 
-    ${CMAKE_CURRENT_SOURCE_DIR}/simple_transform_test.cpp 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
-)
-target_link_libraries(simple_transform_test PRIVATE glm)
-
-# Simple physics test
-add_executable(simple_physics_test 
-    ${CMAKE_CURRENT_SOURCE_DIR}/simple_physics_test.cpp 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/PhysicsComponent.cpp
-)
-target_link_libraries(simple_physics_test PRIVATE glm BulletDynamics BulletCollision LinearMath)
-
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
 else()

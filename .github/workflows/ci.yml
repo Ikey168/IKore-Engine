@@ -58,6 +58,8 @@ jobs:
         # Install OpenAL and required dependencies
         brew update
         brew install openal-soft pkg-config
+        # Set PKG_CONFIG_PATH for openal-soft
+        echo "PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig:/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
         # Verify installation
         ls -la /opt/homebrew/lib/libopenal* || ls -la /usr/local/lib/libopenal* || echo "OpenAL not found in expected locations"
 
@@ -66,9 +68,8 @@ jobs:
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-        vcpkgGitCommitId: '2024.11.16'
+        vcpkgGitCommitId: '5ab8e2fe99df4b0f76ee36de0bf058e13b101696'
         vcpkgJsonGlob: 'vcpkg.json'
-        appendedCacheKey: 'openal-audio'
 
     - name: Install dependencies (Windows)
       if: matrix.os == 'windows-latest'
