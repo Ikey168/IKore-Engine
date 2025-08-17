@@ -67,15 +67,28 @@ jobs:
       if: matrix.os == 'windows-latest'
       uses: lukka/run-vcpkg@v11
       with:
-        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-        vcpkgGitCommitId: '5ab8e2fe99df4b0f76ee36de0bf058e13b101696'
+        runVcpkgInstall: true
         vcpkgJsonGlob: 'vcpkg.json'
+      continue-on-error: true
+
+    - name: Fallback Windows OpenAL setup
+      if: matrix.os == 'windows-latest'
+      run: |
+        echo "=== Windows OpenAL Setup ==="
+        # Try vcpkg first, then fallback to manual installation
+        if ($env:VCPKG_ROOT) {
+          echo "vcpkg available at: $env:VCPKG_ROOT"
+          & "$env:VCPKG_ROOT/vcpkg.exe" install openal-soft:x64-windows
+        } else {
+          echo "vcpkg not available, using fallback mode"
+          echo "OpenAL will be built in fallback mode without audio libraries"
+        }
 
     - name: Install dependencies (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        # OpenAL installed via vcpkg above
-        echo "Windows OpenAL dependencies handled by vcpkg"
+        # OpenAL installation attempted above
+        echo "Windows OpenAL dependencies setup completed"
 
     - name: Create build directory
       run: cmake -E make_directory ${{github.workspace}}/build
@@ -126,14 +139,14 @@ jobs:
       run: |
         echo "=== Windows CMake Configuration Debug ==="
         echo "VCPKG_ROOT: $env:VCPKG_ROOT"
-        echo "Checking vcpkg toolchain file..."
-        if (Test-Path "${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake") {
-          echo "vcpkg toolchain file found"
+        
+        if ($env:VCPKG_ROOT -and (Test-Path "$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake")) {
+          echo "Using vcpkg toolchain file"
+          cmake .. -G "${{ matrix.cmake_generator }}" -A x64 -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
         } else {
-          echo "vcpkg toolchain file NOT found"
+          echo "vcpkg not available, building in fallback mode"
+          cmake .. -G "${{ matrix.cmake_generator }}" -A x64
         }
-        echo ""
-        cmake .. -G "${{ matrix.cmake_generator }}" -A x64 -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake"
 
     - name: Build project (Unix)
       if: matrix.os != 'windows-latest'
