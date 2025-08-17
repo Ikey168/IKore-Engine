@@ -4,6 +4,11 @@
 #include <chrono>
 #include <cmath>
 
+// Define M_PI for Windows compatibility
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 #include "audio/OpenALAudioEngine.h"
 #include "audio/AudioSystem3D.h"
 #include "core/Entity.h"

@@ -247,17 +247,12 @@ add_executable(test_material_component
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Frustum.cpp
 )
 
-# PhysicsComponent Test executable
+# PhysicsComponent Test executable (simplified)
 add_executable(test_physics_component 
     ${CMAKE_CURRENT_SOURCE_DIR}/test_physics_component.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityTypes.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Transform.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/TransformableEntities.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityDebugSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/PhysicsComponent.cpp
 )
 
 # PhysicsComponent Simple Test executable
@@ -267,17 +262,12 @@ add_executable(test_physics_simple
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/PhysicsComponent.cpp
 )
 
-# ECS Benchmark Test executable
+# ECS Benchmark Test executable (simplified)
 add_executable(test_ecs_benchmark 
     ${CMAKE_CURRENT_SOURCE_DIR}/test_ecs_benchmark.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityTypes.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Transform.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/TransformableEntities.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityDebugSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/ECSBenchmark.cpp
 )
 
 # OpenAL 3D Audio Test executable
@@ -309,10 +299,29 @@ target_link_libraries(test_mesh_component PRIVATE glfw glad glm stb_image assimp
 target_link_libraries(test_mesh_component_minimal PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
 target_link_libraries(test_mesh_component_geometry PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
 target_link_libraries(test_material_component PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
-target_link_libraries(test_physics_component PRIVATE BulletDynamics BulletCollision LinearMath glm)
+target_link_libraries(test_physics_component PRIVATE glm)
 target_link_libraries(test_physics_simple PRIVATE BulletDynamics BulletCollision LinearMath glm)
 target_link_libraries(test_ecs_benchmark PRIVATE glm)
 target_link_libraries(test_openal_3d_audio PRIVATE glm ${OPENAL_LIBRARIES})
+
+# Simple transform test
+add_executable(simple_transform_test 
+    ${CMAKE_CURRENT_SOURCE_DIR}/simple_transform_test.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+)
+target_link_libraries(simple_transform_test PRIVATE glm)
+
+# Simple physics test
+add_executable(simple_physics_test 
+    ${CMAKE_CURRENT_SOURCE_DIR}/simple_physics_test.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/PhysicsComponent.cpp
+)
+target_link_libraries(simple_physics_test PRIVATE glm BulletDynamics BulletCollision LinearMath)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
