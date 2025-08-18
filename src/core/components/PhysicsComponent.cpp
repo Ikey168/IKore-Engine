@@ -81,10 +81,10 @@ namespace IKore {
         
         if (auto entity = getEntity().lock()) {
             if (auto transform = entity->getComponent<TransformComponent>()) {
-                startTransform.setOrigin(glmToBullet(transform->position));
+                startTransform.setOrigin(glmToBullet(transform->getPosition()));
                 
                 // Convert Euler angles to quaternion
-                glm::quat rotation = glm::quat(glm::radians(transform->rotation));
+                glm::quat rotation = glm::quat(glm::radians(transform->getRotation()));
                 startTransform.setRotation(glmToBullet(rotation));
             }
         }
@@ -384,11 +384,11 @@ namespace IKore {
         // Update entity transform from physics simulation
         const btTransform& worldTransform = m_rigidBody->getWorldTransform();
         
-        transform->position = bulletToGlm(worldTransform.getOrigin());
+        transform->setPosition(bulletToGlm(worldTransform.getOrigin()));
         
         // Convert quaternion to Euler angles
         glm::quat rotation = bulletToGlm(worldTransform.getRotation());
-        transform->rotation = glm::degrees(glm::eulerAngles(rotation));
+        transform->setRotation(glm::degrees(glm::eulerAngles(rotation)));
     }
 
     void PhysicsComponent::syncFromTransform() {
@@ -402,10 +402,10 @@ namespace IKore {
 
         // Update physics body from entity transform
         btTransform worldTransform;
-        worldTransform.setOrigin(glmToBullet(transform->position));
+        worldTransform.setOrigin(glmToBullet(transform->getPosition()));
         
         // Convert Euler angles to quaternion
-        glm::quat rotation = glm::quat(glm::radians(transform->rotation));
+        glm::quat rotation = glm::quat(glm::radians(transform->getRotation()));
         worldTransform.setRotation(glmToBullet(rotation));
         
         m_rigidBody->setWorldTransform(worldTransform);
