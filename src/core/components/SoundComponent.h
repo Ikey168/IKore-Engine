@@ -82,6 +82,10 @@ namespace IKore {
         // Position synchronization (called by system)
         void updatePosition();
         
+        // Status queries
+        bool isInitialized() const { return m_initialized; }
+        bool isInFallbackMode() const { return m_fallbackMode; }
+        
     protected:
         void onAttach() override;
         void onDetach() override;
@@ -90,6 +94,8 @@ namespace IKore {
         // OpenAL resources
         ALuint m_source;
         ALuint m_buffer;
+        bool m_initialized;
+        bool m_fallbackMode;  // True when running without audio hardware
         
         // Sound properties
         std::string m_filename;

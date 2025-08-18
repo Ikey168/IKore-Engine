@@ -23,6 +23,9 @@ void testSoundComponent() {
     
     // Component is automatically initialized when attached to entity
     std::cout << "✓ SoundComponent created and initialized" << std::endl;
+    if (soundComp->isInFallbackMode()) {
+        std::cout << "  (Running in fallback mode - no audio hardware detected)" << std::endl;
+    }
     
     // Test audio properties
     soundComp->setVolume(0.8f);

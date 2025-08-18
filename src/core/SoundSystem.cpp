@@ -35,6 +35,14 @@ namespace IKore {
             return true;
         }
 
+        // Check if OpenAL is available by trying to get current context
+        ALCcontext* context = alcGetCurrentContext();
+        if (!context) {
+            Logger::getInstance().warning("SoundSystem initializing in fallback mode (no OpenAL context)");
+            m_initialized = true;
+            return true; // Return success in fallback mode
+        }
+
         // OpenAL is initialized by SoundComponents themselves
         // Here we just set up the listener
         updateListener();
@@ -45,8 +53,9 @@ namespace IKore {
         
         ALenum error = alGetError();
         if (error != AL_NO_ERROR) {
-            Logger::getInstance().error("Failed to initialize SoundSystem: " + std::to_string(error));
-            return false;
+            Logger::getInstance().warning("Failed to initialize SoundSystem OpenAL properties (fallback mode): " + std::to_string(error));
+            m_initialized = true;
+            return true; // Return success in fallback mode
         }
 
         m_initialized = true;
