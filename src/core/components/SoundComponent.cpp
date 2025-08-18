@@ -7,6 +7,54 @@
 #include <vector>
 #include <cstring>
 
+// Conditional OpenAL includes for function definitions
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
+#include <AL/al.h>
+#include <AL/alc.h>
+#else
+// Fallback function definitions when OpenAL is not available
+static inline void alDeleteBuffers(ALuint, ALuint*) {}
+static inline void alGenBuffers(ALuint, ALuint*) {}
+static inline void alBufferData(ALuint, ALenum, const void*, ALsizei, ALsizei) {}
+static inline void alSourcei(ALuint, ALenum, ALint) {}
+static inline void alGenSources(ALuint, ALuint*) {}
+static inline void alDeleteSources(ALuint, ALuint*) {}
+static inline void alSourcePlay(ALuint) {}
+static inline void alSourcePause(ALuint) {}
+static inline void alSourceStop(ALuint) {}
+static inline void alSource3f(ALuint, ALenum, ALfloat, ALfloat, ALfloat) {}
+static inline void alSourcef(ALuint, ALenum, ALfloat) {}
+static inline void alGetSourcei(ALuint, ALenum, ALint*) {}
+static inline ALenum alGetError() { return AL_NO_ERROR; }
+static inline ALCdevice* alcOpenDevice(const ALCchar*) { return nullptr; }
+static inline ALCcontext* alcCreateContext(ALCdevice*, const ALCint*) { return nullptr; }
+static inline ALCboolean alcMakeContextCurrent(ALCcontext*) { return AL_FALSE; }
+static inline void alcDestroyContext(ALCcontext*) {}
+static inline void alcCloseDevice(ALCdevice*) {}
+#endif
+#else
+// Fallback function definitions when OPENAL_FOUND is not defined
+static inline void alDeleteBuffers(ALuint, ALuint*) {}
+static inline void alGenBuffers(ALuint, ALuint*) {}
+static inline void alBufferData(ALuint, ALenum, const void*, ALsizei, ALsizei) {}
+static inline void alSourcei(ALuint, ALenum, ALint) {}
+static inline void alGenSources(ALuint, ALuint*) {}
+static inline void alDeleteSources(ALuint, ALuint*) {}
+static inline void alSourcePlay(ALuint) {}
+static inline void alSourcePause(ALuint) {}
+static inline void alSourceStop(ALuint) {}
+static inline void alSource3f(ALuint, ALenum, ALfloat, ALfloat, ALfloat) {}
+static inline void alSourcef(ALuint, ALenum, ALfloat) {}
+static inline void alGetSourcei(ALuint, ALenum, ALint*) {}
+static inline ALenum alGetError() { return AL_NO_ERROR; }
+static inline ALCdevice* alcOpenDevice(const ALCchar*) { return nullptr; }
+static inline ALCcontext* alcCreateContext(ALCdevice*, const ALCint*) { return nullptr; }
+static inline ALCboolean alcMakeContextCurrent(ALCcontext*) { return AL_FALSE; }
+static inline void alcDestroyContext(ALCcontext*) {}
+static inline void alcCloseDevice(ALCdevice*) {}
+#endif
+
 namespace IKore {
 
     // Static member initialization

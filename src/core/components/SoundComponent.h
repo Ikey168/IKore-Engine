@@ -14,6 +14,11 @@
 // Dummy OpenAL types for compilation without OpenAL
 typedef unsigned int ALuint;
 typedef int ALenum;
+typedef int ALint;
+typedef float ALfloat;
+typedef int ALsizei;
+typedef char ALCchar;
+typedef char ALCboolean;
 typedef struct ALCdevice ALCdevice;
 typedef struct ALCcontext ALCcontext;
 #define AL_NO_ERROR 0
@@ -21,11 +26,19 @@ typedef struct ALCcontext ALCcontext;
 #define AL_PLAYING 0x1012
 #define AL_PAUSED 0x1013
 #define AL_STOPPED 0x1014
+#define AL_FALSE 0
+#define AL_FORMAT_MONO16 0x1101
+#define AL_BUFFER 0x1009
 #endif
 #else
 // Fallback definitions when OPENAL_FOUND is not defined
 typedef unsigned int ALuint;
 typedef int ALenum;
+typedef int ALint;
+typedef float ALfloat;
+typedef int ALsizei;
+typedef char ALCchar;
+typedef char ALCboolean;
 typedef struct ALCdevice ALCdevice;
 typedef struct ALCcontext ALCcontext;
 #define AL_NO_ERROR 0
@@ -33,6 +46,9 @@ typedef struct ALCcontext ALCcontext;
 #define AL_PLAYING 0x1012
 #define AL_PAUSED 0x1013
 #define AL_STOPPED 0x1014
+#define AL_FALSE 0
+#define AL_FORMAT_MONO16 0x1101
+#define AL_BUFFER 0x1009
 #endif
 
 namespace IKore {
