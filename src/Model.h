@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 #include <unordered_map>
+#include <map>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -13,11 +14,13 @@
 
 #include "Texture.h"
 #include "Frustum.h"
+#include "core/components/AnimationComponent.h"
 
 namespace IKore {
 
-// Forward declaration
+// Forward declarations
 class Shader;
+class AnimationComponent;
 
 struct Vertex {
     glm::vec3 position;
@@ -93,6 +96,11 @@ private:
     // Texture cache to avoid loading duplicate textures
     std::unordered_map<std::string, std::shared_ptr<Texture>> m_textureCache;
     
+    // Animation data
+    std::map<std::string, BoneInfo> m_boneInfoMap;
+    int m_boneCounter = 0;
+    bool m_hasAnimations = false;
+    
     // Assimp processing
     void loadModel(const std::string& path);
     void processNode(aiNode* node, const aiScene* scene);
@@ -100,6 +108,10 @@ private:
     Material loadMaterial(aiMaterial* mat);
     std::shared_ptr<Texture> loadMaterialTexture(aiMaterial* mat, aiTextureType type, 
                                                 Texture::Type textureType);
+    
+    // Animation processing
+    void extractBoneWeightForVertices(std::vector<AnimatedVertex>& vertices, aiMesh* mesh, const aiScene* scene);
+    void setBoneIdAndWeights(AnimatedVertex& vertex, int boneID, float weight);
     
     // Helper functions
     std::string getTextureFilename(aiMaterial* mat, aiTextureType type, unsigned int index = 0);
@@ -131,6 +143,11 @@ public:
     const BoundingBox& getBoundingBox() const { return m_boundingBox; }
     size_t getMeshCount() const { return m_meshes.size(); }
     bool isEmpty() const { return m_meshes.empty(); }
+    
+    // Animation getters
+    bool hasAnimations() const { return m_hasAnimations; }
+    const std::map<std::string, BoneInfo>& getBoneInfoMap() const { return m_boneInfoMap; }
+    int getBoneCount() const { return m_boneCounter; }
     
     // Static utility functions
     static std::shared_ptr<Model> loadFromFileShared(const std::string& path);

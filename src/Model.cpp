@@ -228,6 +228,12 @@ void Model::loadModel(const std::string& path) {
         throw std::runtime_error("Assimp error: " + std::string(importer.GetErrorString()));
     }
     
+    // Check if the model has animations
+    m_hasAnimations = scene->mNumAnimations > 0;
+    if (m_hasAnimations) {
+        LOG_INFO("Model has " + std::to_string(scene->mNumAnimations) + " animations");
+    }
+    
     processNode(scene->mRootNode, scene);
 }
 
@@ -248,47 +254,111 @@ std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     
-    // Process vertices
-    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-        Vertex vertex;
-        
-        // Positions
-        vertex.position.x = mesh->mVertices[i].x;
-        vertex.position.y = mesh->mVertices[i].y;
-        vertex.position.z = mesh->mVertices[i].z;
-        
-        // Normals
-        if (mesh->HasNormals()) {
-            vertex.normal.x = mesh->mNormals[i].x;
-            vertex.normal.y = mesh->mNormals[i].y;
-            vertex.normal.z = mesh->mNormals[i].z;
-        } else {
-            vertex.normal = glm::vec3(0.0f, 1.0f, 0.0f);
-        }
-        
-        // Texture coordinates
-        if (mesh->mTextureCoords[0]) {
-            vertex.texCoords.x = mesh->mTextureCoords[0][i].x;
-            vertex.texCoords.y = mesh->mTextureCoords[0][i].y;
-        } else {
-            vertex.texCoords = glm::vec2(0.0f, 0.0f);
-        }
-        
-        // Tangents
-        if (mesh->HasTangentsAndBitangents()) {
-            vertex.tangent.x = mesh->mTangents[i].x;
-            vertex.tangent.y = mesh->mTangents[i].y;
-            vertex.tangent.z = mesh->mTangents[i].z;
+    // Check if mesh has bones for skeletal animation
+    bool hasBones = mesh->mNumBones > 0;
+    std::vector<AnimatedVertex> animatedVertices;
+    
+    if (hasBones) {
+        // Process animated vertices
+        for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+            AnimatedVertex vertex;
             
-            vertex.bitangent.x = mesh->mBitangents[i].x;
-            vertex.bitangent.y = mesh->mBitangents[i].y;
-            vertex.bitangent.z = mesh->mBitangents[i].z;
-        } else {
-            vertex.tangent = glm::vec3(1.0f, 0.0f, 0.0f);
-            vertex.bitangent = glm::vec3(0.0f, 0.0f, 1.0f);
+            // Positions
+            vertex.position.x = mesh->mVertices[i].x;
+            vertex.position.y = mesh->mVertices[i].y;
+            vertex.position.z = mesh->mVertices[i].z;
+            
+            // Normals
+            if (mesh->HasNormals()) {
+                vertex.normal.x = mesh->mNormals[i].x;
+                vertex.normal.y = mesh->mNormals[i].y;
+                vertex.normal.z = mesh->mNormals[i].z;
+            } else {
+                vertex.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+            }
+            
+            // Texture coordinates
+            if (mesh->mTextureCoords[0]) {
+                vertex.texCoords.x = mesh->mTextureCoords[0][i].x;
+                vertex.texCoords.y = mesh->mTextureCoords[0][i].y;
+            } else {
+                vertex.texCoords = glm::vec2(0.0f, 0.0f);
+            }
+            
+            // Tangents
+            if (mesh->HasTangentsAndBitangents()) {
+                vertex.tangent.x = mesh->mTangents[i].x;
+                vertex.tangent.y = mesh->mTangents[i].y;
+                vertex.tangent.z = mesh->mTangents[i].z;
+                
+                vertex.bitangent.x = mesh->mBitangents[i].x;
+                vertex.bitangent.y = mesh->mBitangents[i].y;
+                vertex.bitangent.z = mesh->mBitangents[i].z;
+            } else {
+                vertex.tangent = glm::vec3(1.0f, 0.0f, 0.0f);
+                vertex.bitangent = glm::vec3(0.0f, 0.0f, 1.0f);
+            }
+            
+            animatedVertices.push_back(vertex);
         }
         
-        vertices.push_back(vertex);
+        // Extract bone data
+        extractBoneWeightForVertices(animatedVertices, mesh, scene);
+        
+        // Convert animated vertices to regular vertices for now
+        // TODO: Create AnimatedMesh class for proper animated vertex handling
+        for (const auto& animVertex : animatedVertices) {
+            Vertex vertex;
+            vertex.position = animVertex.position;
+            vertex.normal = animVertex.normal;
+            vertex.texCoords = animVertex.texCoords;
+            vertex.tangent = animVertex.tangent;
+            vertex.bitangent = animVertex.bitangent;
+            vertices.push_back(vertex);
+        }
+    } else {
+        // Process regular vertices
+        for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+            Vertex vertex;
+            
+            // Positions
+            vertex.position.x = mesh->mVertices[i].x;
+            vertex.position.y = mesh->mVertices[i].y;
+            vertex.position.z = mesh->mVertices[i].z;
+            
+            // Normals
+            if (mesh->HasNormals()) {
+                vertex.normal.x = mesh->mNormals[i].x;
+                vertex.normal.y = mesh->mNormals[i].y;
+                vertex.normal.z = mesh->mNormals[i].z;
+            } else {
+                vertex.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+            }
+            
+            // Texture coordinates
+            if (mesh->mTextureCoords[0]) {
+                vertex.texCoords.x = mesh->mTextureCoords[0][i].x;
+                vertex.texCoords.y = mesh->mTextureCoords[0][i].y;
+            } else {
+                vertex.texCoords = glm::vec2(0.0f, 0.0f);
+            }
+            
+            // Tangents
+            if (mesh->HasTangentsAndBitangents()) {
+                vertex.tangent.x = mesh->mTangents[i].x;
+                vertex.tangent.y = mesh->mTangents[i].y;
+                vertex.tangent.z = mesh->mTangents[i].z;
+                
+                vertex.bitangent.x = mesh->mBitangents[i].x;
+                vertex.bitangent.y = mesh->mBitangents[i].y;
+                vertex.bitangent.z = mesh->mBitangents[i].z;
+            } else {
+                vertex.tangent = glm::vec3(1.0f, 0.0f, 0.0f);
+                vertex.bitangent = glm::vec3(0.0f, 0.0f, 1.0f);
+            }
+            
+            vertices.push_back(vertex);
+        }
     }
     
     // Process indices
@@ -440,6 +510,54 @@ void Model::calculateModelBoundingBox() {
              std::to_string(m_boundingBox.max.x) + ", " + 
              std::to_string(m_boundingBox.max.y) + ", " + 
              std::to_string(m_boundingBox.max.z) + ")");
+}
+
+void Model::extractBoneWeightForVertices(std::vector<AnimatedVertex>& vertices, aiMesh* mesh, const aiScene* scene) {
+    for (int boneIndex = 0; boneIndex < mesh->mNumBones; ++boneIndex) {
+        int boneID = -1;
+        std::string boneName = mesh->mBones[boneIndex]->mName.C_Str();
+        
+        if (m_boneInfoMap.find(boneName) == m_boneInfoMap.end()) {
+            BoneInfo newBoneInfo;
+            newBoneInfo.id = m_boneCounter;
+            
+            // Convert Assimp matrix to GLM matrix
+            aiMatrix4x4 offsetMatrix = mesh->mBones[boneIndex]->mOffsetMatrix;
+            newBoneInfo.offset = glm::mat4(
+                offsetMatrix.a1, offsetMatrix.b1, offsetMatrix.c1, offsetMatrix.d1,
+                offsetMatrix.a2, offsetMatrix.b2, offsetMatrix.c2, offsetMatrix.d2,
+                offsetMatrix.a3, offsetMatrix.b3, offsetMatrix.c3, offsetMatrix.d3,
+                offsetMatrix.a4, offsetMatrix.b4, offsetMatrix.c4, offsetMatrix.d4
+            );
+            
+            m_boneInfoMap[boneName] = newBoneInfo;
+            boneID = m_boneCounter;
+            m_boneCounter++;
+        } else {
+            boneID = m_boneInfoMap[boneName].id;
+        }
+        
+        assert(boneID != -1);
+        auto weights = mesh->mBones[boneIndex]->mWeights;
+        int numWeights = mesh->mBones[boneIndex]->mNumWeights;
+        
+        for (int weightIndex = 0; weightIndex < numWeights; ++weightIndex) {
+            int vertexId = weights[weightIndex].mVertexId;
+            float weight = weights[weightIndex].mWeight;
+            assert(vertexId <= vertices.size());
+            setBoneIdAndWeights(vertices[vertexId], boneID, weight);
+        }
+    }
+}
+
+void Model::setBoneIdAndWeights(AnimatedVertex& vertex, int boneID, float weight) {
+    for (int i = 0; i < MAX_BONE_INFLUENCE; ++i) {
+        if (vertex.boneIDs[i] < 0) {
+            vertex.weights[i] = weight;
+            vertex.boneIDs[i] = boneID;
+            break;
+        }
+    }
 }
 
 } // namespace IKore
