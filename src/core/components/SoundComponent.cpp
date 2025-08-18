@@ -89,6 +89,8 @@ namespace IKore {
             }
         }
 
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         // Generate OpenAL source
         alGenSources(1, &m_source);
         ALenum error = alGetError();
@@ -99,17 +101,25 @@ namespace IKore {
 
         // Set default source properties
         updateOpenALProperties();
+#endif
+#endif
         return true;
     }
 
     void SoundComponent::cleanupOpenAL() {
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         if (m_source != 0) {
             alDeleteSources(1, &m_source);
             m_source = 0;
         }
+#endif
+#endif
     }
 
     bool SoundComponent::initializeOpenALContext() {
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         // Try to open the default device (may fail in headless environments)
         s_device = alcOpenDevice(nullptr);
         if (!s_device) {
@@ -139,9 +149,19 @@ namespace IKore {
         s_openALInitialized = true;
         Logger::getInstance().info("OpenAL context initialized successfully");
         return true;
+#else
+        // OpenAL not available, always return false
+        return false;
+#endif
+#else
+        // OpenAL not available, always return false
+        return false;
+#endif
     }
 
     void SoundComponent::cleanupOpenALContext() {
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         if (s_context) {
             alcMakeContextCurrent(nullptr);
             alcDestroyContext(s_context);
@@ -155,6 +175,8 @@ namespace IKore {
 
         s_openALInitialized = false;
         Logger::getInstance().info("OpenAL context cleaned up");
+#endif
+#endif
     }
 
     bool SoundComponent::loadSound(const std::string& filename) {
@@ -182,6 +204,8 @@ namespace IKore {
         }
 
         // Generate buffer
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         alGenBuffers(1, &m_buffer);
         ALenum error = alGetError();
         if (error != AL_NO_ERROR) {
@@ -194,6 +218,26 @@ namespace IKore {
             m_isLoaded = true;
             return true; // Return success in fallback mode
         }
+#else
+        // No OpenAL available, use fallback mode
+        if (!s_fallbackModeDetected) {
+            Logger::getInstance().warning("OpenAL not available - switching to fallback mode");
+            s_fallbackModeDetected = true;
+        }
+        m_fallbackMode = true;
+        m_isLoaded = true;
+        return true;
+#endif
+#else
+        // No OpenAL available, use fallback mode
+        if (!s_fallbackModeDetected) {
+            Logger::getInstance().warning("OpenAL not available - switching to fallback mode");
+            s_fallbackModeDetected = true;
+        }
+        m_fallbackMode = true;
+        m_isLoaded = true;
+        return true;
+#endif
 
         // Load WAV file (simplified implementation)
         // In a real implementation, you'd use a proper audio loading library
@@ -219,6 +263,8 @@ namespace IKore {
         }
 
         // Upload buffer data
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         alBufferData(m_buffer, AL_FORMAT_MONO16, samples.data(), 
                     samples.size() * sizeof(short), sampleRate);
         
@@ -232,6 +278,14 @@ namespace IKore {
 
         // Attach buffer to source
         alSourcei(m_source, AL_BUFFER, m_buffer);
+#else
+        // Fallback mode - no buffer operations needed
+        Logger::getInstance().info("Loading sound in fallback mode: " + filename);
+#endif
+#else
+        // Fallback mode - no buffer operations needed
+        Logger::getInstance().info("Loading sound in fallback mode: " + filename);
+#endif
         
         m_filename = filename;
         m_isLoaded = true;
@@ -243,10 +297,14 @@ namespace IKore {
         if (m_isLoaded) {
             stop();
             
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
             if (m_buffer != 0) {
                 alDeleteBuffers(1, &m_buffer);
                 m_buffer = 0;
             }
+#endif
+#endif
             
             m_filename.clear();
             m_isLoaded = false;
@@ -270,11 +328,15 @@ namespace IKore {
             return;
         }
 
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         alSourcePlay(m_source);
         ALenum error = alGetError();
         if (error != AL_NO_ERROR) {
             Logger::getInstance().error("Failed to play sound: " + std::to_string(error));
         }
+#endif
+#endif
     }
 
     void SoundComponent::pause() {
@@ -285,7 +347,11 @@ namespace IKore {
         
         if (m_source == 0) return;
         
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         alSourcePause(m_source);
+#endif
+#endif
     }
 
     void SoundComponent::stop() {
@@ -296,7 +362,11 @@ namespace IKore {
         
         if (m_source == 0) return;
         
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         alSourceStop(m_source);
+#endif
+#endif
     }
 
     void SoundComponent::playOneShot() {
@@ -366,9 +436,17 @@ namespace IKore {
     ALenum SoundComponent::getOpenALState() const {
         if (m_source == 0) return AL_INITIAL;
         
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         ALint state;
         alGetSourcei(m_source, AL_SOURCE_STATE, &state);
         return static_cast<ALenum>(state);
+#else
+        return AL_INITIAL;
+#endif
+#else
+        return AL_INITIAL;
+#endif
     }
 
     void SoundComponent::update(float deltaTime) {
@@ -388,10 +466,14 @@ namespace IKore {
 
     void SoundComponent::updatePosition() {
         syncPositionFromTransform();
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         if (m_source != 0) {
             alSource3f(m_source, AL_POSITION, m_position.x, m_position.y, m_position.z);
             alSource3f(m_source, AL_VELOCITY, m_velocity.x, m_velocity.y, m_velocity.z);
         }
+#endif
+#endif
     }
 
     void SoundComponent::syncPositionFromTransform() {
@@ -414,6 +496,8 @@ namespace IKore {
     void SoundComponent::updateOpenALProperties() {
         if (m_source == 0) return;
         
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         // Basic properties
         alSourcef(m_source, AL_GAIN, m_volume * m_gain);
         alSourcef(m_source, AL_PITCH, m_pitch);
@@ -435,6 +519,8 @@ namespace IKore {
         if (error != AL_NO_ERROR) {
             Logger::getInstance().warning("OpenAL error updating properties: " + std::to_string(error));
         }
+#endif
+#endif
     }
 
 } // namespace IKore

@@ -4,8 +4,28 @@
 #include <glm/glm.hpp>
 #include <string>
 #include <memory>
+
+// Conditional OpenAL includes
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
 #include <AL/al.h>
 #include <AL/alc.h>
+#else
+// Dummy OpenAL types for compilation without OpenAL
+typedef unsigned int ALuint;
+typedef int ALenum;
+typedef struct ALCdevice ALCdevice;
+typedef struct ALCcontext ALCcontext;
+#define AL_NO_ERROR 0
+#endif
+#else
+// Fallback definitions when OPENAL_FOUND is not defined
+typedef unsigned int ALuint;
+typedef int ALenum;
+typedef struct ALCdevice ALCdevice;
+typedef struct ALCcontext ALCcontext;
+#define AL_NO_ERROR 0
+#endif
 
 namespace IKore {
 
