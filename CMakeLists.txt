@@ -144,6 +144,8 @@ set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/MaterialComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/PhysicsComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AudioComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AIComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/AISystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/ECSBenchmark.cpp
 )
 
@@ -303,6 +305,17 @@ target_link_libraries(test_physics_component PRIVATE glm)
 target_link_libraries(test_physics_simple PRIVATE BulletDynamics BulletCollision LinearMath glm)
 target_link_libraries(test_ecs_benchmark PRIVATE glm)
 target_link_libraries(test_openal_3d_audio PRIVATE glm ${OPENAL_LIBRARIES})
+
+# AI Component Test executable
+add_executable(test_ai_component 
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_component.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AIComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/AISystem.cpp
+)
+
+target_link_libraries(test_ai_component PRIVATE glm)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
