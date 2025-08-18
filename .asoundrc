@@ -1,0 +1,8 @@
+# ALSA configuration to suppress errors in headless environments
+pcm.!default {
+    type null
+}
+
+ctl.!default {
+    type null
+}

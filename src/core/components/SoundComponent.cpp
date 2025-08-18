@@ -11,6 +11,7 @@ namespace IKore {
 
     // Static member initialization
     bool SoundComponent::s_openALInitialized = false;
+    bool SoundComponent::s_fallbackModeDetected = false;
     ALCdevice* SoundComponent::s_device = nullptr;
     ALCcontext* SoundComponent::s_context = nullptr;
     int SoundComponent::s_componentCount = 0;
@@ -52,10 +53,21 @@ namespace IKore {
     }
 
     void SoundComponent::onAttach() {
-        if (!initializeOpenAL()) {
-            Logger::getInstance().warning("OpenAL initialization failed - running in fallback mode (no audio output)");
+        // Check if we already detected fallback mode globally
+        if (s_fallbackModeDetected) {
             m_fallbackMode = true;
-            m_initialized = true; // Still mark as initialized for testing
+            m_initialized = true;
+            return;
+        }
+        
+        if (!initializeOpenAL()) {
+            // First time detection - log it once
+            if (!s_fallbackModeDetected) {
+                Logger::getInstance().warning("OpenAL not available - SoundComponents will run in fallback mode");
+                s_fallbackModeDetected = true;
+            }
+            m_fallbackMode = true;
+            m_initialized = true;
             return;
         }
         
@@ -157,9 +169,8 @@ namespace IKore {
         m_filename = filename;
 
         // If in fallback mode, just pretend to load successfully
-        if (m_fallbackMode) {
+        if (m_fallbackMode || s_fallbackModeDetected) {
             m_isLoaded = true;
-            Logger::getInstance().info("Sound loaded in fallback mode: " + filename);
             return true;
         }
 
@@ -174,7 +185,11 @@ namespace IKore {
         alGenBuffers(1, &m_buffer);
         ALenum error = alGetError();
         if (error != AL_NO_ERROR) {
-            Logger::getInstance().warning("Failed to generate OpenAL buffer (fallback mode): " + std::to_string(error));
+            // Switch to fallback mode for this and future components
+            if (!s_fallbackModeDetected) {
+                Logger::getInstance().warning("OpenAL buffer creation failed - switching to fallback mode");
+                s_fallbackModeDetected = true;
+            }
             m_fallbackMode = true;
             m_isLoaded = true;
             return true; // Return success in fallback mode

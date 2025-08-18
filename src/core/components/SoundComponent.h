@@ -129,6 +129,7 @@ namespace IKore {
         
         // Static OpenAL context management
         static bool s_openALInitialized;
+        static bool s_fallbackModeDetected;  // Global fallback detection
         static ALCdevice* s_device;
         static ALCcontext* s_context;
         static int s_componentCount;

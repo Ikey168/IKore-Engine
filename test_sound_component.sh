@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Suppress ALSA error messages in headless environments
+export ALSA_CARD=-1
+export ALSA_DEVICE=-1
+
 echo "=== IKore Engine Sound Component Test ==="
 echo "Testing SoundComponent implementation for Issue #82"
 echo ""
