@@ -3,9 +3,53 @@
 #include "components/SoundComponent.h"
 #include "components/TransformComponent.h"
 #include "Logger.h"
+#include <algorithm>
+
+// Conditional OpenAL includes
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
 #include <AL/al.h>
 #include <AL/alc.h>
-#include <algorithm>
+#else
+// Dummy OpenAL types for compilation without OpenAL
+typedef unsigned int ALuint;
+typedef int ALenum;
+typedef struct ALCdevice ALCdevice;
+typedef struct ALCcontext ALCcontext;
+#define AL_NO_ERROR 0
+#define AL_POSITION 0x1004
+#define AL_VELOCITY 0x1006
+#define AL_GAIN 0x100A
+#define AL_ORIENTATION 0x100F
+// Dummy function declarations
+static inline ALCcontext* alcGetCurrentContext() { return nullptr; }
+static inline ALenum alGetError() { return AL_NO_ERROR; }
+static inline void alDopplerFactor(float) {}
+static inline void alSpeedOfSound(float) {}
+static inline void alListener3f(ALenum, float, float, float) {}
+static inline void alListenerfv(ALenum, const float*) {}
+static inline void alListenerf(ALenum, float) {}
+#endif
+#else
+// Fallback definitions when OPENAL_FOUND is not defined
+typedef unsigned int ALuint;
+typedef int ALenum;
+typedef struct ALCdevice ALCdevice;
+typedef struct ALCcontext ALCcontext;
+#define AL_NO_ERROR 0
+#define AL_POSITION 0x1004
+#define AL_VELOCITY 0x1006
+#define AL_GAIN 0x100A
+#define AL_ORIENTATION 0x100F
+// Dummy function declarations
+static inline ALCcontext* alcGetCurrentContext() { return nullptr; }
+static inline ALenum alGetError() { return AL_NO_ERROR; }
+static inline void alDopplerFactor(float) {}
+static inline void alSpeedOfSound(float) {}
+static inline void alListener3f(ALenum, float, float, float) {}
+static inline void alListenerfv(ALenum, const float*) {}
+static inline void alListenerf(ALenum, float) {}
+#endif
 
 namespace IKore {
 
@@ -36,6 +80,8 @@ namespace IKore {
         }
 
         // Check if OpenAL is available by trying to get current context
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         ALCcontext* context = alcGetCurrentContext();
         if (!context) {
             Logger::getInstance().warning("SoundSystem initializing in fallback mode (no OpenAL context)");
@@ -57,6 +103,18 @@ namespace IKore {
             m_initialized = true;
             return true; // Return success in fallback mode
         }
+#else
+        // OpenAL not available, use fallback mode
+        Logger::getInstance().warning("SoundSystem initializing in fallback mode (no OpenAL context)");
+        m_initialized = true;
+        return true; // Return success in fallback mode
+#endif
+#else
+        // OpenAL not available, use fallback mode
+        Logger::getInstance().warning("SoundSystem initializing in fallback mode (no OpenAL context)");
+        m_initialized = true;
+        return true; // Return success in fallback mode
+#endif
 
         m_initialized = true;
         Logger::getInstance().info("SoundSystem initialized successfully");
@@ -165,17 +223,29 @@ namespace IKore {
 
     void SoundSystem::setGlobalVolume(float volume) {
         m_globalVolume = std::max(0.0f, std::min(1.0f, volume));
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         alListenerf(AL_GAIN, m_globalVolume);
+#endif
+#endif
     }
 
     void SoundSystem::setDopplerFactor(float factor) {
         m_dopplerFactor = std::max(0.0f, factor);
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         alDopplerFactor(m_dopplerFactor);
+#endif
+#endif
     }
 
     void SoundSystem::setSpeedOfSound(float speed) {
         m_speedOfSound = std::max(0.1f, speed);
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         alSpeedOfSound(m_speedOfSound);
+#endif
+#endif
     }
 
     void SoundSystem::setDistanceCulling(bool enabled, float maxDistance) {
@@ -208,6 +278,8 @@ namespace IKore {
     }
 
     void SoundSystem::updateListener() {
+#ifdef OPENAL_FOUND
+#if OPENAL_FOUND
         // Set listener position and velocity
         alListener3f(AL_POSITION, m_listenerPosition.x, m_listenerPosition.y, m_listenerPosition.z);
         alListener3f(AL_VELOCITY, m_listenerVelocity.x, m_listenerVelocity.y, m_listenerVelocity.z);
@@ -221,6 +293,8 @@ namespace IKore {
         
         // Set global volume
         alListenerf(AL_GAIN, m_globalVolume);
+#endif
+#endif
     }
 
     void SoundSystem::cullDistantComponents() {

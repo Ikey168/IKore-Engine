@@ -17,6 +17,10 @@ typedef int ALenum;
 typedef struct ALCdevice ALCdevice;
 typedef struct ALCcontext ALCcontext;
 #define AL_NO_ERROR 0
+#define AL_INITIAL 0x1011
+#define AL_PLAYING 0x1012
+#define AL_PAUSED 0x1013
+#define AL_STOPPED 0x1014
 #endif
 #else
 // Fallback definitions when OPENAL_FOUND is not defined
@@ -25,6 +29,10 @@ typedef int ALenum;
 typedef struct ALCdevice ALCdevice;
 typedef struct ALCcontext ALCcontext;
 #define AL_NO_ERROR 0
+#define AL_INITIAL 0x1011
+#define AL_PLAYING 0x1012
+#define AL_PAUSED 0x1013
+#define AL_STOPPED 0x1014
 #endif
 
 namespace IKore {
