@@ -254,7 +254,7 @@ namespace IKore {
                     auto velocity = entity->getComponent<VelocityComponent>();
                     
                     // Simulate simple update operation
-                    transform->position += velocity->velocity * 0.016f; // 60 FPS
+                    transform->setPosition(transform->getPosition() + velocity->velocity * 0.016f); // 60 FPS
                 }
             }
         }

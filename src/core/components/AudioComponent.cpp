@@ -190,11 +190,6 @@ namespace IKore {
 
         auto& audioSystem = AudioSystem::getInstance();
         
-        // Temporarily adjust properties
-        float originalVolume = m_volume;
-        float originalPitch = m_pitch;
-        bool originalLooping = m_looping;
-        
         // Set one-shot properties
         audioSystem.getEngine().setSourceGain(clip->sourceId, volume * m_volume);
         audioSystem.getEngine().setSourcePitch(clip->sourceId, pitch * m_pitch);
@@ -444,7 +439,7 @@ namespace IKore {
         if (auto entity = getEntity().lock()) {
             // Try to get transform component
             if (auto transform = entity->getComponent<TransformComponent>()) {
-                setPosition(transform->position);
+                setPosition(transform->getPosition());
                 
                 // Also sync velocity if transform provides it
                 // This would require velocity tracking in TransformComponent
@@ -547,7 +542,7 @@ namespace IKore {
         if (auto entity = getEntity().lock()) {
             // Try to get transform component
             if (auto transform = entity->getComponent<TransformComponent>()) {
-                setPosition(transform->position);
+                setPosition(transform->getPosition());
                 
                 // For camera entities, we might also want to get orientation
                 // This would depend on how camera orientation is stored
