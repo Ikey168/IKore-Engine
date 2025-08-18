@@ -19,6 +19,7 @@ typedef float ALfloat;
 typedef int ALsizei;
 typedef char ALCchar;
 typedef char ALCboolean;
+typedef int ALCint;
 typedef struct ALCdevice ALCdevice;
 typedef struct ALCcontext ALCcontext;
 #define AL_NO_ERROR 0
@@ -29,6 +30,26 @@ typedef struct ALCcontext ALCcontext;
 #define AL_FALSE 0
 #define AL_FORMAT_MONO16 0x1101
 #define AL_BUFFER 0x1009
+
+// Fallback function declarations when OpenAL is not available
+static inline void alDeleteBuffers(ALuint, ALuint*) {}
+static inline void alGenBuffers(ALuint, ALuint*) {}
+static inline void alBufferData(ALuint, ALenum, const void*, ALsizei, ALsizei) {}
+static inline void alSourcei(ALuint, ALenum, ALint) {}
+static inline void alGenSources(ALuint, ALuint*) {}
+static inline void alDeleteSources(ALuint, ALuint*) {}
+static inline void alSourcePlay(ALuint) {}
+static inline void alSourcePause(ALuint) {}
+static inline void alSourceStop(ALuint) {}
+static inline void alSource3f(ALuint, ALenum, ALfloat, ALfloat, ALfloat) {}
+static inline void alSourcef(ALuint, ALenum, ALfloat) {}
+static inline void alGetSourcei(ALuint, ALenum, ALint*) {}
+static inline ALenum alGetError() { return AL_NO_ERROR; }
+static inline ALCdevice* alcOpenDevice(const ALCchar*) { return nullptr; }
+static inline ALCcontext* alcCreateContext(ALCdevice*, const ALCint*) { return nullptr; }
+static inline ALCboolean alcMakeContextCurrent(ALCcontext*) { return AL_FALSE; }
+static inline void alcDestroyContext(ALCcontext*) {}
+static inline void alcCloseDevice(ALCdevice*) {}
 #endif
 #else
 // Fallback definitions when OPENAL_FOUND is not defined
@@ -39,6 +60,7 @@ typedef float ALfloat;
 typedef int ALsizei;
 typedef char ALCchar;
 typedef char ALCboolean;
+typedef int ALCint;
 typedef struct ALCdevice ALCdevice;
 typedef struct ALCcontext ALCcontext;
 #define AL_NO_ERROR 0
@@ -49,6 +71,26 @@ typedef struct ALCcontext ALCcontext;
 #define AL_FALSE 0
 #define AL_FORMAT_MONO16 0x1101
 #define AL_BUFFER 0x1009
+
+// Fallback function declarations when OPENAL_FOUND is not defined
+static inline void alDeleteBuffers(ALuint, ALuint*) {}
+static inline void alGenBuffers(ALuint, ALuint*) {}
+static inline void alBufferData(ALuint, ALenum, const void*, ALsizei, ALsizei) {}
+static inline void alSourcei(ALuint, ALenum, ALint) {}
+static inline void alGenSources(ALuint, ALuint*) {}
+static inline void alDeleteSources(ALuint, ALuint*) {}
+static inline void alSourcePlay(ALuint) {}
+static inline void alSourcePause(ALuint) {}
+static inline void alSourceStop(ALuint) {}
+static inline void alSource3f(ALuint, ALenum, ALfloat, ALfloat, ALfloat) {}
+static inline void alSourcef(ALuint, ALenum, ALfloat) {}
+static inline void alGetSourcei(ALuint, ALenum, ALint*) {}
+static inline ALenum alGetError() { return AL_NO_ERROR; }
+static inline ALCdevice* alcOpenDevice(const ALCchar*) { return nullptr; }
+static inline ALCcontext* alcCreateContext(ALCdevice*, const ALCint*) { return nullptr; }
+static inline ALCboolean alcMakeContextCurrent(ALCcontext*) { return AL_FALSE; }
+static inline void alcDestroyContext(ALCcontext*) {}
+static inline void alcCloseDevice(ALCdevice*) {}
 #endif
 
 namespace IKore {
