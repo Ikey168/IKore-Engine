@@ -313,6 +313,7 @@ add_executable(test_ai_component
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AIComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/AISystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
 )
 
 target_link_libraries(test_ai_component PRIVATE glm)
