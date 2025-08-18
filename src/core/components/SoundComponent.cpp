@@ -13,6 +13,19 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 #else
+// Fallback OpenAL type definitions for compilation without OpenAL
+typedef int ALint;
+typedef unsigned int ALuint;
+typedef int ALenum;
+typedef int ALboolean;
+typedef float ALfloat;
+typedef char ALCchar;
+typedef int ALCboolean;
+typedef int ALCint;
+typedef int ALsizei;
+typedef struct ALCdevice_struct { int unused; } ALCdevice;
+typedef struct ALCcontext_struct { int unused; } ALCcontext;
+
 // Fallback function definitions when OpenAL is not available
 static inline void alDeleteBuffers(ALuint, ALuint*) {}
 static inline void alGenBuffers(ALuint, ALuint*) {}
@@ -34,6 +47,19 @@ static inline void alcDestroyContext(ALCcontext*) {}
 static inline void alcCloseDevice(ALCdevice*) {}
 #endif
 #else
+// Fallback OpenAL type definitions when OPENAL_FOUND is not defined
+typedef int ALint;
+typedef unsigned int ALuint;
+typedef int ALenum;
+typedef int ALboolean;
+typedef float ALfloat;
+typedef char ALCchar;
+typedef int ALCboolean;
+typedef int ALCint;
+typedef int ALsizei;
+typedef struct ALCdevice_struct { int unused; } ALCdevice;
+typedef struct ALCcontext_struct { int unused; } ALCcontext;
+
 // Fallback function definitions when OPENAL_FOUND is not defined
 static inline void alDeleteBuffers(ALuint, ALuint*) {}
 static inline void alGenBuffers(ALuint, ALuint*) {}
@@ -53,20 +79,6 @@ static inline ALCcontext* alcCreateContext(ALCdevice*, const ALCint*) { return n
 static inline ALCboolean alcMakeContextCurrent(ALCcontext*) { return AL_FALSE; }
 static inline void alcDestroyContext(ALCcontext*) {}
 static inline void alcCloseDevice(ALCdevice*) {}
-#endif
-
-// Fallback OpenAL type definitions for compilation without OpenAL
-#ifndef OPENAL_FOUND
-typedef int ALint;
-typedef unsigned int ALuint;
-typedef int ALenum;
-typedef int ALboolean;
-typedef float ALfloat;
-typedef char ALCchar;
-typedef int ALCboolean;
-typedef struct ALCdevice_struct { int unused; } ALCdevice;
-typedef struct ALCcontext_struct { int unused; } ALCcontext;
-typedef int ALsizei;
 #endif
 
 namespace IKore {
