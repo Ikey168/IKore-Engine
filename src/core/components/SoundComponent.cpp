@@ -55,6 +55,20 @@ static inline void alcDestroyContext(ALCcontext*) {}
 static inline void alcCloseDevice(ALCdevice*) {}
 #endif
 
+// Fallback OpenAL type definitions for compilation without OpenAL
+#ifndef OPENAL_FOUND
+typedef int ALint;
+typedef unsigned int ALuint;
+typedef int ALenum;
+typedef int ALboolean;
+typedef float ALfloat;
+typedef char ALCchar;
+typedef int ALCboolean;
+typedef struct ALCdevice_struct { int unused; } ALCdevice;
+typedef struct ALCcontext_struct { int unused; } ALCcontext;
+typedef int ALsizei;
+#endif
+
 namespace IKore {
 
     // Static member initialization
