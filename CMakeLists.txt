@@ -306,6 +306,14 @@ add_executable(test_event_system
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
 )
+target_link_libraries(test_event_system PRIVATE glm::glm)
+
+# EventSystem Simple Test executable
+add_executable(test_event_system_simple
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_event_system_simple.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EventSystem.cpp
+)
+target_link_libraries(test_event_system_simple PRIVATE glm::glm)
 
 target_link_libraries(IKore PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
 target_link_libraries(test_scene_graph PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
