@@ -147,9 +147,11 @@ set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AIComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AnimationComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/SoundComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/NetworkComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/AISystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/AnimationLoader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/SoundSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/NetworkSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/ECSBenchmark.cpp
 )
 
@@ -346,6 +348,17 @@ if(OPENAL_FOUND)
 else()
     target_link_libraries(test_sound_component PRIVATE glm::glm)
 endif()
+
+# NetworkComponent test
+add_executable(test_network_component 
+    test_network_component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/NetworkComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/NetworkSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+)
+target_link_libraries(test_network_component PRIVATE glm::glm)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
