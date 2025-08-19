@@ -341,7 +341,11 @@ add_executable(test_sound_component
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
 )
-target_link_libraries(test_sound_component PRIVATE glm::glm openal)
+if(OPENAL_FOUND)
+    target_link_libraries(test_sound_component PRIVATE glm::glm ${OPENAL_LIBRARIES})
+else()
+    target_link_libraries(test_sound_component PRIVATE glm::glm)
+endif()
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)

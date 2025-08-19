@@ -1,3 +1,7 @@
+#!/bin/bash
+
+# Create a temporary file with the fixed content
+cat > /tmp/SoundSystem.cpp << 'END'
 #include "SoundSystem.h"
 #include "Entity.h"
 #include "components/SoundComponent.h"
@@ -24,8 +28,9 @@ typedef struct ALCcontext ALCcontext;
 #define AL_ORIENTATION 0x100F
 #define AL_TRUE 1
 #define AL_FALSE 0
-// Dummy function declarations - no need to redeclare alGetError, it's already declared in SoundComponent.h
+// Dummy function declarations
 static inline ALCcontext* alcGetCurrentContext() { return nullptr; }
+static inline ALenum alGetError() { return AL_NO_ERROR; }
 static inline void alDopplerFactor(float) {}
 static inline void alSpeedOfSound(float) {}
 static inline void alListener3f(ALenum, float, float, float) {}
@@ -46,8 +51,9 @@ typedef struct ALCcontext ALCcontext;
 #define AL_ORIENTATION 0x100F
 #define AL_TRUE 1
 #define AL_FALSE 0
-// Dummy function declarations - no need to redeclare alGetError, it's already declared in SoundComponent.h
+// Dummy function declarations
 static inline ALCcontext* alcGetCurrentContext() { return nullptr; }
+static inline ALenum alGetError() { return AL_NO_ERROR; }
 static inline void alDopplerFactor(float) {}
 static inline void alSpeedOfSound(float) {}
 static inline void alListener3f(ALenum, float, float, float) {}
@@ -271,9 +277,8 @@ namespace IKore {
     }
 
 } // namespace IKore
+END
 
-// Implement the alGetError function that's declared in SoundComponent.h
-// This must be in global scope, not inside any namespace
-ALenum alGetError() { 
-    return AL_NO_ERROR; 
-}
+# Copy the temporary file to replace the original
+cp /tmp/SoundSystem.cpp /workspaces/IKore-Engine/src/core/SoundSystem.cpp
+echo "✅ SoundSystem.cpp updated with fixes"

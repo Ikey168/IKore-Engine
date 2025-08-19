@@ -1,12 +1,13 @@
+#!/bin/bash
+
+# Create a temporary file with the fixed content
+cat > /tmp/SoundComponent.h << 'END'
 #pragma once
 
 #include "core/Component.h"
 #include <glm/glm.hpp>
 #include <string>
 #include <memory>
-
-// Forward declare alGetError once for the entire file
-ALenum alGetError();
 
 // Conditional OpenAL includes
 #ifdef OPENAL_FOUND
@@ -57,7 +58,7 @@ static inline void alSourceStop(ALuint) {}
 static inline void alSource3f(ALuint, ALenum, ALfloat, ALfloat, ALfloat) {}
 static inline void alSourcef(ALuint, ALenum, ALfloat) {}
 static inline void alGetSourcei(ALuint, ALenum, ALint*) {}
-// NOTE: alGetError() is declared at the top of the file and implemented in SoundSystem.cpp
+static inline ALenum alGetError() { return AL_NO_ERROR; }
 static inline ALCdevice* alcOpenDevice(const ALCchar*) { return nullptr; }
 static inline ALCcontext* alcCreateContext(ALCdevice*, const ALCint*) { return nullptr; }
 static inline ALCboolean alcMakeContextCurrent(ALCcontext*) { return AL_FALSE; }
@@ -108,7 +109,7 @@ static inline void alSourceStop(ALuint) {}
 static inline void alSource3f(ALuint, ALenum, ALfloat, ALfloat, ALfloat) {}
 static inline void alSourcef(ALuint, ALenum, ALfloat) {}
 static inline void alGetSourcei(ALuint, ALenum, ALint*) {}
-// NOTE: alGetError() is declared at the top of the file and implemented in SoundSystem.cpp
+static inline ALenum alGetError() { return AL_NO_ERROR; }
 static inline ALCdevice* alcOpenDevice(const ALCchar*) { return nullptr; }
 static inline ALCcontext* alcCreateContext(ALCdevice*, const ALCint*) { return nullptr; }
 static inline ALCboolean alcMakeContextCurrent(ALCcontext*) { return AL_FALSE; }
@@ -232,3 +233,12 @@ namespace IKore {
     };
 
 }  // namespace IKore
+END
+
+# Copy the temporary file to replace the original
+cp /tmp/SoundComponent.h /workspaces/IKore-Engine/src/core/components/SoundComponent.h
+echo "✅ SoundComponent.h updated with fixes"
+
+# Now also check for issues in the SoundSystem.h
+grep -q "AL_TRUE" /workspaces/IKore-Engine/src/core/SoundSystem.h || \
+echo "⚠️ SoundSystem.h might need similar fixes (no AL_TRUE found)"
