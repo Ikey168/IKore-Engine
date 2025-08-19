@@ -140,6 +140,7 @@ set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/TransformableEntities.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityDebugSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EventSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/MeshComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/MaterialComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/PhysicsComponent.cpp
@@ -297,6 +298,14 @@ add_executable(test_openal_3d_audio
 # - logger_test.cpp 
 # - filesystem_test.cpp
 # - debug_logger_test.cpp
+
+# EventSystem Test executable
+add_executable(test_event_system 
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_event_system.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EventSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+)
 
 target_link_libraries(IKore PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
 target_link_libraries(test_scene_graph PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
