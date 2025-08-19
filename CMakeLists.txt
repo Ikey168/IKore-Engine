@@ -146,11 +146,9 @@ set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AudioComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AIComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AnimationComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/SoundComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/NetworkComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/AISystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/AnimationLoader.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/SoundSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/NetworkSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/ECSBenchmark.cpp
 )
@@ -333,21 +331,6 @@ add_executable(test_animation_component
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
 )
 target_link_libraries(test_animation_component PRIVATE glad glfw glm::glm assimp)
-
-# SoundComponent test
-add_executable(test_sound_component 
-    test_sound_component.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/SoundComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/SoundSystem.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
-)
-if(OPENAL_FOUND)
-    target_link_libraries(test_sound_component PRIVATE glm::glm ${OPENAL_LIBRARIES})
-else()
-    target_link_libraries(test_sound_component PRIVATE glm::glm)
-endif()
 
 # NetworkComponent test
 add_executable(test_network_component 
