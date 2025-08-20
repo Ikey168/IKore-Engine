@@ -361,6 +361,20 @@ add_executable(test_network_component
 )
 target_link_libraries(test_network_component PRIVATE glm::glm)
 
+# ParticleComponent test
+add_executable(test_particle_component 
+    test_particle_component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/ParticleComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ParticleSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/TransformComponent.cpp
+)
+target_link_libraries(test_particle_component PRIVATE glad glfw glm::glm stb_image OpenGL::GL)
+
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
 else()
