@@ -305,6 +305,7 @@ add_executable(test_event_system
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EventSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
 )
 target_link_libraries(test_event_system PRIVATE glm::glm)
 
