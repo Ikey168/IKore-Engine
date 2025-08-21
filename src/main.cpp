@@ -11,6 +11,7 @@
 #include <thread>
 
 #include "core/Logger.h"
+#include "core/PerformanceOverlay.h"
 #include "Camera.h"
 #include "CameraController.h"
 #include "Shader.h"
@@ -60,6 +61,9 @@ IKore::ParticleSystemManager* g_particleManager = nullptr;
 
 // Global shadow map manager for keyboard callbacks
 IKore::ShadowMapManager* g_shadowManager = nullptr;
+
+// Global performance overlay pointer for keyboard callbacks
+IKore::PerformanceOverlay* g_performanceOverlay = nullptr;
 
 // Global frustum culler for rendering optimization
 IKore::FrustumCuller g_frustumCuller;
@@ -299,7 +303,22 @@ int main() {
     LOG_INFO("Controls: Press E to show entity stats, R to remove test entities, T to create new test entity");
     LOG_INFO("Serialization Controls: F9 to load scene, F10 to clear scene, F11 to save as JSON, F12 to save as binary");
     LOG_INFO("Debug Controls: F8 to toggle Entity Debug System");
+    LOG_INFO("Performance Controls: F7 to toggle Performance Overlay");
     LOG_INFO("Transform Controls: Y to rotate parent, U to scale parent, I to move light, O to move camera, P to print hierarchy");
+
+    // === Performance Overlay Initialization ===
+    IKore::PerformanceOverlay& performanceOverlay = IKore::getPerformanceOverlay();
+    g_performanceOverlay = &performanceOverlay; // Set global pointer for keyboard callbacks
+    
+    if (performanceOverlay.initialize(1280, 720)) {
+        LOG_INFO("Performance overlay initialized successfully");
+        performanceOverlay.getConfig().enabled = false; // Start hidden
+        performanceOverlay.getConfig().showAdvancedStats = true;
+        performanceOverlay.setPosition(10.0f, 10.0f);
+    } else {
+        LOG_WARNING("Performance overlay initialization failed");
+        g_performanceOverlay = nullptr;
+    }
 
     // === Input Component Demonstration ===
     LOG_INFO("=== Input Component System Demonstration ===");
@@ -613,6 +632,15 @@ int main() {
         // Update Entity Debug System
         IKore::getEntityDebugSystem().update(static_cast<float>(deltaTime));
 
+        // Update Performance Overlay
+        if (g_performanceOverlay) {
+            g_performanceOverlay->update(static_cast<float>(deltaTime));
+            
+            // Update entity statistics
+            auto stats = entityManager.getStats();
+            g_performanceOverlay->setEntityStats(stats.totalEntities, stats.validEntities, stats.totalEntities * 3); // Estimate component count
+        }
+
         // === Camera Component System Update ===
         if (g_enhancedCamera && g_followTarget) {
             // Update the follow target position (simulate movement)
@@ -906,6 +934,11 @@ int main() {
                     
                     // Render the cube
                     glDrawArrays(GL_TRIANGLES, 0, 36);
+                    
+                    // Track draw call for performance overlay
+                    if (g_performanceOverlay) {
+                        g_performanceOverlay->recordDrawCall(12, 36); // 12 triangles, 36 vertices for a cube
+                    }
                 }
                 
                 // Log culling statistics periodically
@@ -936,6 +969,11 @@ int main() {
         // Render Entity Debug Overlay (after all scene rendering)
         IKore::getEntityDebugSystem().renderDebugOverlay();
 
+        // Render Performance Overlay (after all other rendering)
+        if (g_performanceOverlay) {
+            g_performanceOverlay->render();
+        }
+
         glfwSwapBuffers(window);
 
         // Frame timing to cap FPS
@@ -950,6 +988,11 @@ int main() {
     // Cleanup
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
+
+    // Cleanup performance overlay
+    if (g_performanceOverlay) {
+        g_performanceOverlay->shutdown();
+    }
 
     // Cleanup entity system
     LOG_INFO("Cleaning up Entity System...");
@@ -996,6 +1039,9 @@ void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height) {
     camera.setAspectRatio(static_cast<float>(width) / static_cast<float>(height));
     if (g_postProcessor) {
         g_postProcessor->resize(width, height);
+    }
+    if (g_performanceOverlay) {
+        g_performanceOverlay->onWindowResize(width, height);
     }
 }
 
@@ -1087,6 +1133,11 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
             g_shadowManager->setShadowQuality(quality);
             std::string qualityName = qualityLevel == 0 ? "Low" : (qualityLevel == 1 ? "Medium" : "High");
             LOG_INFO("Shadow quality set to: " + qualityName);
+        }
+        else if (key == GLFW_KEY_F7 && g_performanceOverlay) {
+            // Toggle performance overlay
+            g_performanceOverlay->toggle();
+            LOG_INFO("Performance overlay " + std::string(g_performanceOverlay->isVisible() ? "enabled" : "disabled"));
         }
         else if (key == GLFW_KEY_C) {
             // Toggle frustum culling
@@ -1397,6 +1448,10 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
             // Toggle Entity Debug System
             IKore::getEntityDebugSystem().toggleDebugMode();
         }
+        else if (key == GLFW_KEY_F7 && g_performanceOverlay) {
+            // Toggle Performance Overlay
+            g_performanceOverlay->toggle();
+        }
     }
 }
 
@@ -1454,6 +1509,11 @@ void renderSceneObjects(std::shared_ptr<IKore::Shader> shader, GLuint VAO, bool 
             
             // Draw the cube
             glDrawArrays(GL_TRIANGLES, 0, 36);
+            
+            // Track draw call for performance overlay
+            if (g_performanceOverlay) {
+                g_performanceOverlay->recordDrawCall(12, 36); // 12 triangles, 36 vertices for a cube
+            }
         }
         
         glBindVertexArray(0);
