@@ -154,6 +154,7 @@ set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AIComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AnimationComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/NetworkComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/LODComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/AISystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/AnimationLoader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/NetworkSystem.cpp
