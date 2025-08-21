@@ -78,7 +78,7 @@ jobs:
         # Try vcpkg first, then fallback to manual installation
         if ($env:VCPKG_ROOT) {
           echo "vcpkg available at: $env:VCPKG_ROOT"
-          & "$env:VCPKG_ROOT/vcpkg.exe" install openal-soft:x64-windows
+          & "$env:VCPKG_ROOT/vcpkg.exe" install
         } else {
           echo "vcpkg not available, using fallback mode"
           echo "OpenAL will be built in fallback mode without audio libraries"
