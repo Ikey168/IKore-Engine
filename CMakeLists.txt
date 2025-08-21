@@ -1,4 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
+cmake_policy(VERSION 3.10)
+
+# Set modern OpenGL preference policy
+if(POLICY CMP0072)
+    cmake_policy(SET CMP0072 NEW)
+endif()
 
 project(IKoreEngine LANGUAGES CXX)
 
@@ -360,6 +366,19 @@ add_executable(test_network_component
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
 )
 target_link_libraries(test_network_component PRIVATE glm::glm)
+
+# ParticleComponent test
+add_executable(test_particle_component 
+    test_particle_component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/ParticleComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ParticleSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+)
+target_link_libraries(test_particle_component PRIVATE glad glfw glm::glm stb_image OpenGL::GL)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
