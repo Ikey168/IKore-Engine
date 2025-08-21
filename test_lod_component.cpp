@@ -7,9 +7,17 @@
 // Mock classes for testing
 class Model {
 public:
+    Model() = default;
     Model(const std::string& path) : path_(path) {
         std::cout << "Loading model: " << path << std::endl;
     }
+    
+    bool loadFromFile(const std::string& path) {
+        path_ = path;
+        std::cout << "Loading model: " << path << std::endl;
+        return true; // Mock success
+    }
+    
     const std::string& getPath() const { return path_; }
 private:
     std::string path_;
@@ -32,7 +40,7 @@ private:
     glm::vec3 position_{0.0f};
 };
 
-class Entity {
+class Entity : public std::enable_shared_from_this<Entity> {
 public:
     template<typename T>
     std::shared_ptr<T> getComponent() {
@@ -105,7 +113,7 @@ int main() {
     lod->forceLODLevel(LODLevel::LOD_2);
     std::cout << "Forced LOD to level 2: " << static_cast<int>(lod->getCurrentLOD()) << std::endl;
     
-    lod->clearForcedLOD();
+    lod->enableAutoLOD();
     lod->update(glm::vec3(10, 0, 0), 0.016f);
     std::cout << "After clearing forced LOD (distance 10): " << static_cast<int>(lod->getCurrentLOD()) << std::endl;
     

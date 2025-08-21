@@ -14,9 +14,17 @@ using namespace IKore;
 // Simple mock Model class
 class Model {
 public:
+    Model() = default;
     Model(const std::string& path) : path_(path) {
         LOG_INFO("Loading model: " + path);
     }
+    
+    bool loadFromFile(const std::string& path) {
+        path_ = path;
+        LOG_INFO("Loading model: " + path);
+        return true; // Mock success
+    }
+    
     const std::string& getPath() const { return path_; }
 private:
     std::string path_;
@@ -114,7 +122,7 @@ int main() {
     lod->forceLODLevel(LODLevel::LOD_2);
     LOG_INFO("Forced LOD to level 2: " + std::to_string(static_cast<int>(lod->getCurrentLOD())));
     
-    lod->clearForcedLOD();
+    lod->enableAutoLOD();
     lod->update(glm::vec3(10, 0, 0), 0.016f);
     LOG_INFO("After clearing forced LOD (distance 10): " + std::to_string(static_cast<int>(lod->getCurrentLOD())));
     
