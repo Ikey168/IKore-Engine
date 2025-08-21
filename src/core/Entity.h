@@ -164,6 +164,23 @@ namespace IKore {
             return m_components.find(typeIndex) != m_components.end();
         }
 
+        /**
+         * @brief Remove all components from this entity
+         */
+        void removeAllComponents() {
+            for (auto& pair : m_components) {
+                // Try to cast to Component base class and call onDetach
+                if (auto component = std::static_pointer_cast<Component>(pair.second)) {
+                    try {
+                        component->onDetach();
+                    } catch (...) {
+                        // Ignore exceptions during cleanup
+                    }
+                }
+            }
+            m_components.clear();
+        }
+
     private:
         EntityID m_id;
         std::unordered_map<std::type_index, std::shared_ptr<void>> m_components;

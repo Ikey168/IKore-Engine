@@ -141,6 +141,8 @@ endif()
 set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityPool.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/PooledEntityManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityTypes.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Transform.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/TransformableEntities.cpp
