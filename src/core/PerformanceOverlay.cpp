@@ -462,19 +462,9 @@ namespace IKore {
     }
 
     void PerformanceOverlay::updateGPUStats() {
-        if (!m_gpuTimingSupported) {
-            return;
-        }
-
-        // Query GPU timing
-        GLuint64 gpuTime = 0;
-        glGetQueryObjectui64v(m_gpuQueries[m_currentQuery], GL_QUERY_RESULT, &gpuTime);
-        m_stats.gpuFrameTime = gpuTime / 1000000.0f; // Convert nanoseconds to milliseconds
-
-        // Start timing for next frame
-        m_currentQuery = 1 - m_currentQuery;
-        glBeginQuery(GL_TIME_ELAPSED, m_gpuQueries[m_currentQuery]);
-
+        // GPU timing disabled for compatibility
+        m_stats.gpuFrameTime = 0.0f; // Placeholder value
+        
         // Get GPU memory info
         getGPUMemoryInfo(m_stats.gpuMemoryUsage, m_stats.totalGpuMemory);
     }
