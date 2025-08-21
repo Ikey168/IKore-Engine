@@ -74,6 +74,10 @@ void Logger::log(LogLevel level, const std::string& message) {
     }
 }
 
+void Logger::debug(const std::string& message) {
+    log(LogLevel::DEBUG, message);
+}
+
 void Logger::info(const std::string& message) {
     log(LogLevel::INFO, message);
 }
@@ -101,6 +105,7 @@ std::string Logger::getCurrentTimestamp() {
 
 std::string Logger::logLevelToString(LogLevel level) {
     switch (level) {
+        case LogLevel::DEBUG:   return "DEBUG";
         case LogLevel::INFO:    return "INFO";
         case LogLevel::WARNING: return "WARNING";
         case LogLevel::ERROR:   return "ERROR";

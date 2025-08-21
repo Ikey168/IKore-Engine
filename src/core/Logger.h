@@ -12,6 +12,7 @@
 namespace IKore {
 
 enum class LogLevel {
+    DEBUG,
     INFO,
     WARNING,
     ERROR
@@ -25,6 +26,7 @@ public:
     void shutdown();
     
     void log(LogLevel level, const std::string& message);
+    void debug(const std::string& message);
     void info(const std::string& message);
     void warning(const std::string& message);
     void error(const std::string& message);
@@ -45,6 +47,7 @@ private:
 };
 
 // Convenience macros
+#define LOG_DEBUG(msg) IKore::Logger::getInstance().debug(msg)
 #define LOG_INFO(msg) IKore::Logger::getInstance().info(msg)
 #define LOG_WARNING(msg) IKore::Logger::getInstance().warning(msg)
 #define LOG_ERROR(msg) IKore::Logger::getInstance().error(msg)
