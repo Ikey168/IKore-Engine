@@ -147,6 +147,7 @@ set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Transform.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/TransformableEntities.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EntityDebugSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/PerformanceOverlay.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EventSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/MeshComponent.cpp
