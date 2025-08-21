@@ -305,6 +305,32 @@ test_openal_3d_audio/fast:
 .PHONY : test_openal_3d_audio/fast
 
 #=============================================================================
+# Target rules for targets named test_event_system
+
+# Build rule for target.
+test_event_system: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_event_system
+.PHONY : test_event_system
+
+# fast build rule for target.
+test_event_system/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/build
+.PHONY : test_event_system/fast
+
+#=============================================================================
+# Target rules for targets named test_event_system_simple
+
+# Build rule for target.
+test_event_system_simple: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_event_system_simple
+.PHONY : test_event_system_simple
+
+# fast build rule for target.
+test_event_system_simple/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system_simple.dir/build.make CMakeFiles/test_event_system_simple.dir/build
+.PHONY : test_event_system_simple/fast
+
+#=============================================================================
 # Target rules for targets named test_ai_component
 
 # Build rule for target.
@@ -331,17 +357,30 @@ test_animation_component/fast:
 .PHONY : test_animation_component/fast
 
 #=============================================================================
-# Target rules for targets named test_sound_component
+# Target rules for targets named test_network_component
 
 # Build rule for target.
-test_sound_component: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_sound_component
-.PHONY : test_sound_component
+test_network_component: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_network_component
+.PHONY : test_network_component
 
 # fast build rule for target.
-test_sound_component/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/build
-.PHONY : test_sound_component/fast
+test_network_component/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/build
+.PHONY : test_network_component/fast
+
+#=============================================================================
+# Target rules for targets named test_particle_component
+
+# Build rule for target.
+test_particle_component: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_particle_component
+.PHONY : test_particle_component
+
+# fast build rule for target.
+test_particle_component/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/build
+.PHONY : test_particle_component/fast
 
 #=============================================================================
 # Target rules for targets named update_mappings
@@ -757,6 +796,7 @@ src/ParticleSystem.o: src/ParticleSystem.cpp.o
 # target to build an object file
 src/ParticleSystem.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/ParticleSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/ParticleSystem.cpp.o
 .PHONY : src/ParticleSystem.cpp.o
 
 src/ParticleSystem.i: src/ParticleSystem.cpp.i
@@ -765,6 +805,7 @@ src/ParticleSystem.i: src/ParticleSystem.cpp.i
 # target to preprocess a source file
 src/ParticleSystem.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/ParticleSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/ParticleSystem.cpp.i
 .PHONY : src/ParticleSystem.cpp.i
 
 src/ParticleSystem.s: src/ParticleSystem.cpp.s
@@ -773,6 +814,7 @@ src/ParticleSystem.s: src/ParticleSystem.cpp.s
 # target to generate assembly for a file
 src/ParticleSystem.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/ParticleSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/ParticleSystem.cpp.s
 .PHONY : src/ParticleSystem.cpp.s
 
 src/PostProcessor.o: src/PostProcessor.cpp.o
@@ -835,6 +877,7 @@ src/Shader.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/Shader.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/Shader.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/Shader.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/Shader.cpp.o
 .PHONY : src/Shader.cpp.o
 
 src/Shader.i: src/Shader.cpp.i
@@ -849,6 +892,7 @@ src/Shader.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/Shader.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/Shader.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/Shader.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/Shader.cpp.i
 .PHONY : src/Shader.cpp.i
 
 src/Shader.s: src/Shader.cpp.s
@@ -863,6 +907,7 @@ src/Shader.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/Shader.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/Shader.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/Shader.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/Shader.cpp.s
 .PHONY : src/Shader.cpp.s
 
 src/ShadowMap.o: src/ShadowMap.cpp.o
@@ -925,6 +970,7 @@ src/Texture.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/Texture.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/Texture.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/Texture.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/Texture.cpp.o
 .PHONY : src/Texture.cpp.o
 
 src/Texture.i: src/Texture.cpp.i
@@ -939,6 +985,7 @@ src/Texture.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/Texture.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/Texture.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/Texture.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/Texture.cpp.i
 .PHONY : src/Texture.cpp.i
 
 src/Texture.s: src/Texture.cpp.s
@@ -953,6 +1000,7 @@ src/Texture.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/Texture.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/Texture.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/Texture.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/Texture.cpp.s
 .PHONY : src/Texture.cpp.s
 
 src/audio/AudioSystem3D.o: src/audio/AudioSystem3D.cpp.o
@@ -1151,9 +1199,11 @@ src/core/Component.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_physics_simple.dir/build.make CMakeFiles/test_physics_simple.dir/src/core/Component.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ecs_benchmark.dir/build.make CMakeFiles/test_ecs_benchmark.dir/src/core/Component.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_openal_3d_audio.dir/build.make CMakeFiles/test_openal_3d_audio.dir/src/core/Component.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/src/core/Component.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ai_component.dir/build.make CMakeFiles/test_ai_component.dir/src/core/Component.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_animation_component.dir/build.make CMakeFiles/test_animation_component.dir/src/core/Component.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/Component.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/Component.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/core/Component.cpp.o
 .PHONY : src/core/Component.cpp.o
 
 src/core/Component.i: src/core/Component.cpp.i
@@ -1172,9 +1222,11 @@ src/core/Component.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_physics_simple.dir/build.make CMakeFiles/test_physics_simple.dir/src/core/Component.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ecs_benchmark.dir/build.make CMakeFiles/test_ecs_benchmark.dir/src/core/Component.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_openal_3d_audio.dir/build.make CMakeFiles/test_openal_3d_audio.dir/src/core/Component.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/src/core/Component.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ai_component.dir/build.make CMakeFiles/test_ai_component.dir/src/core/Component.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_animation_component.dir/build.make CMakeFiles/test_animation_component.dir/src/core/Component.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/Component.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/Component.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/core/Component.cpp.i
 .PHONY : src/core/Component.cpp.i
 
 src/core/Component.s: src/core/Component.cpp.s
@@ -1193,9 +1245,11 @@ src/core/Component.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_physics_simple.dir/build.make CMakeFiles/test_physics_simple.dir/src/core/Component.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ecs_benchmark.dir/build.make CMakeFiles/test_ecs_benchmark.dir/src/core/Component.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_openal_3d_audio.dir/build.make CMakeFiles/test_openal_3d_audio.dir/src/core/Component.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/src/core/Component.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ai_component.dir/build.make CMakeFiles/test_ai_component.dir/src/core/Component.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_animation_component.dir/build.make CMakeFiles/test_animation_component.dir/src/core/Component.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/Component.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/Component.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/core/Component.cpp.s
 .PHONY : src/core/Component.cpp.s
 
 src/core/ECSBenchmark.o: src/core/ECSBenchmark.cpp.o
@@ -1255,8 +1309,10 @@ src/core/Entity.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_physics_component.dir/build.make CMakeFiles/test_physics_component.dir/src/core/Entity.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ecs_benchmark.dir/build.make CMakeFiles/test_ecs_benchmark.dir/src/core/Entity.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_openal_3d_audio.dir/build.make CMakeFiles/test_openal_3d_audio.dir/src/core/Entity.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/src/core/Entity.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ai_component.dir/build.make CMakeFiles/test_ai_component.dir/src/core/Entity.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/Entity.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/Entity.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/core/Entity.cpp.o
 .PHONY : src/core/Entity.cpp.o
 
 src/core/Entity.i: src/core/Entity.cpp.i
@@ -1274,8 +1330,10 @@ src/core/Entity.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_physics_component.dir/build.make CMakeFiles/test_physics_component.dir/src/core/Entity.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ecs_benchmark.dir/build.make CMakeFiles/test_ecs_benchmark.dir/src/core/Entity.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_openal_3d_audio.dir/build.make CMakeFiles/test_openal_3d_audio.dir/src/core/Entity.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/src/core/Entity.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ai_component.dir/build.make CMakeFiles/test_ai_component.dir/src/core/Entity.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/Entity.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/Entity.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/core/Entity.cpp.i
 .PHONY : src/core/Entity.cpp.i
 
 src/core/Entity.s: src/core/Entity.cpp.s
@@ -1293,8 +1351,10 @@ src/core/Entity.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_physics_component.dir/build.make CMakeFiles/test_physics_component.dir/src/core/Entity.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ecs_benchmark.dir/build.make CMakeFiles/test_ecs_benchmark.dir/src/core/Entity.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_openal_3d_audio.dir/build.make CMakeFiles/test_openal_3d_audio.dir/src/core/Entity.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/src/core/Entity.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ai_component.dir/build.make CMakeFiles/test_ai_component.dir/src/core/Entity.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/Entity.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/Entity.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/core/Entity.cpp.s
 .PHONY : src/core/Entity.cpp.s
 
 src/core/EntityDebugSystem.o: src/core/EntityDebugSystem.cpp.o
@@ -1387,6 +1447,54 @@ src/core/EntityTypes.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_openal_3d_audio.dir/build.make CMakeFiles/test_openal_3d_audio.dir/src/core/EntityTypes.cpp.s
 .PHONY : src/core/EntityTypes.cpp.s
 
+src/core/EventSystem.o: src/core/EventSystem.cpp.o
+.PHONY : src/core/EventSystem.o
+
+# target to build an object file
+src/core/EventSystem.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/EventSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/EventSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/EventSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/EventSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/EventSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/EventSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/EventSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/src/core/EventSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system_simple.dir/build.make CMakeFiles/test_event_system_simple.dir/src/core/EventSystem.cpp.o
+.PHONY : src/core/EventSystem.cpp.o
+
+src/core/EventSystem.i: src/core/EventSystem.cpp.i
+.PHONY : src/core/EventSystem.i
+
+# target to preprocess a source file
+src/core/EventSystem.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/EventSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/EventSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/EventSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/EventSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/EventSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/EventSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/EventSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/src/core/EventSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system_simple.dir/build.make CMakeFiles/test_event_system_simple.dir/src/core/EventSystem.cpp.i
+.PHONY : src/core/EventSystem.cpp.i
+
+src/core/EventSystem.s: src/core/EventSystem.cpp.s
+.PHONY : src/core/EventSystem.s
+
+# target to generate assembly for a file
+src/core/EventSystem.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/EventSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/EventSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/EventSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/EventSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/EventSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/EventSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/EventSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/src/core/EventSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system_simple.dir/build.make CMakeFiles/test_event_system_simple.dir/src/core/EventSystem.cpp.s
+.PHONY : src/core/EventSystem.cpp.s
+
 src/core/Logger.o: src/core/Logger.cpp.o
 .PHONY : src/core/Logger.o
 
@@ -1402,9 +1510,11 @@ src/core/Logger.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_physics_component.dir/build.make CMakeFiles/test_physics_component.dir/src/core/Logger.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ecs_benchmark.dir/build.make CMakeFiles/test_ecs_benchmark.dir/src/core/Logger.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_openal_3d_audio.dir/build.make CMakeFiles/test_openal_3d_audio.dir/src/core/Logger.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/src/core/Logger.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ai_component.dir/build.make CMakeFiles/test_ai_component.dir/src/core/Logger.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_animation_component.dir/build.make CMakeFiles/test_animation_component.dir/src/core/Logger.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/Logger.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/Logger.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/core/Logger.cpp.o
 .PHONY : src/core/Logger.cpp.o
 
 src/core/Logger.i: src/core/Logger.cpp.i
@@ -1422,9 +1532,11 @@ src/core/Logger.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_physics_component.dir/build.make CMakeFiles/test_physics_component.dir/src/core/Logger.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ecs_benchmark.dir/build.make CMakeFiles/test_ecs_benchmark.dir/src/core/Logger.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_openal_3d_audio.dir/build.make CMakeFiles/test_openal_3d_audio.dir/src/core/Logger.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/src/core/Logger.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ai_component.dir/build.make CMakeFiles/test_ai_component.dir/src/core/Logger.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_animation_component.dir/build.make CMakeFiles/test_animation_component.dir/src/core/Logger.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/Logger.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/Logger.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/core/Logger.cpp.i
 .PHONY : src/core/Logger.cpp.i
 
 src/core/Logger.s: src/core/Logger.cpp.s
@@ -1442,55 +1554,57 @@ src/core/Logger.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_physics_component.dir/build.make CMakeFiles/test_physics_component.dir/src/core/Logger.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ecs_benchmark.dir/build.make CMakeFiles/test_ecs_benchmark.dir/src/core/Logger.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_openal_3d_audio.dir/build.make CMakeFiles/test_openal_3d_audio.dir/src/core/Logger.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/src/core/Logger.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ai_component.dir/build.make CMakeFiles/test_ai_component.dir/src/core/Logger.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_animation_component.dir/build.make CMakeFiles/test_animation_component.dir/src/core/Logger.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/Logger.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/Logger.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/core/Logger.cpp.s
 .PHONY : src/core/Logger.cpp.s
 
-src/core/SoundSystem.o: src/core/SoundSystem.cpp.o
-.PHONY : src/core/SoundSystem.o
+src/core/NetworkSystem.o: src/core/NetworkSystem.cpp.o
+.PHONY : src/core/NetworkSystem.o
 
 # target to build an object file
-src/core/SoundSystem.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/SoundSystem.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/SoundSystem.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/SoundSystem.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/SoundSystem.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/SoundSystem.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/SoundSystem.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/SoundSystem.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/SoundSystem.cpp.o
-.PHONY : src/core/SoundSystem.cpp.o
+src/core/NetworkSystem.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/NetworkSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/NetworkSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/NetworkSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/NetworkSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/NetworkSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/NetworkSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/NetworkSystem.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/NetworkSystem.cpp.o
+.PHONY : src/core/NetworkSystem.cpp.o
 
-src/core/SoundSystem.i: src/core/SoundSystem.cpp.i
-.PHONY : src/core/SoundSystem.i
+src/core/NetworkSystem.i: src/core/NetworkSystem.cpp.i
+.PHONY : src/core/NetworkSystem.i
 
 # target to preprocess a source file
-src/core/SoundSystem.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/SoundSystem.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/SoundSystem.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/SoundSystem.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/SoundSystem.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/SoundSystem.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/SoundSystem.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/SoundSystem.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/SoundSystem.cpp.i
-.PHONY : src/core/SoundSystem.cpp.i
+src/core/NetworkSystem.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/NetworkSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/NetworkSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/NetworkSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/NetworkSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/NetworkSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/NetworkSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/NetworkSystem.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/NetworkSystem.cpp.i
+.PHONY : src/core/NetworkSystem.cpp.i
 
-src/core/SoundSystem.s: src/core/SoundSystem.cpp.s
-.PHONY : src/core/SoundSystem.s
+src/core/NetworkSystem.s: src/core/NetworkSystem.cpp.s
+.PHONY : src/core/NetworkSystem.s
 
 # target to generate assembly for a file
-src/core/SoundSystem.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/SoundSystem.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/SoundSystem.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/SoundSystem.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/SoundSystem.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/SoundSystem.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/SoundSystem.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/SoundSystem.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/SoundSystem.cpp.s
-.PHONY : src/core/SoundSystem.cpp.s
+src/core/NetworkSystem.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/NetworkSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/NetworkSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/NetworkSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/NetworkSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/NetworkSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/NetworkSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/NetworkSystem.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/NetworkSystem.cpp.s
+.PHONY : src/core/NetworkSystem.cpp.s
 
 src/core/Transform.o: src/core/Transform.cpp.o
 .PHONY : src/core/Transform.o
@@ -1801,6 +1915,75 @@ src/core/components/MeshComponent.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/components/MeshComponent.cpp.s
 .PHONY : src/core/components/MeshComponent.cpp.s
 
+src/core/components/NetworkComponent.o: src/core/components/NetworkComponent.cpp.o
+.PHONY : src/core/components/NetworkComponent.o
+
+# target to build an object file
+src/core/components/NetworkComponent.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/components/NetworkComponent.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/components/NetworkComponent.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/components/NetworkComponent.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/components/NetworkComponent.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/components/NetworkComponent.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/components/NetworkComponent.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/components/NetworkComponent.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/components/NetworkComponent.cpp.o
+.PHONY : src/core/components/NetworkComponent.cpp.o
+
+src/core/components/NetworkComponent.i: src/core/components/NetworkComponent.cpp.i
+.PHONY : src/core/components/NetworkComponent.i
+
+# target to preprocess a source file
+src/core/components/NetworkComponent.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/components/NetworkComponent.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/components/NetworkComponent.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/components/NetworkComponent.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/components/NetworkComponent.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/components/NetworkComponent.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/components/NetworkComponent.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/components/NetworkComponent.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/components/NetworkComponent.cpp.i
+.PHONY : src/core/components/NetworkComponent.cpp.i
+
+src/core/components/NetworkComponent.s: src/core/components/NetworkComponent.cpp.s
+.PHONY : src/core/components/NetworkComponent.s
+
+# target to generate assembly for a file
+src/core/components/NetworkComponent.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/components/NetworkComponent.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/components/NetworkComponent.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/components/NetworkComponent.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/components/NetworkComponent.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/components/NetworkComponent.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/components/NetworkComponent.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/components/NetworkComponent.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/src/core/components/NetworkComponent.cpp.s
+.PHONY : src/core/components/NetworkComponent.cpp.s
+
+src/core/components/ParticleComponent.o: src/core/components/ParticleComponent.cpp.o
+.PHONY : src/core/components/ParticleComponent.o
+
+# target to build an object file
+src/core/components/ParticleComponent.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/core/components/ParticleComponent.cpp.o
+.PHONY : src/core/components/ParticleComponent.cpp.o
+
+src/core/components/ParticleComponent.i: src/core/components/ParticleComponent.cpp.i
+.PHONY : src/core/components/ParticleComponent.i
+
+# target to preprocess a source file
+src/core/components/ParticleComponent.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/core/components/ParticleComponent.cpp.i
+.PHONY : src/core/components/ParticleComponent.cpp.i
+
+src/core/components/ParticleComponent.s: src/core/components/ParticleComponent.cpp.s
+.PHONY : src/core/components/ParticleComponent.s
+
+# target to generate assembly for a file
+src/core/components/ParticleComponent.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/src/core/components/ParticleComponent.cpp.s
+.PHONY : src/core/components/ParticleComponent.cpp.s
+
 src/core/components/PhysicsComponent.o: src/core/components/PhysicsComponent.cpp.o
 .PHONY : src/core/components/PhysicsComponent.o
 
@@ -1845,51 +2028,6 @@ src/core/components/PhysicsComponent.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/components/PhysicsComponent.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_physics_simple.dir/build.make CMakeFiles/test_physics_simple.dir/src/core/components/PhysicsComponent.cpp.s
 .PHONY : src/core/components/PhysicsComponent.cpp.s
-
-src/core/components/SoundComponent.o: src/core/components/SoundComponent.cpp.o
-.PHONY : src/core/components/SoundComponent.o
-
-# target to build an object file
-src/core/components/SoundComponent.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/components/SoundComponent.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/components/SoundComponent.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/components/SoundComponent.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/components/SoundComponent.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/components/SoundComponent.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/components/SoundComponent.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/components/SoundComponent.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/components/SoundComponent.cpp.o
-.PHONY : src/core/components/SoundComponent.cpp.o
-
-src/core/components/SoundComponent.i: src/core/components/SoundComponent.cpp.i
-.PHONY : src/core/components/SoundComponent.i
-
-# target to preprocess a source file
-src/core/components/SoundComponent.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/components/SoundComponent.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/components/SoundComponent.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/components/SoundComponent.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/components/SoundComponent.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/components/SoundComponent.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/components/SoundComponent.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/components/SoundComponent.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/components/SoundComponent.cpp.i
-.PHONY : src/core/components/SoundComponent.cpp.i
-
-src/core/components/SoundComponent.s: src/core/components/SoundComponent.cpp.s
-.PHONY : src/core/components/SoundComponent.s
-
-# target to generate assembly for a file
-src/core/components/SoundComponent.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/IKore.dir/build.make CMakeFiles/IKore.dir/src/core/components/SoundComponent.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_scene_graph.dir/build.make CMakeFiles/test_scene_graph.dir/src/core/components/SoundComponent.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/scene_graph_demo.dir/build.make CMakeFiles/scene_graph_demo.dir/src/core/components/SoundComponent.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component.dir/build.make CMakeFiles/test_mesh_component.dir/src/core/components/SoundComponent.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_minimal.dir/build.make CMakeFiles/test_mesh_component_minimal.dir/src/core/components/SoundComponent.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mesh_component_geometry.dir/build.make CMakeFiles/test_mesh_component_geometry.dir/src/core/components/SoundComponent.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/src/core/components/SoundComponent.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/src/core/components/SoundComponent.cpp.s
-.PHONY : src/core/components/SoundComponent.cpp.s
 
 src/demos/scene_graph_demo.o: src/demos/scene_graph_demo.cpp.o
 .PHONY : src/demos/scene_graph_demo.o
@@ -2167,6 +2305,54 @@ test_ecs_benchmark.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ecs_benchmark.dir/build.make CMakeFiles/test_ecs_benchmark.dir/test_ecs_benchmark.cpp.s
 .PHONY : test_ecs_benchmark.cpp.s
 
+test_event_system.o: test_event_system.cpp.o
+.PHONY : test_event_system.o
+
+# target to build an object file
+test_event_system.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/test_event_system.cpp.o
+.PHONY : test_event_system.cpp.o
+
+test_event_system.i: test_event_system.cpp.i
+.PHONY : test_event_system.i
+
+# target to preprocess a source file
+test_event_system.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/test_event_system.cpp.i
+.PHONY : test_event_system.cpp.i
+
+test_event_system.s: test_event_system.cpp.s
+.PHONY : test_event_system.s
+
+# target to generate assembly for a file
+test_event_system.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system.dir/build.make CMakeFiles/test_event_system.dir/test_event_system.cpp.s
+.PHONY : test_event_system.cpp.s
+
+test_event_system_simple.o: test_event_system_simple.cpp.o
+.PHONY : test_event_system_simple.o
+
+# target to build an object file
+test_event_system_simple.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system_simple.dir/build.make CMakeFiles/test_event_system_simple.dir/test_event_system_simple.cpp.o
+.PHONY : test_event_system_simple.cpp.o
+
+test_event_system_simple.i: test_event_system_simple.cpp.i
+.PHONY : test_event_system_simple.i
+
+# target to preprocess a source file
+test_event_system_simple.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system_simple.dir/build.make CMakeFiles/test_event_system_simple.dir/test_event_system_simple.cpp.i
+.PHONY : test_event_system_simple.cpp.i
+
+test_event_system_simple.s: test_event_system_simple.cpp.s
+.PHONY : test_event_system_simple.s
+
+# target to generate assembly for a file
+test_event_system_simple.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_event_system_simple.dir/build.make CMakeFiles/test_event_system_simple.dir/test_event_system_simple.cpp.s
+.PHONY : test_event_system_simple.cpp.s
+
 test_material_component.o: test_material_component.cpp.o
 .PHONY : test_material_component.o
 
@@ -2191,6 +2377,30 @@ test_material_component.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_material_component.dir/build.make CMakeFiles/test_material_component.dir/test_material_component.cpp.s
 .PHONY : test_material_component.cpp.s
 
+test_network_component.o: test_network_component.cpp.o
+.PHONY : test_network_component.o
+
+# target to build an object file
+test_network_component.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/test_network_component.cpp.o
+.PHONY : test_network_component.cpp.o
+
+test_network_component.i: test_network_component.cpp.i
+.PHONY : test_network_component.i
+
+# target to preprocess a source file
+test_network_component.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/test_network_component.cpp.i
+.PHONY : test_network_component.cpp.i
+
+test_network_component.s: test_network_component.cpp.s
+.PHONY : test_network_component.s
+
+# target to generate assembly for a file
+test_network_component.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_network_component.dir/build.make CMakeFiles/test_network_component.dir/test_network_component.cpp.s
+.PHONY : test_network_component.cpp.s
+
 test_openal_3d_audio.o: test_openal_3d_audio.cpp.o
 .PHONY : test_openal_3d_audio.o
 
@@ -2214,6 +2424,30 @@ test_openal_3d_audio.s: test_openal_3d_audio.cpp.s
 test_openal_3d_audio.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_openal_3d_audio.dir/build.make CMakeFiles/test_openal_3d_audio.dir/test_openal_3d_audio.cpp.s
 .PHONY : test_openal_3d_audio.cpp.s
+
+test_particle_component.o: test_particle_component.cpp.o
+.PHONY : test_particle_component.o
+
+# target to build an object file
+test_particle_component.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/test_particle_component.cpp.o
+.PHONY : test_particle_component.cpp.o
+
+test_particle_component.i: test_particle_component.cpp.i
+.PHONY : test_particle_component.i
+
+# target to preprocess a source file
+test_particle_component.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/test_particle_component.cpp.i
+.PHONY : test_particle_component.cpp.i
+
+test_particle_component.s: test_particle_component.cpp.s
+.PHONY : test_particle_component.s
+
+# target to generate assembly for a file
+test_particle_component.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_particle_component.dir/build.make CMakeFiles/test_particle_component.dir/test_particle_component.cpp.s
+.PHONY : test_particle_component.cpp.s
 
 test_physics_component.o: test_physics_component.cpp.o
 .PHONY : test_physics_component.o
@@ -2263,30 +2497,6 @@ test_physics_simple.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_physics_simple.dir/build.make CMakeFiles/test_physics_simple.dir/test_physics_simple.cpp.s
 .PHONY : test_physics_simple.cpp.s
 
-test_sound_component.o: test_sound_component.cpp.o
-.PHONY : test_sound_component.o
-
-# target to build an object file
-test_sound_component.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/test_sound_component.cpp.o
-.PHONY : test_sound_component.cpp.o
-
-test_sound_component.i: test_sound_component.cpp.i
-.PHONY : test_sound_component.i
-
-# target to preprocess a source file
-test_sound_component.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/test_sound_component.cpp.i
-.PHONY : test_sound_component.cpp.i
-
-test_sound_component.s: test_sound_component.cpp.s
-.PHONY : test_sound_component.s
-
-# target to generate assembly for a file
-test_sound_component.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_sound_component.dir/build.make CMakeFiles/test_sound_component.dir/test_sound_component.cpp.s
-.PHONY : test_sound_component.cpp.s
-
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -2315,15 +2525,18 @@ help:
 	@echo "... test_ai_component"
 	@echo "... test_animation_component"
 	@echo "... test_ecs_benchmark"
+	@echo "... test_event_system"
+	@echo "... test_event_system_simple"
 	@echo "... test_material_component"
 	@echo "... test_mesh_component"
 	@echo "... test_mesh_component_geometry"
 	@echo "... test_mesh_component_minimal"
+	@echo "... test_network_component"
 	@echo "... test_openal_3d_audio"
+	@echo "... test_particle_component"
 	@echo "... test_physics_component"
 	@echo "... test_physics_simple"
 	@echo "... test_scene_graph"
-	@echo "... test_sound_component"
 	@echo "... zlibstatic"
 	@echo "... src/Camera.o"
 	@echo "... src/Camera.i"
@@ -2400,12 +2613,15 @@ help:
 	@echo "... src/core/EntityTypes.o"
 	@echo "... src/core/EntityTypes.i"
 	@echo "... src/core/EntityTypes.s"
+	@echo "... src/core/EventSystem.o"
+	@echo "... src/core/EventSystem.i"
+	@echo "... src/core/EventSystem.s"
 	@echo "... src/core/Logger.o"
 	@echo "... src/core/Logger.i"
 	@echo "... src/core/Logger.s"
-	@echo "... src/core/SoundSystem.o"
-	@echo "... src/core/SoundSystem.i"
-	@echo "... src/core/SoundSystem.s"
+	@echo "... src/core/NetworkSystem.o"
+	@echo "... src/core/NetworkSystem.i"
+	@echo "... src/core/NetworkSystem.s"
 	@echo "... src/core/Transform.o"
 	@echo "... src/core/Transform.i"
 	@echo "... src/core/Transform.s"
@@ -2427,12 +2643,15 @@ help:
 	@echo "... src/core/components/MeshComponent.o"
 	@echo "... src/core/components/MeshComponent.i"
 	@echo "... src/core/components/MeshComponent.s"
+	@echo "... src/core/components/NetworkComponent.o"
+	@echo "... src/core/components/NetworkComponent.i"
+	@echo "... src/core/components/NetworkComponent.s"
+	@echo "... src/core/components/ParticleComponent.o"
+	@echo "... src/core/components/ParticleComponent.i"
+	@echo "... src/core/components/ParticleComponent.s"
 	@echo "... src/core/components/PhysicsComponent.o"
 	@echo "... src/core/components/PhysicsComponent.i"
 	@echo "... src/core/components/PhysicsComponent.s"
-	@echo "... src/core/components/SoundComponent.o"
-	@echo "... src/core/components/SoundComponent.i"
-	@echo "... src/core/components/SoundComponent.s"
 	@echo "... src/demos/scene_graph_demo.o"
 	@echo "... src/demos/scene_graph_demo.i"
 	@echo "... src/demos/scene_graph_demo.s"
@@ -2466,21 +2685,30 @@ help:
 	@echo "... test_ecs_benchmark.o"
 	@echo "... test_ecs_benchmark.i"
 	@echo "... test_ecs_benchmark.s"
+	@echo "... test_event_system.o"
+	@echo "... test_event_system.i"
+	@echo "... test_event_system.s"
+	@echo "... test_event_system_simple.o"
+	@echo "... test_event_system_simple.i"
+	@echo "... test_event_system_simple.s"
 	@echo "... test_material_component.o"
 	@echo "... test_material_component.i"
 	@echo "... test_material_component.s"
+	@echo "... test_network_component.o"
+	@echo "... test_network_component.i"
+	@echo "... test_network_component.s"
 	@echo "... test_openal_3d_audio.o"
 	@echo "... test_openal_3d_audio.i"
 	@echo "... test_openal_3d_audio.s"
+	@echo "... test_particle_component.o"
+	@echo "... test_particle_component.i"
+	@echo "... test_particle_component.s"
 	@echo "... test_physics_component.o"
 	@echo "... test_physics_component.i"
 	@echo "... test_physics_component.s"
 	@echo "... test_physics_simple.o"
 	@echo "... test_physics_simple.i"
 	@echo "... test_physics_simple.s"
-	@echo "... test_sound_component.o"
-	@echo "... test_sound_component.i"
-	@echo "... test_sound_component.s"
 .PHONY : help
 
 
