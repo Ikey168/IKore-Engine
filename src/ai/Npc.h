@@ -64,6 +64,7 @@ public:
     }
 
     const std::string& name() const { return m_name; }
+    const std::string& goal() const { return m_goal; }
     Memory& memory() { return m_memory; }
     const Memory& memory() const { return m_memory; }
     const ecs::Vec3& position() const { return m_selfPosition; }
