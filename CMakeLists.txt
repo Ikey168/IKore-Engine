@@ -386,6 +386,11 @@ add_executable(test_particle_component
 )
 target_link_libraries(test_particle_component PRIVATE glad glfw glm::glm stb_image OpenGL::GL)
 
+# Archetype ECS test (Milestone 8 / #140) - header-only module, no extra deps
+add_executable(test_archetype_ecs
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_archetype_ecs.cpp
+)
+
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
 else()
