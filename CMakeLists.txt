@@ -458,6 +458,11 @@ add_executable(test_file_watcher
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_file_watcher.cpp
 )
 
+# SVG floor-plan importer test (Milestone 11 / #148) - header-only, no extra deps
+add_executable(test_svg_floorplan
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_svg_floorplan.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
