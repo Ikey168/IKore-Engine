@@ -541,6 +541,11 @@ add_executable(test_level_format
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_level_format.cpp
 )
 
+# Playable top-down dungeon loop (Milestone 15 / #164) - header-only.
+add_executable(test_dungeon_game
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_dungeon_game.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
