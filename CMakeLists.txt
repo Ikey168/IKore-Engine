@@ -453,6 +453,11 @@ add_executable(test_ecs_systems
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ecs_systems.cpp
 )
 
+# Hot-reload file watcher test (Milestone 10 / #146) - header-only, std::filesystem
+add_executable(test_file_watcher
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_file_watcher.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
