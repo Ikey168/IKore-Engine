@@ -7,8 +7,8 @@
  * @file Entity.h
  * @brief Stable, generational entity handle for the data-oriented ECS.
  *
- * Part of Milestone 8 (issue #140). An Entity is a lightweight value type —
- * an index plus a generation counter — that stays valid regardless of where
+ * Part of Milestone 8 (issue #140). An Entity is a lightweight value type -
+ * an index plus a generation counter - that stays valid regardless of where
  * the entity's component data physically lives. When an entity is destroyed
  * its index is recycled with a bumped generation, so stale handles referring
  * to the old occupant compare as invalid.

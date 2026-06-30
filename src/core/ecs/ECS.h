@@ -4,13 +4,13 @@
  * @file ECS.h
  * @brief Umbrella header for the data-oriented (archetype/SoA) ECS.
  *
- * Milestone 8 — Foundations: Data-Oriented ECS (issue #140).
+ * Milestone 8 - Foundations: Data-Oriented ECS (issue #140).
  *
  * This module provides archetype-based, structure-of-arrays component storage
  * with stable, generational entity handles:
  *
- *   - IKore::ecs::Entity   — a stable handle (index + generation).
- *   - IKore::ecs::Registry — the world: create/destroy entities, add/remove/get
+ *   - IKore::ecs::Entity   - a stable handle (index + generation).
+ *   - IKore::ecs::Registry - the world: create/destroy entities, add/remove/get
  *                            components, with data stored contiguously per
  *                            component type and grouped by component signature.
  *

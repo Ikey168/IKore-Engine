@@ -1,4 +1,4 @@
-// Unit test for the data-oriented (archetype/SoA) ECS — Milestone 8, issue #140.
+// Unit test for the data-oriented (archetype/SoA) ECS - Milestone 8, issue #140.
 //
 // Verifies the issue's acceptance criteria:
 //   1. Components for a given archetype are laid out contiguously in memory.
