@@ -493,6 +493,11 @@ add_executable(test_timeline
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_timeline.cpp
 )
 
+# Per-tick simulation data export test (Milestone 12 / #155) - header-only
+add_executable(test_data_export
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_data_export.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
