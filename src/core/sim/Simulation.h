@@ -31,6 +31,11 @@ public:
 
     void seed(std::uint64_t seedValue) { m_state = seedValue; }
 
+    /// Full internal state - capture/restore it to snapshot the exact stream
+    /// position (e.g. for rewind/replay), not just the original seed.
+    std::uint64_t state() const { return m_state; }
+    void setState(std::uint64_t stateValue) { m_state = stateValue; }
+
     std::uint64_t nextU64() {
         std::uint64_t z = (m_state += 0x9E3779B97F4A7C15ULL);
         z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
