@@ -478,6 +478,11 @@ add_executable(test_navmesh
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_navmesh.cpp
 )
 
+# Deterministic fixed-step simulation test (Milestone 12 / #152) - header-only
+add_executable(test_simulation
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_simulation.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
