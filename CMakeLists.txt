@@ -391,6 +391,11 @@ add_executable(test_archetype_ecs
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_archetype_ecs.cpp
 )
 
+# ECS query/View test (Milestone 8 / #141) - header-only module, no extra deps
+add_executable(test_ecs_query
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ecs_query.cpp
+)
+
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
 else()
