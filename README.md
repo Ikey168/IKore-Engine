@@ -10,7 +10,7 @@ around an Entity-Component System with physics, audio, animation, and a forward
 renderer with shadows and post-processing.
 
 > **Where it's headed.** IKore is evolving from a general-purpose engine toward a
-> focused identity: **building living 3D worlds from real data** — turning
+> focused identity: **building living 3D worlds from real data** - turning
 > floor plans, maps, and sketches into navigable, simulated spaces. See
 > [`EXPANSION_IDEAS.md`](EXPANSION_IDEAS.md) for the thesis and
 > [`PHONE_GAME_CONCEPT.md`](PHONE_GAME_CONCEPT.md) /
@@ -39,7 +39,7 @@ wander) · `Sound` / `Audio` (3D positional, OpenAL) · `Particle` · `Network`.
 
 ### Rendering
 - Forward renderer (Phong/Blinn lighting).
-- **Shadow mapping** — directional and point (cubemap) shadows.
+- **Shadow mapping** - directional and point (cubemap) shadows.
 - **Frustum culling**.
 - **GPU/compute-shader particle system**.
 - **Post-processing**: bloom, SSAO, FXAA.
@@ -123,17 +123,17 @@ direction is documented in [`EXPANSION_IDEAS.md`](EXPANSION_IDEAS.md),
 
 IKore's near-term direction is to differentiate around **world-from-data**:
 
-1. **Foundations** — a data-oriented (archetype) ECS, scripting + hot reload, and
+1. **Foundations** - a data-oriented (archetype) ECS, scripting + hot reload, and
    an in-engine editor (ImGui) that closes the open UI/debugging backlog.
-2. **Flagship importer** — turn 2D/vector inputs (SVG floor plans, tilemaps, and
+2. **Flagship importer** - turn 2D/vector inputs (SVG floor plans, tilemaps, and
    later GeoJSON/OpenStreetMap) into 3D scenes with collision and navigation.
-3. **Simulation & AI** — large-scale agent simulation with time control
+3. **Simulation & AI** - large-scale agent simulation with time control
    (pause / rewind / replay) and an AI-native authoring/NPC layer.
 
 The full strategy and rationale are in:
-- [`EXPANSION_IDEAS.md`](EXPANSION_IDEAS.md) — the engine's unique-identity thesis.
-- [`PHONE_GAME_CONCEPT.md`](PHONE_GAME_CONCEPT.md) — the consumer flagship concept.
-- [`PHONE_GAME_DESIGN.md`](PHONE_GAME_DESIGN.md) — deep design + market analysis.
+- [`EXPANSION_IDEAS.md`](EXPANSION_IDEAS.md) - the engine's unique-identity thesis.
+- [`PHONE_GAME_CONCEPT.md`](PHONE_GAME_CONCEPT.md) - the consumer flagship concept.
+- [`PHONE_GAME_DESIGN.md`](PHONE_GAME_DESIGN.md) - deep design + market analysis.
 
 ---
 
