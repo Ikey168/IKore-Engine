@@ -48,6 +48,10 @@ wander) · `Sound` / `Audio` (3D positional, OpenAL) · `Particle` · `Network`.
 ### Audio
 - 3D positional audio with distance attenuation (OpenAL).
 
+### Scripting
+- **Lua scripting** (via sol2) bound to the ECS and event system, with
+  **hot reload** of scripts/shaders/assets. See [`docs/SCRIPTING.md`](docs/SCRIPTING.md).
+
 ---
 
 ## Tech stack
