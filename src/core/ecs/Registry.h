@@ -20,11 +20,15 @@
  * components are added or removed.
  *
  * Scope note: this milestone delivers storage + stable handles + add/remove/get.
- * A cache-friendly iteration/query API is issue #141; migrating the engine's
- * existing components onto this storage is issue #142.
+ * The cache-friendly iteration/query API lives in View.h (issue #141); migrating
+ * the engine's existing components onto this storage is issue #142.
  */
 namespace IKore {
 namespace ecs {
+
+// Defined in View.h: the query/iteration API (issue #141).
+template <class... Include>
+class View;
 
 class Registry {
 public:
@@ -138,7 +142,14 @@ public:
     /// Number of distinct archetypes (including the empty one). Mostly for tests.
     std::size_t archetypeCount() const { return m_archetypes.size(); }
 
+    /// Begin a query over all entities that have every one of @c Include.
+    /// Compose with `.exclude<...>()` and iterate with `.each(fn)`; see View.h.
+    template <class... Include>
+    View<Include...> view();
+
 private:
+    template <class...> friend class View;
+
     struct Record {
         std::uint32_t generation{0};
         bool alive{false};
