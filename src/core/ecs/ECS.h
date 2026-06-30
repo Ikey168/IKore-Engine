@@ -46,3 +46,7 @@
 #include "core/ecs/Entity.h"
 #include "core/ecs/Registry.h"
 #include "core/ecs/View.h"
+// Concrete hot-path components and systems (issue #142) are an opt-in layer on
+// top of this generic core - include them directly when needed:
+//   #include "core/ecs/components/Components.h"
+//   #include "core/ecs/systems/Systems.h"

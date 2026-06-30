@@ -396,6 +396,11 @@ add_executable(test_ecs_query
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ecs_query.cpp
 )
 
+# ECS hot-path components + systems test (Milestone 8 / #142) - header-only
+add_executable(test_ecs_systems
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ecs_systems.cpp
+)
+
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
 else()
