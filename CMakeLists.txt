@@ -101,6 +101,37 @@ set(IMGUI_SOURCES
   ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
+# Lua + sol2 for the scripting layer (#145).
+# The lua/lua repo ships no CMakeLists, so MakeAvailable only populates it and we
+# build the library ourselves from its .c files (excluding the standalone
+# interpreter lua.c, the compiler luac.c, and the all-in-one amalgam onelua.c).
+FetchContent_Declare(
+  lua
+  GIT_REPOSITORY https://github.com/lua/lua.git
+  GIT_TAG        v5.4.6
+)
+FetchContent_MakeAvailable(lua)
+file(GLOB LUA_LIB_SOURCES "${lua_SOURCE_DIR}/*.c")
+list(REMOVE_ITEM LUA_LIB_SOURCES
+  "${lua_SOURCE_DIR}/lua.c"
+  "${lua_SOURCE_DIR}/luac.c"
+  "${lua_SOURCE_DIR}/onelua.c")
+add_library(lua_static STATIC ${LUA_LIB_SOURCES})
+target_include_directories(lua_static PUBLIC ${lua_SOURCE_DIR})
+set_target_properties(lua_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+# sol2 is header-only; populate it and use its include dir directly (avoid running
+# sol2's own CMake, which would try to locate a Lua install for its targets).
+FetchContent_Declare(
+  sol2
+  GIT_REPOSITORY https://github.com/ThePhd/sol2.git
+  GIT_TAG        v3.3.0
+)
+FetchContent_GetProperties(sol2)
+if(NOT sol2_POPULATED)
+  FetchContent_Populate(sol2)
+endif()
+
 # OpenAL for 3D Audio
 find_package(PkgConfig)
 if(PkgConfig_FOUND)
@@ -421,6 +452,19 @@ add_executable(test_ecs_query
 add_executable(test_ecs_systems
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ecs_systems.cpp
 )
+
+# Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
+# static lib and uses sol2 (header-only) + the header-only ECS.
+add_executable(test_scripting
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_scripting.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/scripting/ScriptSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EventSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
+)
+target_include_directories(test_scripting PRIVATE
+    ${sol2_SOURCE_DIR}/include
+    ${lua_SOURCE_DIR})
+target_link_libraries(test_scripting PRIVATE lua_static)
 
 if(MSVC)
     target_compile_options(IKore PRIVATE /W4)
