@@ -128,6 +128,9 @@ find_package(OpenGL REQUIRED)
 
 # Add include directories for the new folder structure
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+# Repo root on the include path so tests using "src/..."-style includes resolve
+# regardless of where the test source lives (e.g. tests/).
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Add Bullet Physics include directories
 include_directories(${bullet3_SOURCE_DIR}/src)
@@ -254,7 +257,7 @@ add_executable(test_mesh_component_geometry
 
 # MaterialComponent Test executable
 add_executable(test_material_component 
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_material_component.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_material_component.cpp 
     ${CORE_SOURCES}
     ${AUDIO_SOURCES}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Model.cpp
@@ -265,7 +268,7 @@ add_executable(test_material_component
 
 # PhysicsComponent Test executable (simplified)
 add_executable(test_physics_component 
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_physics_component.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_physics_component.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
@@ -273,14 +276,14 @@ add_executable(test_physics_component
 
 # PhysicsComponent Simple Test executable
 add_executable(test_physics_simple 
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_physics_simple.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_physics_simple.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/PhysicsComponent.cpp
 )
 
 # ECS Benchmark Test executable (simplified)
 add_executable(test_ecs_benchmark 
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_ecs_benchmark.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ecs_benchmark.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
@@ -288,7 +291,7 @@ add_executable(test_ecs_benchmark
 
 # OpenAL 3D Audio Test executable
 add_executable(test_openal_3d_audio 
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_openal_3d_audio.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_openal_3d_audio.cpp 
     # Minimal core sources needed for audio testing (excluding graphics dependencies)
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
@@ -310,7 +313,7 @@ add_executable(test_openal_3d_audio
 
 # EventSystem Test executable
 add_executable(test_event_system 
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_event_system.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_event_system.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EventSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
@@ -320,7 +323,7 @@ target_link_libraries(test_event_system PRIVATE glm::glm)
 
 # EventSystem Simple Test executable
 add_executable(test_event_system_simple
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_event_system_simple.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_event_system_simple.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EventSystem.cpp
 )
 target_link_libraries(test_event_system_simple PRIVATE glm::glm)
@@ -339,7 +342,7 @@ target_link_libraries(test_openal_3d_audio PRIVATE glm ${OPENAL_LIBRARIES})
 
 # AI Component Test executable
 add_executable(test_ai_component 
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_component.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ai_component.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AIComponent.cpp
@@ -351,7 +354,7 @@ target_link_libraries(test_ai_component PRIVATE glm)
 
 # AnimationComponent test
 add_executable(test_animation_component 
-    test_animation_component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_animation_component.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/AnimationComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/AnimationLoader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
@@ -361,7 +364,7 @@ target_link_libraries(test_animation_component PRIVATE glad glfw glm::glm assimp
 
 # NetworkComponent test
 add_executable(test_network_component 
-    test_network_component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_network_component.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/NetworkComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/NetworkSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
@@ -372,7 +375,7 @@ target_link_libraries(test_network_component PRIVATE glm::glm)
 
 # ParticleComponent test
 add_executable(test_particle_component 
-    test_particle_component.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_particle_component.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/ParticleComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ParticleSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Shader.cpp

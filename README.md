@@ -105,14 +105,17 @@ src/
   audio/               OpenAL 3D audio engine and ambient zones
   shaders/             GLSL shaders (shadows, bloom, SSAO, FXAA, particles, …)
   demos/               Standalone demos
-  tests/               Component/system tests
+  tests/               Engine unit/component tests (built by CMake)
   main.cpp             Entry point / sample application
+tests/                 Standalone test programs and shell test runners
 assets/                Models, textures, and other runtime assets
-docs/                  Implementation notes per subsystem
+docs/                  Per-subsystem implementation notes
 ```
 
-Per-subsystem implementation notes live in the root `*_IMPLEMENTATION.md` files
-and in [`docs/`](docs/).
+Per-subsystem implementation notes live in [`docs/`](docs/). The project's
+direction is documented in [`EXPANSION_IDEAS.md`](EXPANSION_IDEAS.md),
+[`PHONE_GAME_CONCEPT.md`](PHONE_GAME_CONCEPT.md), and
+[`PHONE_GAME_DESIGN.md`](PHONE_GAME_DESIGN.md).
 
 ---
 
