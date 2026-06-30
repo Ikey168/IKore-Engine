@@ -1,0 +1,17 @@
+{
+  "format": "doodle-level",
+  "version": 1,
+  "wallHeight": 3.0,
+  "wallThickness": 0.2,
+  "walls": [
+    {"polyline": [[0, 0], [20, 0], [20, 15], [0, 15], [0, 0]]},
+    {"polyline": [[8, 0], [8, 9]]}
+  ],
+  "symbols": [
+    {"type": "player", "x": 2, "z": 2, "yaw": 0},
+    {"type": "enemy", "x": 16, "z": 4, "yaw": 0},
+    {"type": "enemy", "x": 12, "z": 12, "yaw": 0},
+    {"type": "treasure", "x": 18, "z": 13, "yaw": 0},
+    {"type": "door", "x": 8, "z": 11, "yaw": 0}
+  ]
+}
