@@ -34,6 +34,7 @@
 #include "Serialization.h"
 #include "core/EntityRegistration.h"
 #include "core/EntityDebugSystem.h"
+#include "ui/DebugUI.h"
 
 // Forward declarations for GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -52,8 +53,11 @@ IKore::CameraController cameraController(camera);
 // Global post-processor pointer for keyboard callbacks
 IKore::PostProcessor* g_postProcessor = nullptr;
 
-// Global skybox pointer for keyboard callbacks  
+// Global skybox pointer for keyboard callbacks
 IKore::Skybox* g_skybox = nullptr;
+
+// Global debug UI pointer for keyboard callbacks (F1 toggles the overlay)
+IKore::DebugUI* g_debugUI = nullptr;
 
 // Global particle system manager for keyboard callbacks
 IKore::ParticleSystemManager* g_particleManager = nullptr;
@@ -130,6 +134,12 @@ int main() {
         return -1;
     }
     LOG_INFO("GLAD initialized successfully");
+
+    // Initialize the in-engine debug UI (Dear ImGui). GL context is 3.3 core,
+    // so the GL3 backend uses GLSL "#version 330". Starts hidden; F1 toggles it.
+    IKore::DebugUI debugUI;
+    debugUI.initialize(window, "#version 330");
+    g_debugUI = &debugUI;
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glEnable(GL_DEPTH_TEST);
@@ -936,6 +946,9 @@ int main() {
         // Render Entity Debug Overlay (after all scene rendering)
         IKore::getEntityDebugSystem().renderDebugOverlay();
 
+        // Render the Dear ImGui debug overlay on top (no-op while hidden)
+        debugUI.render(static_cast<float>(deltaTime));
+
         glfwSwapBuffers(window);
 
         // Frame timing to cap FPS
@@ -959,6 +972,8 @@ int main() {
     entityManager.clear();
 
     LOG_INFO("Shutting down IKore Engine");
+    g_debugUI = nullptr;
+    debugUI.shutdown();
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
@@ -1002,6 +1017,11 @@ void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height) {
 // Keyboard callback for toggling post-processing effects
 void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action, int /*mods*/) {
     if (action == GLFW_PRESS) {
+        if (key == GLFW_KEY_F1 && g_debugUI) {
+            // Toggle the in-engine debug UI overlay
+            g_debugUI->toggle();
+            LOG_INFO(std::string("Debug UI ") + (g_debugUI->isVisible() ? "shown" : "hidden"));
+        }
         if (key == GLFW_KEY_1 && g_postProcessor) {
             // Toggle Bloom
             auto* bloom = g_postProcessor->getBloomEffect();

@@ -1,0 +1,56 @@
+#pragma once
+
+struct GLFWwindow;
+
+/**
+ * @file DebugUI.h
+ * @brief Dear ImGui integration: the foundation for in-engine editor/debug UI.
+ *
+ * Milestone 9 (issue #144). Wraps ImGui setup, per-frame rendering, and teardown
+ * behind a small interface so the engine's main loop only needs a few lines.
+ * Docking is enabled (ImGuiConfigFlags_DockingEnable) so the panels added by the
+ * follow-on issues (#53-#63: FPS overlay, console, entity inspector, scene
+ * hierarchy, input remapping, HUD) can be docked into a layout.
+ *
+ * The overlay is toggleable and starts hidden; when hidden, render() returns
+ * immediately so there is no per-frame ImGui cost.
+ */
+namespace IKore {
+
+class DebugUI {
+public:
+    /**
+     * @brief Initialize ImGui and its GLFW + OpenGL3 backends.
+     * @param window       The GLFW window owning the current GL context.
+     * @param glslVersion  GLSL #version string for the GL3 backend (e.g. "#version 330").
+     * @return true on success.
+     *
+     * Call after the GL context is current and the loader is initialized.
+     */
+    bool initialize(GLFWwindow* window, const char* glslVersion);
+
+    /// Tear down the ImGui backends and context. Safe to call if not initialized.
+    void shutdown();
+
+    /**
+     * @brief Build and draw the debug UI for this frame.
+     * @param deltaTimeSeconds Frame delta, shown in the stats panel.
+     *
+     * No-op (returns immediately) when the overlay is hidden or uninitialized,
+     * so a hidden overlay costs nothing.
+     */
+    void render(float deltaTimeSeconds);
+
+    void setVisible(bool visible) { m_visible = visible; }
+    bool isVisible() const { return m_visible; }
+    void toggle() { m_visible = !m_visible; }
+
+private:
+    void buildUI(float deltaTimeSeconds);
+
+    bool m_initialized{false};
+    bool m_visible{false};
+    bool m_showDemoWindow{false};
+};
+
+} // namespace IKore
