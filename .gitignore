@@ -278,3 +278,14 @@ config.ini
 settings.json
 !config.template.ini
 !settings.template.json
+
+# --- IKore: build directories & stray compiled artifacts ---
+build*/
+out/
+# Compiled test/demo executables accidentally produced at repo root
+/test_*
+!/test_*.cpp
+!/test_*.sh
+/scene_graph_demo
+/simple_*_test
+!/simple_*_test.cpp
