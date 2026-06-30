@@ -551,6 +551,11 @@ add_executable(test_tour_camera
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_tour_camera.cpp
 )
 
+# Camera capture + perspective rectification (Milestone 16 / #166) - header-only.
+add_executable(test_rectify
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_rectify.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
