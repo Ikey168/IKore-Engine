@@ -281,12 +281,11 @@ add_executable(test_physics_simple
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/components/PhysicsComponent.cpp
 )
 
-# ECS Benchmark Test executable (simplified)
-add_executable(test_ecs_benchmark 
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ecs_benchmark.cpp 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Logger.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Entity.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/Component.cpp
+# ECS storage benchmark: legacy model vs archetype ECS (Milestone 8 / #143).
+# Self-contained and header-only (the legacy model is mirrored in the source),
+# so no extra engine sources or deps are needed.
+add_executable(test_ecs_benchmark
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ecs_benchmark.cpp
 )
 
 # OpenAL 3D Audio Test executable
@@ -337,7 +336,6 @@ target_link_libraries(test_mesh_component_geometry PRIVATE glfw glad glm stb_ima
 target_link_libraries(test_material_component PRIVATE glfw glad glm stb_image assimp OpenGL::GL BulletDynamics BulletCollision LinearMath ${OPENAL_LIBRARIES})
 target_link_libraries(test_physics_component PRIVATE glm)
 target_link_libraries(test_physics_simple PRIVATE BulletDynamics BulletCollision LinearMath glm)
-target_link_libraries(test_ecs_benchmark PRIVATE glm)
 target_link_libraries(test_openal_3d_audio PRIVATE glm ${OPENAL_LIBRARIES})
 
 # AI Component Test executable
