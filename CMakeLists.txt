@@ -463,6 +463,11 @@ add_executable(test_svg_floorplan
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_svg_floorplan.cpp
 )
 
+# Tiled (.tmx) importer test (Milestone 11 / #149) - header-only, no extra deps
+add_executable(test_tmx_importer
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_tmx_importer.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
