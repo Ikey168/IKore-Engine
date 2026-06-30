@@ -505,6 +505,12 @@ add_executable(test_ai_brain
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core/EventSystem.cpp
 )
 
+# Natural-language scene authoring test (Milestone 13 / #157) - header-only;
+# generates entities through the world importer/scene-graph primitives.
+add_executable(test_scene_author
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_scene_author.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
