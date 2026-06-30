@@ -82,6 +82,25 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(bullet3)
 
+# Dear ImGui (docking branch) for the in-engine editor/debug UI (#144).
+# ImGui ships as source with no CMakeLists, so MakeAvailable only populates it;
+# its sources and the GLFW + OpenGL3 backends are compiled into the IKore target.
+FetchContent_Declare(
+  imgui
+  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  GIT_TAG        docking
+)
+FetchContent_MakeAvailable(imgui)
+set(IMGUI_SOURCES
+  ${imgui_SOURCE_DIR}/imgui.cpp
+  ${imgui_SOURCE_DIR}/imgui_draw.cpp
+  ${imgui_SOURCE_DIR}/imgui_tables.cpp
+  ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+  ${imgui_SOURCE_DIR}/imgui_demo.cpp
+  ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+  ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
 # OpenAL for 3D Audio
 find_package(PkgConfig)
 if(PkgConfig_FOUND)
@@ -194,9 +213,13 @@ set(ENGINE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CameraComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/EnhancedCameraEntity.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Serialization.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/DebugUI.cpp
 )
 
-add_executable(IKore ${ENGINE_SOURCES} ${CORE_SOURCES} ${SCENE_SOURCES} ${AUDIO_SOURCES})
+add_executable(IKore ${ENGINE_SOURCES} ${CORE_SOURCES} ${SCENE_SOURCES} ${AUDIO_SOURCES} ${IMGUI_SOURCES})
+
+# Dear ImGui headers (core + backends) for the IKore target (#144)
+target_include_directories(IKore PRIVATE ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
 
 # Scene Graph Test executable
 add_executable(test_scene_graph 
