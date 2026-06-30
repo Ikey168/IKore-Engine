@@ -521,6 +521,11 @@ add_executable(test_determinism
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_determinism.cpp
 )
 
+# Rollback + input prediction netcode (Milestone 14 / #160) - header-only.
+add_executable(test_rollback
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_rollback.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
