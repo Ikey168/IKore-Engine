@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/DebugConsole.h"
 #include "core/PerfStats.h"
 
 struct GLFWwindow;
@@ -56,15 +57,28 @@ public:
     bool isVisible() const { return m_visible; }
     void toggle() { m_visible = !m_visible; }
 
+    /// Access the debug console so engine systems can register commands.
+    DebugConsole& console() { return m_console; }
+
+    /// Handle an ImGui InputText callback for the console (history/completion).
+    /// Takes a void* (an ImGuiInputTextCallbackData*) to keep this header free of
+    /// the ImGui headers; the implementation casts it. Public so the file-static
+    /// callback trampoline in DebugUI.cpp can dispatch to it.
+    int onConsoleTextEdit(void* callbackData);
+
 private:
     void buildUI(float deltaTimeSeconds);
     void renderPerfOverlay();
+    void renderConsole();
 
     bool m_initialized{false};
     bool m_visible{false};
     bool m_showDemoWindow{false};
     bool m_showPerf{true};
+    bool m_showConsole{true};
     PerfStats m_perf;
+    DebugConsole m_console;
+    char m_consoleInput[256]{};
 };
 
 } // namespace IKore

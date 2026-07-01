@@ -6,9 +6,16 @@
 
 #include "core/Logger.h"
 
+#include <string>
 #include <vector>
 
 namespace IKore {
+
+// File-static trampoline: ImGui's InputText callback dispatches here, then into
+// the DebugUI instance passed as user data.
+static int consoleTextEditStub(ImGuiInputTextCallbackData* data) {
+    return static_cast<DebugUI*>(data->UserData)->onConsoleTextEdit(data);
+}
 
 bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
     if (m_initialized) return true;
@@ -34,6 +41,11 @@ bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
         ImGui::DestroyContext();
         return false;
     }
+
+    m_console.registerCommand("version", "print the engine name", [](const std::vector<std::string>&) {
+        return std::string("IKore Engine");
+    });
+    m_console.print("Console ready. Type 'help'.");
 
     m_initialized = true;
     LOG_INFO("DebugUI: Dear ImGui initialized (press F1 to toggle)");
@@ -91,14 +103,66 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
 
     ImGui::Separator();
     ImGui::Checkbox("Show performance overlay (#53)", &m_showPerf);
+    ImGui::Checkbox("Show console (#54)", &m_showConsole);
     ImGui::Checkbox("Show ImGui demo window", &m_showDemoWindow);
     ImGui::End();
 
     renderPerfOverlay();
+    renderConsole();
 
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
     }
+}
+
+void DebugUI::renderConsole() {
+    if (!m_showConsole) return;
+
+    ImGui::Begin("Console", &m_showConsole);
+
+    // Scrollback region, leaving room for the input line at the bottom.
+    const float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+    ImGui::BeginChild("console_scroll", ImVec2(0.0f, -footerHeight), true,
+                      ImGuiWindowFlags_HorizontalScrollbar);
+    for (const std::string& line : m_console.lines()) {
+        ImGui::TextUnformatted(line.c_str());
+    }
+    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) ImGui::SetScrollHereY(1.0f); // autoscroll
+    ImGui::EndChild();
+
+    ImGui::Separator();
+    const ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue |
+                                      ImGuiInputTextFlags_CallbackCompletion |
+                                      ImGuiInputTextFlags_CallbackHistory;
+    if (ImGui::InputText("Input", m_consoleInput, sizeof(m_consoleInput), flags, &consoleTextEditStub,
+                         this)) {
+        m_console.execute(m_consoleInput);
+        m_consoleInput[0] = '\0';
+        ImGui::SetKeyboardFocusHere(-1); // keep focus on the input
+    }
+    ImGui::End();
+}
+
+int DebugUI::onConsoleTextEdit(void* callbackData) {
+    ImGuiInputTextCallbackData* data = static_cast<ImGuiInputTextCallbackData*>(callbackData);
+    if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion) {
+        const std::string current(data->Buf, data->Buf + data->BufTextLen);
+        const std::string completed = m_console.complete(current);
+        if (completed.size() > current.size()) {
+            data->DeleteChars(0, data->BufTextLen);
+            data->InsertChars(0, completed.c_str());
+        }
+    } else if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory) {
+        std::string recalled;
+        if (data->EventKey == ImGuiKey_UpArrow) {
+            recalled = m_console.historyPrev();
+        } else if (data->EventKey == ImGuiKey_DownArrow) {
+            recalled = m_console.historyNext();
+        }
+        data->DeleteChars(0, data->BufTextLen);
+        if (!recalled.empty()) data->InsertChars(0, recalled.c_str());
+    }
+    return 0;
 }
 
 void DebugUI::renderPerfOverlay() {
