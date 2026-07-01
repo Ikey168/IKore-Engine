@@ -42,7 +42,16 @@ struct Material {
     glm::vec3 specularColor = glm::vec3(0.5f);
     glm::vec3 ambientColor = glm::vec3(0.2f);
     float shininess = 32.0f;
-    
+
+    // Opt-in metallic-roughness PBR (issue #234). When isPBR is false (the default)
+    // the material uses the Blinn-Phong path unchanged; when true the renderer picks
+    // the PBR program and uses the fields below.
+    bool isPBR = false;
+    glm::vec3 albedo = glm::vec3(1.0f);
+    float metallic = 0.0f;
+    float roughness = 0.5f;
+    float ao = 1.0f;
+
     // Flags to indicate texture availability
     bool hasDiffuseTexture() const { return diffuse && diffuse->isLoaded(); }
     bool hasSpecularTexture() const { return specular && specular->isLoaded(); }

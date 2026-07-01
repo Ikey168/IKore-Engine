@@ -296,7 +296,13 @@ namespace IKore {
         material->setShaderParameter("metallicFactor", 1.0f);
         material->setShaderParameter("roughnessFactor", 1.0f);
         material->setShaderParameter("emissiveFactor", glm::vec3(1.0f));
-        
+
+        // Flag the underlying material for the opt-in PBR path (issue #234) so the
+        // renderer selects the PBR program for it.
+        material->getMaterial().isPBR = true;
+        material->getMaterial().metallic = 1.0f;
+        material->getMaterial().roughness = 1.0f;
+
         return material;
     }
 

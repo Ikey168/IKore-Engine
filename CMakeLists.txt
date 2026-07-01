@@ -693,6 +693,11 @@ add_executable(test_pbr_brdf
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_pbr_brdf.cpp
 )
 
+# PBR material + reference direct-lighting shading (rendering P2 / #234) - header-only.
+add_executable(test_pbr_material
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_pbr_material.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
