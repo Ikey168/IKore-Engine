@@ -588,6 +588,13 @@ add_executable(test_doodle_library
 )
 target_link_libraries(test_doodle_library PRIVATE doodle)
 
+# Mobile app shell (Milestone 17 / #172): platform-agnostic draw->snap->play->share
+# loop over the doodle library. Header-only; the GLES/native layer wraps it.
+add_executable(test_app_shell
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_app_shell.cpp
+)
+target_link_libraries(test_app_shell PRIVATE doodle)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
