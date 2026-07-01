@@ -665,6 +665,11 @@ add_executable(test_log_system
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_log_system.cpp
 )
 
+# Vertical-slice integration: import -> nav -> crowd -> rewind (roadmap section 6).
+add_executable(test_vertical_slice
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_vertical_slice.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
