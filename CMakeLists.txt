@@ -556,6 +556,11 @@ add_executable(test_rectify
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_rectify.cpp
 )
 
+# Binarize/clean + wall vectorization (Milestone 16 / #167) - header-only.
+add_executable(test_vectorize
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_vectorize.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
