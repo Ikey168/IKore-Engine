@@ -23,6 +23,7 @@
 #include "ParticleSystem.h"
 #include "ShadowMap.h"
 #include "Frustum.h"
+#include "render/FrameGraph.h"
 #include "core/Entity.h"
 #include "core/EntityTypes.h"
 #include "core/Transform.h"
@@ -569,6 +570,21 @@ int main() {
 
     LOG_INFO("Starting main game loop with delta time calculation");
 
+    // === Render frame graph ===
+    // The per-frame render passes run in the order computed by the render-pass
+    // dependency graph rather than a hard-coded sequence (rendering modernization
+    // P1 / #232). Reordering or inserting a pass is a change to
+    // buildDefaultFrameGraph(), not to the loop below. The order is computed once;
+    // handlers are (re)bound each frame to the current frame's locals.
+    IKore::render::FrameGraphExecutor frameGraph(IKore::render::buildDefaultFrameGraph());
+    {
+        std::string order;
+        for (const std::string& pass : frameGraph.order()) {
+            order += (order.empty() ? "" : " -> ") + pass;
+        }
+        LOG_INFO("Render frame graph pass order: " + order);
+    }
+
     while (!glfwWindowShouldClose(window)) {
         auto frameStart = std::chrono::high_resolution_clock::now();
 
@@ -658,42 +674,13 @@ int main() {
             sin(currentFrameTime * 0.5f) * 2.0f + 2.0f
         ));
 
-        // === SHADOW MAPPING PASSES ===
-        
-        // Update shadow maps with current light positions
-        if (dirShadowMap) {
-            dirShadowMap->setLightSpaceMatrix(dirLight.direction, glm::vec3(0.0f), 15.0f);
-        }
-        
-        if (pointShadowMap) {
-            pointShadowMap->setPointLightMatrices(pointLight.position, 25.0f);
-        }
-        
-        // Render directional light shadow map
-        if (dirShadowMap && shadowShaderPtr) {
-            dirShadowMap->beginShadowPass();
-            shadowShaderPtr->use();
-            
-            // Set light space matrix
-            glm::mat4 lightSpaceMatrix = dirShadowMap->getLightSpaceMatrix();
-            shadowShaderPtr->setMat4("lightSpaceMatrix", glm::value_ptr(lightSpaceMatrix));
-            
-            // Render scene objects to shadow map
-            renderSceneObjects(shadowShaderPtr, VAO, modelLoaded, cubeModel, currentFrameTime);
-            
-            dirShadowMap->endShadowPass();
-        }
-        
-        // Render point light shadow map (if point shadow shader is available)
-        // Note: This would require the point shadow shader with geometry shader
-        // For now, we'll focus on directional light shadows
-        
-        // === END SHADOW MAPPING PASSES ===
+        // === FRAME RENDER GRAPH ===
+        // The per-frame passes below are bound to handlers and then run in the
+        // order the render-pass graph computed (see buildDefaultFrameGraph()):
+        //   shadow -> scene_begin -> skybox -> forward -> particles -> postprocess
 
-        // Begin post-processing frame (renders to framebuffer)
-        postProcessor.beginFrame();
-        
-        // Get camera matrices for this frame - use Camera Component if enabled
+        // Camera matrices for this frame, shared by the skybox/forward/particle
+        // passes. Use the Camera Component if enabled.
         glm::mat4 view, projection;
         if (g_useCameraComponent && g_enhancedCamera) {
             view = g_enhancedCamera->getViewMatrix();
@@ -702,15 +689,43 @@ int main() {
             view = camera.getViewMatrix();
             projection = camera.getProjectionMatrix();
         }
-        
+
         // Update frustum for culling
         if (g_frustumCullingEnabled) {
             g_frustumCuller.updateFrustum(view, projection);
         }
-        
-        // Render skybox first (as background)
-        skybox.render(view, projection);
-        
+
+        frameGraph.setHandler(IKore::render::passes::Shadow, [&]() {
+            // Update shadow maps with current light positions
+            if (dirShadowMap) {
+                dirShadowMap->setLightSpaceMatrix(dirLight.direction, glm::vec3(0.0f), 15.0f);
+            }
+            if (pointShadowMap) {
+                pointShadowMap->setPointLightMatrices(pointLight.position, 25.0f);
+            }
+            // Render directional light shadow map
+            if (dirShadowMap && shadowShaderPtr) {
+                dirShadowMap->beginShadowPass();
+                shadowShaderPtr->use();
+                glm::mat4 lightSpaceMatrix = dirShadowMap->getLightSpaceMatrix();
+                shadowShaderPtr->setMat4("lightSpaceMatrix", glm::value_ptr(lightSpaceMatrix));
+                renderSceneObjects(shadowShaderPtr, VAO, modelLoaded, cubeModel, currentFrameTime);
+                dirShadowMap->endShadowPass();
+            }
+            // Point light shadow map needs a geometry-shader path; not rendered yet.
+        });
+
+        frameGraph.setHandler(IKore::render::passes::SceneBegin, [&]() {
+            // Bind the offscreen post-processing target and clear it.
+            postProcessor.beginFrame();
+        });
+
+        frameGraph.setHandler(IKore::render::passes::Skybox, [&]() {
+            // Render skybox first (as background)
+            skybox.render(view, projection);
+        });
+
+        frameGraph.setHandler(IKore::render::passes::Forward, [&]() {
         if(shaderPtr) {
             shaderPtr->use();
             
@@ -936,12 +951,20 @@ int main() {
             // Unbind textures
             textureManager.unbindAll();
         }
+        });  // end forward pass handler
 
-        // Render particle systems
-        particleManager.renderAll(view, projection);
+        frameGraph.setHandler(IKore::render::passes::Particles, [&]() {
+            // Render particle systems
+            particleManager.renderAll(view, projection);
+        });
 
-        // End post-processing frame (applies effects and renders to screen)
-        postProcessor.endFrame();
+        frameGraph.setHandler(IKore::render::passes::PostProcess, [&]() {
+            // End post-processing frame (applies effects and renders to screen)
+            postProcessor.endFrame();
+        });
+
+        // Run the registered passes in dependency order.
+        frameGraph.execute();
 
         // Render Entity Debug Overlay (after all scene rendering)
         IKore::getEntityDebugSystem().renderDebugOverlay();
