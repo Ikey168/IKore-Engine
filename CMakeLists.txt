@@ -650,6 +650,11 @@ add_executable(test_input_map
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_input_map.cpp
 )
 
+# DPI / resolution UI scaling core (Milestone 9 / #61) - header-only.
+add_executable(test_ui_scaling
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ui_scaling.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
