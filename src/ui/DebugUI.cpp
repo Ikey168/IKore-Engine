@@ -6,6 +6,8 @@
 
 #include "core/Logger.h"
 
+#include <cmath>
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -47,6 +49,19 @@ bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
     });
     m_console.print("Console ready. Type 'help'.");
 
+    // Demo HUD wired through the reusable framework (#55). Each widget is anchored
+    // and bound to a live getter; in a real game these would read ECS component
+    // values. update() animates the demo state so the readouts visibly change.
+    m_demoInventory = {"Sword", "Shield", "Potion x3", "Map"};
+    m_hud.add(hudBar("Health", HudAnchor::TopLeft, {16.0f, 16.0f}, {220.0f, 20.0f},
+                     [this] { return m_demoHealth; }));
+    m_hud.add(hudText("Score", HudAnchor::TopRight, {16.0f, 16.0f}, {200.0f, 24.0f},
+                      [this] { return std::string("Score: ") + std::to_string(m_demoScore); }));
+    m_hud.add(hudValue("Ammo", HudAnchor::BottomRight, {16.0f, 16.0f}, {140.0f, 24.0f},
+                       [this] { return m_demoAmmo; }));
+    m_hud.add(hudList("Inventory", HudAnchor::BottomLeft, {16.0f, 16.0f}, {180.0f, 130.0f},
+                      [this] { return m_demoInventory; }));
+
     m_initialized = true;
     LOG_INFO("DebugUI: Dear ImGui initialized (press F1 to toggle)");
     return true;
@@ -64,6 +79,13 @@ void DebugUI::update(float deltaTimeSeconds) {
     // Cheap frame-time recording; runs even while the overlay is hidden so the
     // graph is populated when it is opened.
     m_perf.record(deltaTimeSeconds);
+
+    // Animate the demo HUD state so the data-bound widgets visibly update. In a
+    // real game these values come from ECS/game systems instead.
+    m_hudClock += deltaTimeSeconds;
+    m_demoHealth = 0.5f + 0.5f * std::sin(m_hudClock);       // oscillate across 0..1
+    m_demoScore = static_cast<int>(m_hudClock * 100.0f);     // climbs over time
+    m_demoAmmo = 30 - static_cast<int>(m_hudClock) % 31;     // counts down 30..0, loops
 }
 
 void DebugUI::render(float deltaTimeSeconds) {
@@ -104,11 +126,14 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     ImGui::Separator();
     ImGui::Checkbox("Show performance overlay (#53)", &m_showPerf);
     ImGui::Checkbox("Show console (#54)", &m_showConsole);
+    ImGui::Checkbox("Show HUD (#55)", &m_showHud);
+    ImGui::SliderFloat("HUD scale (#61)", &m_hudScale, 0.5f, 2.0f, "%.2f");
     ImGui::Checkbox("Show ImGui demo window", &m_showDemoWindow);
     ImGui::End();
 
     renderPerfOverlay();
     renderConsole();
+    renderHud();
 
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
@@ -141,6 +166,56 @@ void DebugUI::renderConsole() {
         ImGui::SetKeyboardFocusHere(-1); // keep focus on the input
     }
     ImGui::End();
+}
+
+void DebugUI::renderHud() {
+    if (!m_showHud) return;
+
+    const ImGuiIO& io = ImGui::GetIO();
+    m_hud.setScreenSize(io.DisplaySize.x, io.DisplaySize.y); // resolution aware (#55)
+    m_hud.setScale(m_hudScale);                              // scale aware (#61)
+
+    // Borderless, click-through overlays so the HUD never obstructs gameplay input.
+    const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |
+                                   ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+                                   ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
+
+    int index = 0;
+    for (const HudElement& e : m_hud.elements()) {
+        if (!e.visible) continue;
+
+        const HudVec2 pos = m_hud.positionOf(e);
+        ImGui::SetNextWindowPos(ImVec2(pos.x, pos.y));
+        ImGui::SetNextWindowSize(ImVec2(e.size.x * m_hud.scale(), e.size.y * m_hud.scale()));
+        ImGui::SetNextWindowBgAlpha(0.35f);
+
+        char windowId[32];
+        std::snprintf(windowId, sizeof(windowId), "##hud_%d", index++);
+        if (ImGui::Begin(windowId, nullptr, flags)) {
+            switch (e.widget) {
+                case HudWidget::Text:
+                    ImGui::TextUnformatted(e.text().c_str());
+                    break;
+                case HudWidget::Value:
+                    ImGui::Text("%s: %d", e.name.c_str(), e.value());
+                    break;
+                case HudWidget::Bar: {
+                    char label[48];
+                    std::snprintf(label, sizeof(label), "%s %.0f%%", e.name.c_str(),
+                                  static_cast<double>(e.bar()) * 100.0);
+                    ImGui::ProgressBar(e.bar(), ImVec2(-1.0f, 0.0f), label);
+                    break;
+                }
+                case HudWidget::List:
+                    ImGui::TextUnformatted((e.name + ":").c_str());
+                    for (const std::string& item : e.list()) {
+                        ImGui::BulletText("%s", item.c_str());
+                    }
+                    break;
+            }
+        }
+        ImGui::End();
+    }
 }
 
 int DebugUI::onConsoleTextEdit(void* callbackData) {

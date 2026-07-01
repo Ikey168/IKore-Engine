@@ -2,6 +2,10 @@
 
 #include "core/DebugConsole.h"
 #include "core/PerfStats.h"
+#include "ui/HudFramework.h"
+
+#include <string>
+#include <vector>
 
 struct GLFWwindow;
 
@@ -60,6 +64,10 @@ public:
     /// Access the debug console so engine systems can register commands.
     DebugConsole& console() { return m_console; }
 
+    /// Access the in-game HUD so engine systems can add anchored, data-bound
+    /// widgets (issue #55). Menu screens (#58) reuse the same framework.
+    Hud& hud() { return m_hud; }
+
     /// Handle an ImGui InputText callback for the console (history/completion).
     /// Takes a void* (an ImGuiInputTextCallbackData*) to keep this header free of
     /// the ImGui headers; the implementation casts it. Public so the file-static
@@ -70,15 +78,27 @@ private:
     void buildUI(float deltaTimeSeconds);
     void renderPerfOverlay();
     void renderConsole();
+    void renderHud();
 
     bool m_initialized{false};
     bool m_visible{false};
     bool m_showDemoWindow{false};
     bool m_showPerf{true};
     bool m_showConsole{true};
+    bool m_showHud{true};
+    float m_hudScale{1.0f};
     PerfStats m_perf;
     DebugConsole m_console;
+    Hud m_hud;
     char m_consoleInput[256]{};
+
+    // Demo state bound into the HUD so the overlay visibly updates from "live"
+    // values, standing in for real ECS/game state. Animated in update().
+    float m_demoHealth{1.0f};
+    int m_demoAmmo{30};
+    int m_demoScore{0};
+    std::vector<std::string> m_demoInventory;
+    float m_hudClock{0.0f};
 };
 
 } // namespace IKore
