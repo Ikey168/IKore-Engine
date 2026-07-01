@@ -703,6 +703,12 @@ add_executable(test_tone_mapping
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_tone_mapping.cpp
 )
 
+# Cascaded shadow map math: splits / cascade selection / frustum fit / ortho
+# (rendering P4 / #236) - header-only.
+add_executable(test_shadow_cascades
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_shadow_cascades.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
