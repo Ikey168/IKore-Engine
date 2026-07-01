@@ -323,6 +323,12 @@ void DebugUI::update(float deltaTimeSeconds) {
     // graph is populated when it is opened.
     m_perf.record(deltaTimeSeconds);
 
+    // Benchmark capture (#62) runs regardless of panel visibility. When not
+    // capturing this is a single branch, so it costs nothing when idle/disabled.
+    if (m_benchmark.capturing()) {
+        m_benchmark.record(static_cast<double>(deltaTimeSeconds), PerfStats::residentBytes());
+    }
+
     // Animate the demo HUD state so the data-bound widgets visibly update. In a
     // real game these values come from ECS/game systems instead.
     m_hudClock += deltaTimeSeconds;
@@ -377,6 +383,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     ImGui::Checkbox("Show scene hierarchy (#59)", &m_showHierarchy);
     ImGui::Checkbox("Show input bindings (#60)", &m_showInput);
     ImGui::Checkbox("Show UI scaling (#61)", &m_showScaling);
+    ImGui::Checkbox("Show benchmark (#62)", &m_showBenchmark);
     ImGui::Checkbox("Show ImGui demo window", &m_showDemoWindow);
     ImGui::End();
 
@@ -389,6 +396,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     renderHierarchy();
     renderInputBindings();
     renderScaling();
+    renderBenchmark();
 
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
@@ -791,6 +799,56 @@ void DebugUI::renderScaling() {
         m_settings.setFloat("ui.scale", 1.0f);
         saveSettings();
     }
+
+    ImGui::End();
+}
+
+void DebugUI::renderBenchmark() {
+    if (!m_showBenchmark) return;
+
+    ImGui::Begin("Benchmark", &m_showBenchmark);
+
+    const bool capturing = m_benchmark.capturing();
+    if (capturing) {
+        if (ImGui::Button("Stop")) m_benchmark.stop();
+    } else {
+        if (ImGui::Button("Start")) m_benchmark.start();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Reset")) {
+        m_benchmark.reset();
+        m_benchmarkStatus.clear();
+    }
+
+    ImGui::Text("Capturing: %s", capturing ? "yes" : "no");
+    ImGui::Text("Samples: %zu    Duration: %.2f s", m_benchmark.sampleCount(),
+                m_benchmark.durationSeconds());
+
+    if (m_benchmark.sampleCount() > 0) {
+        ImGui::Text("FPS: avg %.1f (min %.1f, max %.1f)", m_benchmark.avgFps(), m_benchmark.minFps(),
+                    m_benchmark.maxFps());
+        ImGui::Text("Frame ms: avg %.3f (min %.3f, max %.3f)", m_benchmark.avgFrameMs(),
+                    m_benchmark.minFrameMs(), m_benchmark.maxFrameMs());
+        if (m_benchmark.peakMemoryBytes() > 0) {
+            ImGui::Text("Peak memory: %.1f MB",
+                        static_cast<double>(m_benchmark.peakMemoryBytes()) / (1024.0 * 1024.0));
+        }
+    }
+
+    ImGui::Separator();
+    ImGui::Checkbox("Export as JSON", &m_benchmarkJson);
+    ImGui::SameLine();
+    if (ImGui::Button("Export")) {
+        const char* path = m_benchmarkJson ? "ikore_benchmark.json" : "ikore_benchmark.csv";
+        const sim::ExportFormat format = m_benchmarkJson ? sim::ExportFormat::Json : sim::ExportFormat::Csv;
+        if (m_benchmark.exportToFile(path, format)) {
+            m_benchmarkStatus = "Exported " + std::to_string(m_benchmark.sampleCount()) +
+                                " samples to " + path;
+        } else {
+            m_benchmarkStatus = "Export failed";
+        }
+    }
+    if (!m_benchmarkStatus.empty()) ImGui::TextUnformatted(m_benchmarkStatus.c_str());
 
     ImGui::End();
 }

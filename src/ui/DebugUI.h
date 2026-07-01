@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/Benchmark.h"
 #include "core/DebugConsole.h"
 #include "core/InputMap.h"
 #include "core/PerfStats.h"
@@ -100,6 +101,7 @@ private:
     void renderInputBindings();
     void renderScaling();
     void applyScaling();
+    void renderBenchmark();
 
     bool m_initialized{false};
     bool m_visible{false};
@@ -113,6 +115,7 @@ private:
     bool m_showHierarchy{true};
     bool m_showInput{true};
     bool m_showScaling{true};
+    bool m_showBenchmark{true};
     PerfStats m_perf;
     DebugConsole m_console;
     Hud m_hud;
@@ -166,6 +169,12 @@ private:
     // ImGui (font + style) and the HUD; the user scale persists in settings.
     UiScaleConfig m_uiScale;
     float m_effectiveScale{1.0f};
+
+    // Benchmark capture (#62): records FPS/frame-time/memory over a run (fed each
+    // frame from update() while capturing) and exports via the #155 format.
+    Benchmark m_benchmark;
+    bool m_benchmarkJson{false};
+    std::string m_benchmarkStatus;
 };
 
 } // namespace IKore
