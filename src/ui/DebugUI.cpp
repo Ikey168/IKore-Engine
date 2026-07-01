@@ -6,6 +6,8 @@
 
 #include "core/Logger.h"
 
+#include <vector>
+
 namespace IKore {
 
 bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
@@ -46,6 +48,12 @@ void DebugUI::shutdown() {
     m_initialized = false;
 }
 
+void DebugUI::update(float deltaTimeSeconds) {
+    // Cheap frame-time recording; runs even while the overlay is hidden so the
+    // graph is populated when it is opened.
+    m_perf.record(deltaTimeSeconds);
+}
+
 void DebugUI::render(float deltaTimeSeconds) {
     // Hidden or uninitialized overlay costs nothing.
     if (!m_initialized || !m_visible) return;
@@ -82,12 +90,40 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     ImGui::TextDisabled("Docking is enabled: drag a window onto another to dock it.");
 
     ImGui::Separator();
+    ImGui::Checkbox("Show performance overlay (#53)", &m_showPerf);
     ImGui::Checkbox("Show ImGui demo window", &m_showDemoWindow);
     ImGui::End();
+
+    renderPerfOverlay();
 
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
     }
+}
+
+void DebugUI::renderPerfOverlay() {
+    if (!m_showPerf) return;
+
+    m_perf.refreshMemory(); // sampled only while the overlay is on screen
+
+    ImGui::Begin("Performance", &m_showPerf);
+    ImGui::Text("FPS: %.1f  (avg %.1f)", m_perf.fps(), m_perf.avgFps());
+    ImGui::Text("Frame: %.3f ms  (avg %.3f, min %.3f, max %.3f)", static_cast<double>(m_perf.lastFrameMs()),
+                static_cast<double>(m_perf.avgFrameMs()), static_cast<double>(m_perf.minFrameMs()),
+                static_cast<double>(m_perf.maxFrameMs()));
+
+    const std::vector<float> history = m_perf.historyMs();
+    if (!history.empty()) {
+        const float scaleMax = m_perf.maxFrameMs() * 1.25f + 1.0f;
+        ImGui::PlotLines("Frame ms", history.data(), static_cast<int>(history.size()), 0, nullptr, 0.0f,
+                         scaleMax, ImVec2(0.0f, 60.0f));
+    }
+
+    const long memoryBytes = m_perf.memoryBytes();
+    if (memoryBytes > 0) {
+        ImGui::Text("Memory (RSS): %.1f MB", static_cast<double>(memoryBytes) / (1024.0 * 1024.0));
+    }
+    ImGui::End();
 }
 
 } // namespace IKore
