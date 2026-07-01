@@ -1,9 +1,11 @@
 #include "SoundComponent.h"
 #include "TransformComponent.h"
+#include "audio/AudioDecode.h"
 #include "core/Entity.h"
 #include "core/Logger.h"
 #include <iostream>
 #include <fstream>
+#include <iterator>
 #include <vector>
 #include <cstring>
 
@@ -257,23 +259,26 @@ namespace IKore {
             return false;
         }
 
-        // Generates a test tone for now; real audio-file decoding is tracked in #258.
-        std::vector<short> samples;
-        const int sampleRate = 44100;
-        const int duration = 1; // 1 second
-        const float frequency = 440.0f; // A4 note
-        
-        for (int i = 0; i < sampleRate * duration; i++) {
-            float t = static_cast<float>(i) / sampleRate;
-            short sample = static_cast<short>(sin(2.0f * 3.14159f * frequency * t) * 32767 * 0.3f);
-            samples.push_back(sample);
+        // Decode the WAV into PCM (issue #258); fall back to a short tone if the file
+        // cannot be decoded, so a malformed asset never hard-fails audio loading.
+        std::vector<unsigned char> fileBytes((std::istreambuf_iterator<char>(file)),
+                                             std::istreambuf_iterator<char>());
+        audio::PcmAudio pcm;
+        std::string decodeErr;
+        if (!(audio::parseWav(fileBytes.data(), fileBytes.size(), pcm, decodeErr) && pcm.valid())) {
+            Logger::getInstance().warning("Could not decode " + filename + " (" + decodeErr +
+                                          "); using a fallback tone");
+            pcm = audio::generateTone(440.0f, 1.0f, 44100, 0.3f);
         }
 
         // Upload buffer data
 #ifdef OPENAL_FOUND
 #if OPENAL_FOUND
-        alBufferData(m_buffer, AL_FORMAT_MONO16, samples.data(), 
-                    samples.size() * sizeof(short), sampleRate);
+        const ALenum bufferFormat = (pcm.channels == 2)
+            ? (pcm.bitsPerSample == 8 ? AL_FORMAT_STEREO8 : AL_FORMAT_STEREO16)
+            : (pcm.bitsPerSample == 8 ? AL_FORMAT_MONO8 : AL_FORMAT_MONO16);
+        alBufferData(m_buffer, bufferFormat, pcm.data.data(),
+                    static_cast<ALsizei>(pcm.data.size()), pcm.sampleRate);
         
         error = alGetError();
         if (error != AL_NO_ERROR) {

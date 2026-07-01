@@ -5,6 +5,8 @@
 #include <memory>
 #include <glm/glm.hpp>
 
+#include "AudioStreaming.h" // audio::Crossfade (issue #258)
+
 namespace IKore {
 
 // Forward declaration to avoid circular dependency
@@ -52,7 +54,9 @@ private:
     std::vector<AmbientSoundZone> zones;
     glm::vec3 listenerPosition{0.0f, 0.0f, 0.0f};
     AmbientSoundZone* currentZone{nullptr};
+    AmbientSoundZone* previousZone{nullptr}; // zone being faded out (issue #258)
     float transitionSpeed{2.0f};           // Speed of volume transitions
+    audio::Crossfade transition{0.5f};     // Cross-fade between previous and current zone
     AudioSystem3D* audioSystem{nullptr};   // Reference to audio system
     
 public:
@@ -85,6 +89,26 @@ public:
      * @return Pointer to active zone or nullptr
      */
     const AmbientSoundZone* getCurrentZone() const { return currentZone; }
+
+    /**
+     * @brief The zone being faded out during a transition (issue #258).
+     */
+    const AmbientSoundZone* getPreviousZone() const { return previousZone; }
+
+    /**
+     * @brief Gain [0,1] for the incoming (current) zone during a cross-fade.
+     */
+    float getCurrentZoneGain() const { return transition.gains().toGain; }
+
+    /**
+     * @brief Gain [0,1] for the outgoing (previous) zone during a cross-fade.
+     */
+    float getPreviousZoneGain() const { return transition.gains().fromGain; }
+
+    /**
+     * @brief True while a zone cross-fade is still in progress.
+     */
+    bool isTransitioning() const { return !transition.done(); }
     
     /**
      * @brief Get all zones

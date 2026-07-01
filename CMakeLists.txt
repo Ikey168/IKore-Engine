@@ -628,6 +628,16 @@ add_executable(test_leaderboard
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_leaderboard.cpp
 )
 
+# Audio decode core: robust WAV/PCM parser + tone generator (#258) - header-only.
+add_executable(test_audio_decode
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_audio_decode.cpp
+)
+
+# Audio cross-fade + streaming buffer-queue logic (#258) - header-only.
+add_executable(test_audio_streaming
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_audio_streaming.cpp
+)
+
 # Performance-overlay stats core (Milestone 9 / #53) - header-only.
 add_executable(test_perf_stats
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_perf_stats.cpp

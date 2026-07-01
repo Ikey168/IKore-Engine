@@ -1,6 +1,8 @@
 #include "OpenALAudioEngine.h"
+#include "AudioDecode.h"
 #include <iostream>
 #include <fstream>
+#include <iterator>
 #include <cstring>
 #include <algorithm>
 #include <cmath>
@@ -705,38 +707,27 @@ namespace IKore {
             return false;
         }
 
-        // Simple WAV header parsing (simplified version)
-        char header[44];
-        file.read(header, 44);
-        
-        if (std::strncmp(header, "RIFF", 4) != 0) {
-            m_lastError = "Invalid WAV file format: " + filename;
-            return false;
-        }
-
-        // Extract format information
-        short channels = *(short*)(header + 22);
-        int sampleRate = *(int*)(header + 24);
-        short bitsPerSample = *(short*)(header + 34);
-        int dataSize = *(int*)(header + 40);
-
-        // Read audio data
-        std::vector<char> audioData(dataSize);
-        file.read(audioData.data(), dataSize);
+        // Robust RIFF/WAVE parse via the shared decoder (issue #258): walks the
+        // chunk list, so files with extra chunks or an extended fmt chunk load, not
+        // just the canonical 44-byte layout the old inline parser assumed.
+        std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(file)),
+                                         std::istreambuf_iterator<char>());
         file.close();
 
-        // Determine OpenAL format
-        if (channels == 1) {
-            buffer.format = (bitsPerSample == 8) ? AL_FORMAT_MONO8 : AL_FORMAT_MONO16;
-        } else if (channels == 2) {
-            buffer.format = (bitsPerSample == 8) ? AL_FORMAT_STEREO8 : AL_FORMAT_STEREO16;
-        } else {
-            m_lastError = "Unsupported channel count in WAV file: " + filename;
+        audio::PcmAudio pcm;
+        std::string decodeErr;
+        if (!audio::parseWav(bytes.data(), bytes.size(), pcm, decodeErr)) {
+            m_lastError = "Invalid WAV file (" + filename + "): " + decodeErr;
             return false;
         }
 
-        buffer.frequency = sampleRate;
-        buffer.size = dataSize;
+        if (pcm.channels == 1) {
+            buffer.format = (pcm.bitsPerSample == 8) ? AL_FORMAT_MONO8 : AL_FORMAT_MONO16;
+        } else {
+            buffer.format = (pcm.bitsPerSample == 8) ? AL_FORMAT_STEREO8 : AL_FORMAT_STEREO16;
+        }
+        buffer.frequency = pcm.sampleRate;
+        buffer.size = static_cast<ALsizei>(pcm.data.size());
 
         // Generate OpenAL buffer
         alGenBuffers(1, &buffer.bufferId);
@@ -745,8 +736,8 @@ namespace IKore {
         }
 
         // Upload audio data to buffer
-        alBufferData(buffer.bufferId, buffer.format, audioData.data(), buffer.size, buffer.frequency);
-        
+        alBufferData(buffer.bufferId, buffer.format, pcm.data.data(), buffer.size, buffer.frequency);
+
         return checkALError("Upload audio data to buffer");
     }
 
