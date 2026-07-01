@@ -487,6 +487,13 @@ int main() {
         LOG_ERROR(std::string("Shader file load/compile failed: ") + shaderError);
     }
 
+    // Opt-in metallic-roughness PBR program (issue #234). Only used to draw
+    // materials that opt in; the Blinn-Phong path above is left untouched.
+    auto pbrShaderPtr = IKore::Shader::loadFromFilesCached("src/shaders/pbr.vert", "src/shaders/pbr.frag", shaderError);
+    if(!pbrShaderPtr){
+        LOG_ERROR(std::string("PBR shader file load/compile failed: ") + shaderError);
+    }
+
     // Load shadow mapping shaders
     auto shadowShaderPtr = IKore::Shader::loadFromFilesCached("src/shaders/shadow_depth.vert", "src/shaders/shadow_depth.frag", shaderError);
     if(!shadowShaderPtr){
@@ -950,6 +957,45 @@ int main() {
             
             // Unbind textures
             textureManager.unbindAll();
+        }
+
+        // Opt-in PBR showcase (issue #234): a row of metallic-roughness cubes drawn
+        // with the PBR program, next to (above) the Blinn-Phong scene rendered above.
+        // This block is purely additive - it does not touch the Phong draws, so
+        // existing content renders byte-for-byte unchanged.
+        if (pbrShaderPtr && modelLoaded && !cubeModel.getMeshes().empty()) {
+            pbrShaderPtr->use();
+            pbrShaderPtr->setMat4("view", glm::value_ptr(view));
+            pbrShaderPtr->setMat4("projection", glm::value_ptr(projection));
+            glm::vec3 pbrCamPos = camera.getPosition();
+            pbrShaderPtr->setVec3("viewPos", pbrCamPos.x, pbrCamPos.y, pbrCamPos.z);
+
+            // Reuse the scene's directional + point light for the PBR objects.
+            pbrShaderPtr->setInt("useDirLight", 1);
+            pbrShaderPtr->setVec3("dirLight.direction", dirLight.direction.x, dirLight.direction.y, dirLight.direction.z);
+            pbrShaderPtr->setVec3("dirLight.diffuse", dirLight.diffuse.x, dirLight.diffuse.y, dirLight.diffuse.z);
+            pbrShaderPtr->setInt("numPointLights", 1);
+            pbrShaderPtr->setVec3("pointLights[0].position", pointLight.position.x, pointLight.position.y, pointLight.position.z);
+            pbrShaderPtr->setVec3("pointLights[0].diffuse", pointLight.diffuse.x, pointLight.diffuse.y, pointLight.diffuse.z);
+            pbrShaderPtr->setFloat("pointLights[0].constant", pointLight.constant);
+            pbrShaderPtr->setFloat("pointLights[0].linear", pointLight.linear);
+            pbrShaderPtr->setFloat("pointLights[0].quadratic", pointLight.quadratic);
+
+            const int kPbrShowcaseCount = 5;
+            for (int i = 0; i < kPbrShowcaseCount; ++i) {
+                const float t = static_cast<float>(i) / static_cast<float>(kPbrShowcaseCount - 1);
+                glm::mat4 pbrModel = glm::mat4(1.0f);
+                pbrModel = glm::translate(pbrModel, glm::vec3(-8.0f + i * 4.0f, 12.0f, 0.0f));
+                const glm::mat3 pbrNormal = glm::mat3(glm::transpose(glm::inverse(pbrModel)));
+                pbrShaderPtr->setMat4("model", glm::value_ptr(pbrModel));
+                pbrShaderPtr->setMat3("normalMatrix", glm::value_ptr(pbrNormal));
+                // Metallic increases left -> right; fixed mid-low roughness.
+                pbrShaderPtr->setVec3("material.albedo", 0.9f, 0.2f, 0.2f);
+                pbrShaderPtr->setFloat("material.metallic", t);
+                pbrShaderPtr->setFloat("material.roughness", 0.35f);
+                pbrShaderPtr->setFloat("material.ao", 1.0f);
+                cubeModel.render(pbrShaderPtr);
+            }
         }
         });  // end forward pass handler
 

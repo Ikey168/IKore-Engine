@@ -1,0 +1,125 @@
+#version 330 core
+out vec4 FragColor;
+
+in vec3 FragPos;
+in vec3 Normal;
+in vec2 TexCoord;
+
+// Metallic-roughness material (issue #234). This fragment path is only used by
+// materials that opt in; Blinn-Phong materials use phong_shadows.frag unchanged.
+struct Material {
+    vec3 albedo;
+    float metallic;
+    float roughness;
+    float ao;
+};
+
+struct DirectionalLight {
+    vec3 direction; // direction the light travels
+    vec3 diffuse;   // light color / intensity
+};
+
+struct PointLight {
+    vec3 position;
+    vec3 diffuse;
+    float constant;
+    float linear;
+    float quadratic;
+};
+
+#define MAX_POINT_LIGHTS 4
+
+uniform Material material;
+uniform DirectionalLight dirLight;
+uniform PointLight pointLights[MAX_POINT_LIGHTS];
+uniform int numPointLights;
+uniform bool useDirLight;
+uniform vec3 viewPos;
+
+const float PI = 3.14159265359;
+
+// The functions below mirror src/render/PbrBrdf.h and the reference evaluation in
+// src/render/PbrMaterial.h (evaluateDirectionalPbr), which are unit-tested. GLSL is
+// not compiled in CI, so keeping the math identical to the tested C++ is the
+// safeguard against drift.
+float distributionGGX(vec3 N, vec3 H, float roughness) {
+    float r = clamp(roughness, 1e-3, 1.0);
+    float a = r * r;
+    float a2 = a * a;
+    float NdotH = max(dot(N, H), 0.0);
+    float nh2 = NdotH * NdotH;
+    // Written to avoid catastrophic cancellation (matches PbrBrdf.h).
+    float d = nh2 * a2 + (1.0 - nh2);
+    return a2 / (PI * d * d);
+}
+
+float geometrySchlickGGX(float NdotX, float k) {
+    float denom = NdotX * (1.0 - k) + k;
+    return denom > 0.0 ? NdotX / denom : 0.0;
+}
+
+float geometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
+    float r = clamp(roughness, 0.0, 1.0);
+    float k = (r + 1.0) * (r + 1.0) / 8.0; // direct-lighting remap
+    float ggxV = geometrySchlickGGX(max(dot(N, V), 0.0), k);
+    float ggxL = geometrySchlickGGX(max(dot(N, L), 0.0), k);
+    return ggxV * ggxL;
+}
+
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+    float m = clamp(1.0 - cosTheta, 0.0, 1.0);
+    float m5 = m * m * m * m * m;
+    return F0 + (1.0 - F0) * m5;
+}
+
+// Cook-Torrance contribution of a single light. Mirrors evaluateDirectionalPbr().
+vec3 shadePbr(vec3 N, vec3 V, vec3 L, vec3 radiance, vec3 albedo, float metallic, float roughness) {
+    float NdotL = max(dot(N, L), 0.0);
+    if (NdotL <= 0.0) return vec3(0.0);
+    float NdotV = max(dot(N, V), 0.0);
+    vec3 H = normalize(V + L);
+    float VdotH = max(dot(V, H), 0.0);
+
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
+    float D = distributionGGX(N, H, roughness);
+    float G = geometrySmith(N, V, L, roughness);
+    vec3 F = fresnelSchlick(VdotH, F0);
+
+    vec3 specular = (D * G * F) / (4.0 * NdotV * NdotL + 1e-4);
+    vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
+    vec3 diffuse = kD * albedo / PI;
+    return (diffuse + specular) * radiance * NdotL;
+}
+
+void main() {
+    vec3 N = normalize(Normal);
+    vec3 V = normalize(viewPos - FragPos);
+
+    vec3 albedo = material.albedo;
+    float metallic = material.metallic;
+    float roughness = material.roughness;
+
+    vec3 Lo = vec3(0.0);
+    if (useDirLight) {
+        vec3 L = normalize(-dirLight.direction);
+        Lo += shadePbr(N, V, L, dirLight.diffuse, albedo, metallic, roughness);
+    }
+    for (int i = 0; i < numPointLights && i < MAX_POINT_LIGHTS; ++i) {
+        vec3 toLight = pointLights[i].position - FragPos;
+        float dist = length(toLight);
+        vec3 L = toLight / max(dist, 1e-4);
+        float attenuation = 1.0 / (pointLights[i].constant + pointLights[i].linear * dist +
+                                   pointLights[i].quadratic * dist * dist);
+        vec3 radiance = pointLights[i].diffuse * attenuation;
+        Lo += shadePbr(N, V, L, radiance, albedo, metallic, roughness);
+    }
+
+    // Simple ambient so unlit faces are not pure black (IBL replaces this later).
+    vec3 ambient = vec3(0.03) * albedo * material.ao;
+    vec3 color = ambient + Lo;
+
+    // Reinhard tone map + gamma for display.
+    color = color / (color + vec3(1.0));
+    color = pow(color, vec3(1.0 / 2.2));
+    FragColor = vec4(color, 1.0);
+}
