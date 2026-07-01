@@ -600,6 +600,11 @@ add_executable(test_glyph_net
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_glyph_net.cpp
 )
 
+# UGC catalog: share codes, feed, stars (Milestone 17 / #174) - header-only.
+add_executable(test_level_catalog
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_level_catalog.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
