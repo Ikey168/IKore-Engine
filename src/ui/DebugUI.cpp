@@ -191,6 +191,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     ImGui::Checkbox("Show HUD (#55)", &m_showHud);
     ImGui::SliderFloat("HUD scale (#61)", &m_hudScale, 0.5f, 2.0f, "%.2f");
     ImGui::Checkbox("Show entity inspector (#56)", &m_showInspector);
+    ImGui::Checkbox("Show scene view / picking (#57)", &m_showPicking);
     ImGui::Checkbox("Show ImGui demo window", &m_showDemoWindow);
     ImGui::End();
 
@@ -198,6 +199,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     renderConsole();
     renderHud();
     renderInspector();
+    renderPicking();
 
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
@@ -269,6 +271,89 @@ void DebugUI::renderInspector() {
             }
         }
         ImGui::PopID();
+    }
+
+    ImGui::End();
+}
+
+void DebugUI::renderPicking() {
+    if (!m_showPicking) return;
+
+    ImGui::Begin("Scene View (picking)", &m_showPicking);
+    ImGui::TextUnformatted("Top-down pick view: hover to highlight, click to select.");
+    const ImGuiIO& io = ImGui::GetIO();
+    ImGui::Text("ImGui WantCaptureMouse: %s", io.WantCaptureMouse ? "yes" : "no");
+
+    // Reserve the viewport rectangle. The InvisibleButton is what makes ImGui
+    // consume clicks: only a click that lands on it (and not on another panel)
+    // counts as a scene click - clicks elsewhere on the UI never pick (#57).
+    const ImVec2 topLeft = ImGui::GetCursorScreenPos();
+    const float viewW = ImGui::GetContentRegionAvail().x;
+    const float viewH = 240.0f;
+    ImGui::InvisibleButton("##viewport", ImVec2(viewW, viewH));
+    const bool overViewport = ImGui::IsItemHovered();
+    const bool clicked = ImGui::IsItemClicked(ImGuiMouseButton_Left);
+
+    // World window (x -> horizontal, z -> vertical) mapped onto the rectangle.
+    const float worldMinX = -6.0f, worldMaxX = 6.0f, worldMinZ = -6.0f, worldMaxZ = 6.0f;
+    auto worldToScreen = [&](float wx, float wz) {
+        return ImVec2(topLeft.x + (wx - worldMinX) / (worldMaxX - worldMinX) * viewW,
+                      topLeft.y + (wz - worldMinZ) / (worldMaxZ - worldMinZ) * viewH);
+    };
+
+    // Pickable bounds from the demo entities' transforms; ids match the inspector.
+    std::vector<pick::Pickable> pickables;
+    pickables.reserve(m_demoEntities.size());
+    for (const ecs::Entity entity : m_demoEntities) {
+        if (!m_demoRegistry.has<ecs::Transform>(entity)) continue;
+        const ecs::Transform& t = m_demoRegistry.get<ecs::Transform>(entity);
+        const pick::Vec3 half{0.5f * t.scale.x + 0.25f, 0.5f * t.scale.y + 0.25f, 0.5f * t.scale.z + 0.25f};
+        pickables.push_back({packEntity(entity),
+                             pick::Aabb::fromCenterHalf(
+                                 pick::Vec3{t.position.x, t.position.y, t.position.z}, half)});
+    }
+
+    // Cursor -> top-down world ray (straight down onto the x/z plane).
+    const float worldX = worldMinX + (io.MousePos.x - topLeft.x) / viewW * (worldMaxX - worldMinX);
+    const float worldZ = worldMinZ + (io.MousePos.y - topLeft.y) / viewH * (worldMaxZ - worldMinZ);
+    const pick::Ray ray{pick::Vec3{worldX, 100.0f, worldZ}, pick::Vec3{0.0f, -1.0f, 0.0f}};
+
+    m_picker.update(ray, pickables, /*pointerOverUI=*/!overViewport, clicked);
+
+    // A click in the viewport feeds the entity inspector (#56).
+    if (clicked) {
+        if (m_picker.hasSelection()) {
+            m_inspector.select(m_picker.selected());
+        } else {
+            m_inspector.deselect();
+        }
+    }
+
+    // Draw the scene: white dots, a yellow ring on hover, green fill when selected.
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    drawList->AddRectFilled(topLeft, ImVec2(topLeft.x + viewW, topLeft.y + viewH), IM_COL32(28, 28, 32, 255));
+    drawList->AddRect(topLeft, ImVec2(topLeft.x + viewW, topLeft.y + viewH), IM_COL32(80, 80, 90, 255));
+    for (const pick::Pickable& p : pickables) {
+        const float cx = 0.5f * (p.bounds.min.x + p.bounds.max.x);
+        const float cz = 0.5f * (p.bounds.min.z + p.bounds.max.z);
+        const ImVec2 dot = worldToScreen(cx, cz);
+        ImU32 color = IM_COL32(220, 220, 220, 255);
+        if (m_picker.hasSelection() && m_picker.selected() == p.id) color = IM_COL32(80, 220, 120, 255);
+        drawList->AddCircleFilled(dot, 6.0f, color);
+        if (m_picker.hasHover() && m_picker.hovered() == p.id) {
+            drawList->AddCircle(dot, 10.0f, IM_COL32(240, 220, 80, 255), 0, 2.0f);
+        }
+    }
+
+    if (m_picker.hasHover()) {
+        ImGui::Text("Hover: Entity %u", unpackEntity(m_picker.hovered()).index);
+    } else {
+        ImGui::TextDisabled("Hover: none");
+    }
+    if (m_picker.hasSelection()) {
+        ImGui::Text("Selected: Entity %u", unpackEntity(m_picker.selected()).index);
+    } else {
+        ImGui::TextDisabled("Selected: none");
     }
 
     ImGui::End();

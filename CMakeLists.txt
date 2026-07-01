@@ -625,6 +625,11 @@ add_executable(test_entity_inspector
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_entity_inspector.cpp
 )
 
+# Ray-based viewport picking core (Milestone 9 / #57) - header-only.
+add_executable(test_picking
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_picking.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting

@@ -2,6 +2,7 @@
 
 #include "core/DebugConsole.h"
 #include "core/PerfStats.h"
+#include "core/Picking.h"
 #include "core/ecs/ECS.h"
 #include "core/ecs/components/Components.h"
 #include "ui/EcsInspector.h"
@@ -88,6 +89,7 @@ private:
     void renderConsole();
     void renderHud();
     void renderInspector();
+    void renderPicking();
 
     bool m_initialized{false};
     bool m_visible{false};
@@ -96,6 +98,7 @@ private:
     bool m_showConsole{true};
     bool m_showHud{true};
     bool m_showInspector{true};
+    bool m_showPicking{true};
     float m_hudScale{1.0f};
     PerfStats m_perf;
     DebugConsole m_console;
@@ -116,6 +119,10 @@ private:
     ecs::Registry m_demoRegistry;
     std::vector<ecs::Entity> m_demoEntities;
     EntityInspector m_inspector;
+
+    // Viewport picking (#57): a top-down pick view over the demo scene that feeds
+    // the inspector on click. The core math/state lives in core/Picking.h.
+    pick::Picker m_picker;
 };
 
 } // namespace IKore
