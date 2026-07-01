@@ -630,6 +630,16 @@ add_executable(test_picking
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_picking.cpp
 )
 
+# Persistent settings store (Milestone 9 / #58) - header-only.
+add_executable(test_settings
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_settings.cpp
+)
+
+# Interactive menu navigation core (Milestone 9 / #58) - header-only.
+add_executable(test_menu_system
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_menu_system.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting

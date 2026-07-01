@@ -56,6 +56,64 @@ static void drawProperty(const Property& prop) {
     }
 }
 
+// Draw one menu row with the widget matching its type. Mouse hover moves the menu
+// focus and mouse edits route through the same setters keyboard/gamepad use (#58).
+static void drawMenuItem(Menu& menu, int index, const MenuItem& item, bool focused) {
+    ImGui::PushID(index);
+    if (focused) {
+        ImGui::Bullet(); // focus marker
+        ImGui::SameLine();
+    }
+
+    switch (item.type) {
+        case MenuItemType::Label:
+            ImGui::TextDisabled("%s", item.label.c_str());
+            break;
+        case MenuItemType::Button:
+            if (ImGui::Selectable(item.label.c_str(), focused)) {
+                menu.setFocus(index);
+                menu.activate();
+            }
+            if (ImGui::IsItemHovered()) menu.setFocus(index);
+            break;
+        case MenuItemType::Toggle: {
+            bool v = item.getBool ? item.getBool() : false;
+            if (ImGui::Checkbox(item.label.c_str(), &v)) {
+                menu.setFocus(index);
+                if (item.setBool) item.setBool(v);
+            }
+            if (ImGui::IsItemHovered()) menu.setFocus(index);
+            break;
+        }
+        case MenuItemType::Slider: {
+            float v = item.getFloat ? item.getFloat() : 0.0f;
+            if (ImGui::SliderFloat(item.label.c_str(), &v, item.minValue, item.maxValue)) {
+                menu.setFocus(index);
+                if (item.setFloat) item.setFloat(v);
+            }
+            if (ImGui::IsItemHovered()) menu.setFocus(index);
+            break;
+        }
+        case MenuItemType::Choice: {
+            const int cur = item.getChoice ? item.getChoice() : 0;
+            const char* preview =
+                (cur >= 0 && cur < static_cast<int>(item.options.size())) ? item.options[cur].c_str() : "";
+            if (ImGui::BeginCombo(item.label.c_str(), preview)) {
+                for (int k = 0; k < static_cast<int>(item.options.size()); ++k) {
+                    if (ImGui::Selectable(item.options[k].c_str(), k == cur)) {
+                        menu.setFocus(index);
+                        if (item.setChoice) item.setChoice(k);
+                    }
+                }
+                ImGui::EndCombo();
+            }
+            if (ImGui::IsItemHovered()) menu.setFocus(index);
+            break;
+        }
+    }
+    ImGui::PopID();
+}
+
 bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
     if (m_initialized) return true;
     if (window == nullptr) return false;
@@ -65,7 +123,8 @@ bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
 
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // allow panels to be docked together
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // menus (#58) support gamepad
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;    // allow panels to be docked together
 
     ImGui::StyleColorsDark();
 
@@ -123,6 +182,39 @@ bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
     }
     installEcsBuilder(m_inspector, m_demoRegistry);
     if (!m_demoEntities.empty()) m_inspector.select(packEntity(m_demoEntities.front()));
+
+    // Interactive menus + persisted settings (#58). Defaults first, then load any
+    // saved values from disk (so a previous session's choices win), then build the
+    // menus on the navigation core and open the main menu.
+    m_settings.setBool("vsync", true);
+    m_settings.setFloat("volume", 0.8f);
+    m_settings.setInt("quality", 2); // index into {Low, Medium, High}
+    m_settings.loadFromFile("ikore_settings.ini");
+
+    m_settingsMenu.add(menuToggle("VSync", [this] { return m_settings.getBool("vsync"); },
+                                  [this](bool b) { m_settings.setBool("vsync", b); }));
+    m_settingsMenu.add(menuSlider("Master Volume", [this] { return m_settings.getFloat("volume"); },
+                                  [this](float v) { m_settings.setFloat("volume", v); }, 0.0f, 1.0f, 0.05f));
+    m_settingsMenu.add(menuChoice("Quality", {"Low", "Medium", "High"},
+                                  [this] { return m_settings.getInt("quality"); },
+                                  [this](int i) { m_settings.setInt("quality", i); }));
+    m_settingsMenu.add(menuButton("Back", [this] {
+        saveSettings();
+        m_menuStack.back();
+    }));
+
+    m_pauseMenu.add(menuButton("Resume", [this] { m_menuStack.closeAll(); }));
+    m_pauseMenu.add(menuButton("Settings", [this] { m_menuStack.open(&m_settingsMenu); }));
+    m_pauseMenu.add(menuButton("Main Menu", [this] {
+        m_menuStack.closeAll();
+        m_menuStack.open(&m_mainMenu);
+    }));
+
+    m_mainMenu.add(menuButton("Play", [this] { m_menuStack.closeAll(); }));
+    m_mainMenu.add(menuButton("Settings", [this] { m_menuStack.open(&m_settingsMenu); }));
+    m_mainMenu.add(menuButton("Quit", [this] { m_menuQuitRequested = true; }));
+
+    m_menuStack.open(&m_mainMenu);
 
     m_initialized = true;
     LOG_INFO("DebugUI: Dear ImGui initialized (press F1 to toggle)");
@@ -192,6 +284,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     ImGui::SliderFloat("HUD scale (#61)", &m_hudScale, 0.5f, 2.0f, "%.2f");
     ImGui::Checkbox("Show entity inspector (#56)", &m_showInspector);
     ImGui::Checkbox("Show scene view / picking (#57)", &m_showPicking);
+    ImGui::Checkbox("Show menus (#58)", &m_showMenus);
     ImGui::Checkbox("Show ImGui demo window", &m_showDemoWindow);
     ImGui::End();
 
@@ -200,6 +293,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     renderHud();
     renderInspector();
     renderPicking();
+    renderMenus();
 
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
@@ -357,6 +451,60 @@ void DebugUI::renderPicking() {
     }
 
     ImGui::End();
+}
+
+void DebugUI::saveSettings() { m_settings.saveToFile("ikore_settings.ini"); }
+
+void DebugUI::renderMenus() {
+    if (!m_showMenus) return;
+
+    // Map keyboard and gamepad input to menu actions. All input sources funnel
+    // through the same MenuAction stream, so navigation is identical for each; the
+    // mouse is handled per-item below (hover to focus, click to activate).
+    if (m_menuStack.isOpen()) {
+        if (ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadUp))
+            m_menuStack.handle(MenuAction::Up);
+        if (ImGui::IsKeyPressed(ImGuiKey_DownArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadDown))
+            m_menuStack.handle(MenuAction::Down);
+        if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadLeft))
+            m_menuStack.handle(MenuAction::Left);
+        if (ImGui::IsKeyPressed(ImGuiKey_RightArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadRight))
+            m_menuStack.handle(MenuAction::Right);
+        if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceDown))
+            m_menuStack.handle(MenuAction::Activate);
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight))
+            m_menuStack.handle(MenuAction::Back);
+    } else if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+        m_menuStack.open(&m_pauseMenu); // Escape opens the pause menu when idle
+    }
+
+    Menu* menu = m_menuStack.current();
+    if (menu == nullptr) return;
+
+    // Center the menu window using the HUD framework's anchoring (#55).
+    const ImGuiIO& io = ImGui::GetIO();
+    const HudVec2 size{340.0f, 320.0f};
+    const HudVec2 pos =
+        resolveAnchor(HudAnchor::Center, {io.DisplaySize.x, io.DisplaySize.y}, size, {0.0f, 0.0f});
+    ImGui::SetNextWindowPos(ImVec2(pos.x, pos.y), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(size.x, size.y), ImGuiCond_Always);
+
+    ImGui::Begin(menu->title().c_str(), nullptr,
+                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+                     ImGuiWindowFlags_NoSavedSettings);
+    const std::vector<MenuItem>& items = menu->items();
+    for (int i = 0; i < static_cast<int>(items.size()); ++i) {
+        drawMenuItem(*menu, i, items[i], menu->focus() == i);
+    }
+    ImGui::End();
+
+    if (m_menuQuitRequested) {
+        // In the full engine this would signal the main loop to exit; here we just
+        // note it and drop back so the demo stays interactive.
+        LOG_INFO("DebugUI: menu Quit selected");
+        m_menuQuitRequested = false;
+        m_menuStack.closeAll();
+    }
 }
 
 void DebugUI::renderHud() {
