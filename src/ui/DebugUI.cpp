@@ -6,6 +6,7 @@
 
 #include "core/Logger.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -183,6 +184,14 @@ bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
     installEcsBuilder(m_inspector, m_demoRegistry);
     if (!m_demoEntities.empty()) m_inspector.select(packEntity(m_demoEntities.front()));
 
+    // Scene hierarchy (#59) mirroring the demo entities; Prop nests under Player to
+    // show a parent/child relationship. Selecting a node drives the inspector.
+    if (m_demoEntities.size() >= 3) {
+        m_hierarchy.add(packEntity(m_demoEntities[0]), "Player");
+        m_hierarchy.add(packEntity(m_demoEntities[1]), "Enemy");
+        m_hierarchy.add(packEntity(m_demoEntities[2]), "Prop", packEntity(m_demoEntities[0]));
+    }
+
     // Interactive menus + persisted settings (#58). Defaults first, then load any
     // saved values from disk (so a previous session's choices win), then build the
     // menus on the navigation core and open the main menu.
@@ -285,6 +294,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     ImGui::Checkbox("Show entity inspector (#56)", &m_showInspector);
     ImGui::Checkbox("Show scene view / picking (#57)", &m_showPicking);
     ImGui::Checkbox("Show menus (#58)", &m_showMenus);
+    ImGui::Checkbox("Show scene hierarchy (#59)", &m_showHierarchy);
     ImGui::Checkbox("Show ImGui demo window", &m_showDemoWindow);
     ImGui::End();
 
@@ -294,6 +304,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     renderInspector();
     renderPicking();
     renderMenus();
+    renderHierarchy();
 
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
@@ -505,6 +516,86 @@ void DebugUI::renderMenus() {
         m_menuQuitRequested = false;
         m_menuStack.closeAll();
     }
+}
+
+void DebugUI::renderHierarchy() {
+    if (!m_showHierarchy) return;
+
+    ImGui::Begin("Scene Hierarchy", &m_showHierarchy);
+
+    // Create/Delete stay in sync with the demo registry, so the tree reflects the
+    // live scene as entities are created and destroyed.
+    if (ImGui::Button("Create")) {
+        ecs::Entity created = m_demoRegistry.create();
+        m_demoRegistry.add<ecs::Transform>(created, ecs::Transform{});
+        m_demoEntities.push_back(created);
+        const SceneHierarchy::NodeId id = packEntity(created);
+        m_hierarchy.add(id, "Entity " + std::to_string(m_nextEntityLabel++));
+        m_inspector.select(id);
+    }
+    ImGui::SameLine();
+    const bool haveSelection = m_inspector.hasSelection() && m_hierarchy.exists(m_inspector.selected());
+    if (ImGui::Button("Delete") && haveSelection) {
+        const SceneHierarchy::NodeId id = m_inspector.selected();
+        for (const SceneHierarchy::NodeId gone : m_hierarchy.subtree(id)) {
+            const ecs::Entity entity = unpackEntity(gone);
+            if (m_demoRegistry.isValid(entity)) m_demoRegistry.destroy(entity);
+            m_demoEntities.erase(std::remove_if(m_demoEntities.begin(), m_demoEntities.end(),
+                                                [entity](ecs::Entity x) { return x == entity; }),
+                                 m_demoEntities.end());
+        }
+        m_hierarchy.remove(id, /*recursive=*/true);
+        m_inspector.deselect();
+    }
+
+    // Rename and reparent the current selection (re-checked after any delete above).
+    if (m_inspector.hasSelection() && m_hierarchy.exists(m_inspector.selected())) {
+        const SceneHierarchy::NodeId sel = m_inspector.selected();
+        if (sel != m_renameFor) {
+            std::snprintf(m_renameBuffer, sizeof(m_renameBuffer), "%s", m_hierarchy.name(sel).c_str());
+            m_renameFor = sel;
+        }
+        if (ImGui::InputText("Name", m_renameBuffer, sizeof(m_renameBuffer),
+                             ImGuiInputTextFlags_EnterReturnsTrue)) {
+            m_hierarchy.rename(sel, m_renameBuffer);
+        }
+
+        const SceneHierarchy::NodeId curParent = m_hierarchy.parent(sel);
+        const char* preview =
+            curParent == SceneHierarchy::kNoNode ? "(root)" : m_hierarchy.name(curParent).c_str();
+        if (ImGui::BeginCombo("Parent", preview)) {
+            if (ImGui::Selectable("(root)", curParent == SceneHierarchy::kNoNode)) {
+                m_hierarchy.reparent(sel, SceneHierarchy::kNoNode);
+            }
+            for (const auto& entry : m_hierarchy.flatten()) {
+                const SceneHierarchy::NodeId id = entry.first;
+                if (id == sel || m_hierarchy.isAncestor(sel, id)) continue; // no self / descendants
+                if (ImGui::Selectable(m_hierarchy.name(id).c_str(), id == curParent)) {
+                    m_hierarchy.reparent(sel, id); // guarded against cycles anyway
+                }
+            }
+            ImGui::EndCombo();
+        }
+    } else {
+        m_renameFor = SceneHierarchy::kNoNode;
+    }
+
+    ImGui::Separator();
+
+    // Flat, indented listing. flatten() returns a snapshot, so selecting mid-list
+    // never invalidates the iteration.
+    for (const auto& entry : m_hierarchy.flatten()) {
+        const SceneHierarchy::NodeId id = entry.first;
+        const int depth = entry.second;
+        ImGui::PushID(static_cast<int>(id & 0xFFFFFFFFu));
+        if (depth > 0) ImGui::Indent(static_cast<float>(depth) * 16.0f);
+        const bool selected = m_inspector.hasSelection() && m_inspector.selected() == id;
+        if (ImGui::Selectable(m_hierarchy.name(id).c_str(), selected)) m_inspector.select(id);
+        if (depth > 0) ImGui::Unindent(static_cast<float>(depth) * 16.0f);
+        ImGui::PopID();
+    }
+
+    ImGui::End();
 }
 
 void DebugUI::renderHud() {

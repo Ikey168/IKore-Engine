@@ -10,6 +10,7 @@
 #include "ui/EntityInspector.h"
 #include "ui/HudFramework.h"
 #include "ui/MenuSystem.h"
+#include "ui/SceneHierarchy.h"
 
 #include <string>
 #include <vector>
@@ -93,6 +94,7 @@ private:
     void renderInspector();
     void renderPicking();
     void renderMenus();
+    void renderHierarchy();
 
     bool m_initialized{false};
     bool m_visible{false};
@@ -103,6 +105,7 @@ private:
     bool m_showInspector{true};
     bool m_showPicking{true};
     bool m_showMenus{true};
+    bool m_showHierarchy{true};
     float m_hudScale{1.0f};
     PerfStats m_perf;
     DebugConsole m_console;
@@ -138,6 +141,13 @@ private:
     MenuStack m_menuStack;
     bool m_menuQuitRequested{false};
     void saveSettings();
+
+    // Scene hierarchy (#59): a tree over the demo entities, kept in sync as they are
+    // created/destroyed; selecting a node drives the inspector (#56).
+    SceneHierarchy m_hierarchy;
+    char m_renameBuffer[64]{};
+    SceneHierarchy::NodeId m_renameFor{SceneHierarchy::kNoNode};
+    int m_nextEntityLabel{1};
 };
 
 } // namespace IKore
