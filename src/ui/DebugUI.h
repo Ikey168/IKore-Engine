@@ -2,6 +2,10 @@
 
 #include "core/DebugConsole.h"
 #include "core/PerfStats.h"
+#include "core/ecs/ECS.h"
+#include "core/ecs/components/Components.h"
+#include "ui/EcsInspector.h"
+#include "ui/EntityInspector.h"
 #include "ui/HudFramework.h"
 
 #include <string>
@@ -68,6 +72,10 @@ public:
     /// widgets (issue #55). Menu screens (#58) reuse the same framework.
     Hud& hud() { return m_hud; }
 
+    /// Access the entity inspector (issue #56) so viewport picking (#57) or the
+    /// scene hierarchy (#59) can drive selection via inspector().select(id).
+    EntityInspector& inspector() { return m_inspector; }
+
     /// Handle an ImGui InputText callback for the console (history/completion).
     /// Takes a void* (an ImGuiInputTextCallbackData*) to keep this header free of
     /// the ImGui headers; the implementation casts it. Public so the file-static
@@ -79,6 +87,7 @@ private:
     void renderPerfOverlay();
     void renderConsole();
     void renderHud();
+    void renderInspector();
 
     bool m_initialized{false};
     bool m_visible{false};
@@ -86,6 +95,7 @@ private:
     bool m_showPerf{true};
     bool m_showConsole{true};
     bool m_showHud{true};
+    bool m_showInspector{true};
     float m_hudScale{1.0f};
     PerfStats m_perf;
     DebugConsole m_console;
@@ -99,6 +109,13 @@ private:
     int m_demoScore{0};
     std::vector<std::string> m_demoInventory;
     float m_hudClock{0.0f};
+
+    // Demo ECS scene the entity inspector (#56) reflects. In the full engine the
+    // inspector points at the real registry; here it owns a small one so the panel
+    // is self-contained. m_demoRegistry must outlive m_inspector's builder.
+    ecs::Registry m_demoRegistry;
+    std::vector<ecs::Entity> m_demoEntities;
+    EntityInspector m_inspector;
 };
 
 } // namespace IKore

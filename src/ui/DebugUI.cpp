@@ -19,6 +19,43 @@ static int consoleTextEditStub(ImGuiInputTextCallbackData* data) {
     return static_cast<DebugUI*>(data->UserData)->onConsoleTextEdit(data);
 }
 
+// Draw one reflected property with the widget matching its type; an edit writes
+// straight back through the setter, so it applies live to the component (#56).
+static void drawProperty(const Property& prop) {
+    const char* label = prop.name.c_str();
+    switch (prop.type) {
+        case PropertyType::Bool: {
+            bool v = prop.getBool();
+            if (ImGui::Checkbox(label, &v)) prop.setBool(v);
+            break;
+        }
+        case PropertyType::Int: {
+            int v = prop.getInt();
+            if (ImGui::DragInt(label, &v, prop.speed, static_cast<int>(prop.minValue),
+                               static_cast<int>(prop.maxValue)))
+                prop.setInt(v);
+            break;
+        }
+        case PropertyType::Float: {
+            float v = prop.getFloat();
+            if (ImGui::DragFloat(label, &v, prop.speed, prop.minValue, prop.maxValue)) prop.setFloat(v);
+            break;
+        }
+        case PropertyType::Float3: {
+            const Vec3f v = prop.getVec3();
+            float a[3] = {v.x, v.y, v.z};
+            if (ImGui::DragFloat3(label, a, prop.speed)) prop.setVec3(Vec3f{a[0], a[1], a[2]});
+            break;
+        }
+        case PropertyType::String: {
+            char buf[128];
+            std::snprintf(buf, sizeof(buf), "%s", prop.getString().c_str());
+            if (ImGui::InputText(label, buf, sizeof(buf))) prop.setString(std::string(buf));
+            break;
+        }
+    }
+}
+
 bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
     if (m_initialized) return true;
     if (window == nullptr) return false;
@@ -61,6 +98,31 @@ bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
                        [this] { return m_demoAmmo; }));
     m_hud.add(hudList("Inventory", HudAnchor::BottomLeft, {16.0f, 16.0f}, {180.0f, 130.0f},
                       [this] { return m_demoInventory; }));
+
+    // Demo ECS scene for the entity inspector (#56). A few archetype-ECS entities
+    // with different component sets; the inspector reflects and live-edits them.
+    {
+        ecs::Entity player = m_demoRegistry.create();
+        m_demoRegistry.add<ecs::Transform>(player,
+                                           ecs::Transform{{0.0f, 1.0f, 0.0f}, {}, {1.0f, 1.0f, 1.0f}});
+        m_demoRegistry.add<ecs::Velocity>(player, ecs::Velocity{{1.0f, 0.0f, 0.0f}, {}});
+        m_demoRegistry.add<ecs::RigidBody>(player,
+                                           ecs::RigidBody{{0.0f, -9.8f, 0.0f}, 1.0f, 0.05f, false});
+        m_demoEntities.push_back(player);
+
+        ecs::Entity enemy = m_demoRegistry.create();
+        m_demoRegistry.add<ecs::Transform>(enemy,
+                                           ecs::Transform{{5.0f, 0.0f, 2.0f}, {}, {1.0f, 1.0f, 1.0f}});
+        m_demoRegistry.add<ecs::AIAgent>(enemy, ecs::AIAgent{{0.0f, 0.0f, 0.0f}, 2.0f, 0.1f, true});
+        m_demoEntities.push_back(enemy);
+
+        ecs::Entity prop = m_demoRegistry.create();
+        m_demoRegistry.add<ecs::Transform>(prop,
+                                           ecs::Transform{{-3.0f, 0.0f, -1.0f}, {}, {2.0f, 2.0f, 2.0f}});
+        m_demoEntities.push_back(prop);
+    }
+    installEcsBuilder(m_inspector, m_demoRegistry);
+    if (!m_demoEntities.empty()) m_inspector.select(packEntity(m_demoEntities.front()));
 
     m_initialized = true;
     LOG_INFO("DebugUI: Dear ImGui initialized (press F1 to toggle)");
@@ -128,12 +190,14 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     ImGui::Checkbox("Show console (#54)", &m_showConsole);
     ImGui::Checkbox("Show HUD (#55)", &m_showHud);
     ImGui::SliderFloat("HUD scale (#61)", &m_hudScale, 0.5f, 2.0f, "%.2f");
+    ImGui::Checkbox("Show entity inspector (#56)", &m_showInspector);
     ImGui::Checkbox("Show ImGui demo window", &m_showDemoWindow);
     ImGui::End();
 
     renderPerfOverlay();
     renderConsole();
     renderHud();
+    renderInspector();
 
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
@@ -165,6 +229,48 @@ void DebugUI::renderConsole() {
         m_consoleInput[0] = '\0';
         ImGui::SetKeyboardFocusHere(-1); // keep focus on the input
     }
+    ImGui::End();
+}
+
+void DebugUI::renderInspector() {
+    if (!m_showInspector) return;
+
+    ImGui::Begin("Entity Inspector", &m_showInspector);
+
+    // Entity picker. Selection will also be driven by viewport picking (#57) and
+    // the scene hierarchy (#59) once those land, via inspector().select(id).
+    ImGui::TextUnformatted("Entities");
+    if (ImGui::BeginListBox("##entities", ImVec2(-1.0f, 90.0f))) {
+        for (const ecs::Entity entity : m_demoEntities) {
+            const EntityInspector::EntityId id = packEntity(entity);
+            const bool selected = m_inspector.hasSelection() && m_inspector.selected() == id;
+            char label[32];
+            std::snprintf(label, sizeof(label), "Entity %u", entity.index);
+            if (ImGui::Selectable(label, selected)) m_inspector.select(id);
+        }
+        ImGui::EndListBox();
+    }
+
+    ImGui::Separator();
+
+    if (!m_inspector.hasSelection() || m_inspector.components().empty()) {
+        ImGui::TextDisabled("No entity selected, or it has no components.");
+        ImGui::End();
+        return;
+    }
+
+    // Cached component views: iterated every frame with no rebuild/allocation.
+    int componentIndex = 0;
+    for (const ComponentView& view : m_inspector.components()) {
+        ImGui::PushID(componentIndex++);
+        if (ImGui::CollapsingHeader(view.name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+            for (const Property& prop : view.properties) {
+                drawProperty(prop);
+            }
+        }
+        ImGui::PopID();
+    }
+
     ImGui::End();
 }
 
