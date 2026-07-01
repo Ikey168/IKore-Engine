@@ -595,6 +595,11 @@ add_executable(test_app_shell
 )
 target_link_libraries(test_app_shell PRIVATE doodle)
 
+# On-device symbol ML classifier (Milestone 17 / #173) - header-only inference.
+add_executable(test_glyph_net
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_glyph_net.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
