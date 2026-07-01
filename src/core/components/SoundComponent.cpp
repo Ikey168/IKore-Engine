@@ -257,8 +257,7 @@ namespace IKore {
             return false;
         }
 
-        // For now, create a simple sine wave as placeholder
-        // This would be replaced with actual file loading
+        // Generates a test tone for now; real audio-file decoding is tracked in #258.
         std::vector<short> samples;
         const int sampleRate = 44100;
         const int duration = 1; // 1 second

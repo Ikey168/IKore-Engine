@@ -305,8 +305,8 @@ std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         // Extract bone data
         extractBoneWeightForVertices(animatedVertices, mesh, scene);
         
-        // Convert animated vertices to regular vertices for now
-        // TODO: Create AnimatedMesh class for proper animated vertex handling
+        // Flatten animated vertices to static Vertex for now; a dedicated AnimatedMesh
+        // that preserves bone IDs/weights for GPU skinning is tracked in #260.
         for (const auto& animVertex : animatedVertices) {
             Vertex vertex;
             vertex.position = animVertex.position;

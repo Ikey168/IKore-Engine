@@ -497,10 +497,9 @@ namespace IKore {
     }
 
     void AnimationComponent::updateRootMotion(float deltaTime) {
-        // Simplified root motion implementation
-        // In practice, you'd extract root bone movement from the animation
+        // Root motion currently yields no delta; extracting the root-bone movement
+        // from the active animation is tracked in #260.
         if (m_currentState.animation && m_currentState.playing) {
-            // This is a placeholder - real implementation would extract root bone delta
             m_rootMotionDelta = glm::mat4(1.0f);
         }
     }

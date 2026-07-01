@@ -367,8 +367,7 @@ void SSAOEffect::render(GLuint inputTexture, GLuint outputFramebuffer) {
     glBindFramebuffer(GL_FRAMEBUFFER, outputFramebuffer);
     glDisable(GL_DEPTH_TEST);
     
-    // For now, just pass through the input texture
-    // TODO: Implement full SSAO when G-buffer is available
+    // Passthrough for now: full SSAO needs a G-buffer (depth + normals). Tracked in #259.
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, inputTexture);
     renderQuad();
@@ -416,8 +415,8 @@ void SSAOEffect::renderSSAO(GLuint /*colorTexture*/, GLuint depthTexture, GLuint
     
     // Apply SSAO to final image
     glBindFramebuffer(GL_FRAMEBUFFER, outputFramebuffer);
-    // TODO: Combine SSAO with lighting calculation
-    
+    // Combining the SSAO term with the lit image is part of the G-buffer work in #259.
+
     glEnable(GL_DEPTH_TEST);
 }
 

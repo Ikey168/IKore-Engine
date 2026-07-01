@@ -227,7 +227,7 @@ namespace IKore {
         ALCdevice* m_device;
         ALCcontext* m_context;
 #else
-        // Fallback placeholders when OpenAL is not available
+        // Fallback state used when OpenAL is not available
         void* m_device;
         void* m_context;
 #endif

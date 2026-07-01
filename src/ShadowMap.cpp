@@ -350,8 +350,8 @@ void ShadowMapManager::removeShadowMap(int lightIndex) {
 }
 
 void ShadowMapManager::updateShadowMaps() {
-    // This method can be used for any per-frame updates if needed
-    // Currently just a placeholder for future enhancements
+    // Per-frame hook for shadow-map bookkeeping; intentionally empty, since the
+    // current single-pass shadow setup needs no per-frame update here.
 }
 
 void ShadowMapManager::setShadowQuality(float quality) {

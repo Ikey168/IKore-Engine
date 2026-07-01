@@ -355,20 +355,18 @@ namespace IKore {
     }
 
     void EntityDebugSystem::renderDebugText(const std::string& text, [[maybe_unused]] float x, [[maybe_unused]] float y, [[maybe_unused]] const glm::vec4& color) {
-        // This is a placeholder implementation
-        // In a real implementation, you would use your rendering system to draw text
-        // For now, we'll just log the text if needed
+        // On-screen debug text is not wired to a text renderer yet (tracked in #259);
+        // log the first request so the call path stays visible.
         static bool firstCall = true;
         if (firstCall) {
-            LOG_INFO("EntityDebugSystem: Text rendering not implemented yet. Would display: " + text);
+            LOG_INFO("EntityDebugSystem: debug text rendering pending (see #259). Would display: " + text);
             firstCall = false;
         }
     }
 
     void EntityDebugSystem::renderDebugBackground([[maybe_unused]] float x, [[maybe_unused]] float y, [[maybe_unused]] float width, [[maybe_unused]] float height) {
-        // This is a placeholder implementation
-        // In a real implementation, you would render a semi-transparent background quad
-        // This keeps the interface ready for when rendering is implemented
+        // The debug background quad needs a renderer hookup (tracked in #259);
+        // the interface is kept ready.
     }
 
     float EntityDebugSystem::getCurrentTimeMs() const {
