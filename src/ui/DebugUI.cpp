@@ -19,6 +19,40 @@ namespace IKore {
 static ImGuiStyle s_baseStyle;
 static bool s_baseStyleCaptured = false;
 
+// A tiny OSM-style neighborhood the vertical-slice panel (#225) imports.
+static const char* kSliceGeoJson = R"JSON({
+  "type": "FeatureCollection",
+  "features": [
+    { "type":"Feature", "properties":{"highway":"residential"},
+      "geometry":{"type":"LineString","coordinates":[[0,0],[0.0001,0],[0.0002,0]]} },
+    { "type":"Feature", "properties":{"highway":"residential"},
+      "geometry":{"type":"LineString","coordinates":[[0.0002,0],[0.0002,0.0001]]} },
+    { "type":"Feature", "properties":{"building":"yes","height":"10"},
+      "geometry":{"type":"Polygon","coordinates":[[[0,0],[0.0001,0],[0.0001,0.0001],[0,0.0001],[0,0]]]} },
+    { "type":"Feature", "properties":{"building":"yes","building:levels":"3"},
+      "geometry":{"type":"Polygon","coordinates":[[[0.0003,0],[0.0004,0],[0.0004,0.0001],[0.0003,0.0001],[0.0003,0]]]} },
+    { "type":"Feature", "properties":{"leisure":"park"},
+      "geometry":{"type":"Polygon","coordinates":[[[0,0.0002],[0.0002,0.0002],[0.0002,0.0003],[0,0.0003],[0,0.0002]]]} }
+  ]
+})JSON";
+
+// Pick a walkable cell in the far corner of the grid as the crowd's goal.
+static ecs::Vec3 sliceFarWalkableCell(const world::NavGrid& grid) {
+    ecs::Vec3 best{};
+    float bestScore = -1.0e30f;
+    for (int cz = 0; cz < grid.height; ++cz) {
+        for (int cx = 0; cx < grid.width; ++cx) {
+            if (!grid.isWalkable(cx, cz)) continue;
+            const ecs::Vec3 c = grid.cellCenter(cx, cz);
+            if (c.x + c.z > bestScore) {
+                bestScore = c.x + c.z;
+                best = c;
+            }
+        }
+    }
+    return best;
+}
+
 // File-static trampoline: ImGui's InputText callback dispatches here, then into
 // the DebugUI instance passed as user data.
 static int consoleTextEditStub(ImGuiInputTextCallbackData* data) {
@@ -179,6 +213,13 @@ static bool bindingActive(const InputBinding& binding) {
     return ImGui::IsKeyDown(static_cast<ImGuiKey>(binding.code));
 }
 
+game::VerticalSlice::Config DebugUI::sliceConfig() {
+    game::VerticalSlice::Config config;
+    config.cellSize = 2.0f;
+    config.historyCapacity = 1800; // a generous rewind window for the scrubber
+    return config;
+}
+
 bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
     if (m_initialized) return true;
     if (window == nullptr) return false;
@@ -314,6 +355,14 @@ bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
     m_log.warning("render", "Shader cache miss for 'pbr'");
     m_log.error("audio", "Failed to open device (using fallback)");
 
+    // Vertical-slice panel (#225): import the demo neighborhood, pick a far goal,
+    // and spawn a crowd. The scenario is driven by the panel (play/step/rewind).
+    if (m_slice.loadFromGeoJson(kSliceGeoJson)) {
+        m_slice.setGoal(sliceFarWalkableCell(m_slice.grid()));
+        m_slice.spawnCrowd(120);
+        m_log.info("world", "Vertical slice ready: " + std::to_string(m_slice.agentCount()) + " agents");
+    }
+
     m_initialized = true;
     LOG_INFO("DebugUI: Dear ImGui initialized (press F1 to toggle)");
     return true;
@@ -353,6 +402,13 @@ void DebugUI::update(float deltaTimeSeconds) {
     m_demoHealth = 0.5f + 0.5f * std::sin(m_hudClock);       // oscillate across 0..1
     m_demoScore = static_cast<int>(m_hudClock * 100.0f);     // climbs over time
     m_demoAmmo = 30 - static_cast<int>(m_hudClock) % 31;     // counts down 30..0, loops
+
+    // Vertical-slice panel (#225): advance the scenario in real time while playing,
+    // and stop automatically once the whole crowd has arrived.
+    if (m_slicePlaying) {
+        m_slice.advance(static_cast<double>(deltaTimeSeconds));
+        if (m_slice.tick() > 0 && m_slice.agentsMoving() == 0) m_slicePlaying = false;
+    }
 }
 
 void DebugUI::render(float deltaTimeSeconds) {
@@ -403,6 +459,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     ImGui::Checkbox("Show UI scaling (#61)", &m_showScaling);
     ImGui::Checkbox("Show benchmark (#62)", &m_showBenchmark);
     ImGui::Checkbox("Show log viewer (#63)", &m_showLog);
+    ImGui::Checkbox("Show vertical slice (#225)", &m_showSlice);
     ImGui::Checkbox("Show ImGui demo window", &m_showDemoWindow);
     ImGui::End();
 
@@ -417,6 +474,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     renderScaling();
     renderBenchmark();
     renderLog();
+    renderVerticalSlice();
 
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
@@ -1033,6 +1091,53 @@ void DebugUI::renderPerfOverlay() {
     if (memoryBytes > 0) {
         ImGui::Text("Memory (RSS): %.1f MB", static_cast<double>(memoryBytes) / (1024.0 * 1024.0));
     }
+    ImGui::End();
+}
+
+void DebugUI::renderVerticalSlice() {
+    if (!m_showSlice) return;
+
+    ImGui::Begin("Vertical Slice", &m_showSlice);
+
+    ImGui::Text("Neighborhood: %zu buildings, %zu roads   |   nav grid %d x %d",
+                m_slice.city().buildings.size(), m_slice.city().roads.size(), m_slice.grid().width,
+                m_slice.grid().height);
+    ImGui::Text("Tick %llu   Agents %zu   Arrived %zu   Moving %d",
+                static_cast<unsigned long long>(m_slice.tick()), m_slice.agentCount(),
+                m_slice.arrivedCount(), m_slice.agentsMoving());
+
+    ImGui::Separator();
+
+    // Playback controls.
+    if (m_slicePlaying) {
+        if (ImGui::Button("Pause")) m_slicePlaying = false;
+    } else {
+        if (ImGui::Button("Play")) m_slicePlaying = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Step")) m_slice.step();
+    ImGui::SameLine();
+    if (ImGui::Button("Reset crowd")) {
+        m_slice.resetCrowd();
+        m_slicePlaying = false;
+    }
+
+    // Rewind scrubber: the handle tracks the current tick during playback; drag it
+    // back and release to rewind there (which drops the future), then Play to replay.
+    const int oldest = static_cast<int>(m_slice.oldestTick());
+    const int now = static_cast<int>(m_slice.tick());
+    if (!m_sliceScrubbing) m_sliceRewindTick = now;
+    if (m_sliceRewindTick < oldest) m_sliceRewindTick = oldest;
+    if (m_sliceRewindTick > now) m_sliceRewindTick = now;
+
+    ImGui::SetNextItemWidth(-1.0f);
+    ImGui::SliderInt("##rewind", &m_sliceRewindTick, oldest, now, "rewind to tick %d");
+    m_sliceScrubbing = ImGui::IsItemActive();
+    if (ImGui::IsItemDeactivatedAfterEdit() && m_sliceRewindTick < now) {
+        if (m_slice.rewindTo(static_cast<std::uint64_t>(m_sliceRewindTick))) m_slicePlaying = false;
+    }
+    ImGui::TextDisabled("Drag the slider left and release to rewind; press Play to replay.");
+
     ImGui::End();
 }
 

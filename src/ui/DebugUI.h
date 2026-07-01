@@ -11,6 +11,7 @@
 #include "core/ecs/components/Components.h"
 #include "ui/EcsInspector.h"
 #include "ui/EntityInspector.h"
+#include "game/VerticalSlice.h"
 #include "ui/HudFramework.h"
 #include "ui/MenuSystem.h"
 #include "ui/SceneHierarchy.h"
@@ -104,6 +105,8 @@ private:
     void applyScaling();
     void renderBenchmark();
     void renderLog();
+    void renderVerticalSlice();
+    static game::VerticalSlice::Config sliceConfig();
 
     bool m_initialized{false};
     bool m_visible{false};
@@ -119,6 +122,7 @@ private:
     bool m_showScaling{true};
     bool m_showBenchmark{true};
     bool m_showLog{true};
+    bool m_showSlice{true};
     PerfStats m_perf;
     DebugConsole m_console;
     Hud m_hud;
@@ -186,6 +190,13 @@ private:
     int m_logCategoryIndex{0}; // 0 = all categories
     bool m_logAutoScroll{true};
     float m_logClock{0.0f};    // paces the demo heartbeat log
+
+    // Vertical-slice panel (#225): drives the headless game::VerticalSlice scenario
+    // (import -> crowd -> rewind) with play/pause/step and a rewind scrubber.
+    game::VerticalSlice m_slice{sliceConfig()};
+    bool m_slicePlaying{false};
+    bool m_sliceScrubbing{false};
+    int m_sliceRewindTick{0};
 };
 
 } // namespace IKore
