@@ -678,6 +678,11 @@ add_executable(sample_benchmark_export
     ${CMAKE_CURRENT_SOURCE_DIR}/samples/benchmark_export_demo.cpp
 )
 
+# Render-pass dependency graph (rendering modernization step 1 / #226) - header-only.
+add_executable(test_render_pass_graph
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_render_pass_graph.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
