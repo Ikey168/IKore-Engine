@@ -3,6 +3,7 @@
 #include "core/Benchmark.h"
 #include "core/DebugConsole.h"
 #include "core/InputMap.h"
+#include "core/LogSystem.h"
 #include "core/PerfStats.h"
 #include "core/Picking.h"
 #include "core/Settings.h"
@@ -102,6 +103,7 @@ private:
     void renderScaling();
     void applyScaling();
     void renderBenchmark();
+    void renderLog();
 
     bool m_initialized{false};
     bool m_visible{false};
@@ -116,6 +118,7 @@ private:
     bool m_showInput{true};
     bool m_showScaling{true};
     bool m_showBenchmark{true};
+    bool m_showLog{true};
     PerfStats m_perf;
     DebugConsole m_console;
     Hud m_hud;
@@ -175,6 +178,14 @@ private:
     Benchmark m_benchmark;
     bool m_benchmarkJson{false};
     std::string m_benchmarkStatus;
+
+    // Logging + in-engine viewer (#63): structured logs feed the console (#54) and a
+    // file sink; the viewer filters by level/category and tails in real time.
+    LogSystem m_log;
+    int m_logFilterLevel{0};   // index into LogLevel for the viewer's min level
+    int m_logCategoryIndex{0}; // 0 = all categories
+    bool m_logAutoScroll{true};
+    float m_logClock{0.0f};    // paces the demo heartbeat log
 };
 
 } // namespace IKore
