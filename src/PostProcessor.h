@@ -200,7 +200,12 @@ private:
     
     GLuint m_quadVAO, m_quadVBO;
     std::shared_ptr<Shader> m_copyShader;
-    
+
+    // HDR ACES tone-mapping resolve (issue #235). Opt-in and off by default.
+    std::shared_ptr<Shader> m_toneMapShader;
+    float m_exposure{1.0f};
+    bool m_toneMapEnabled{false};
+
     int m_width, m_height;
     bool m_initialized;
 
@@ -225,6 +230,14 @@ public:
     FXAAEffect* getFXAAEffect() { return m_fxaaEffect.get(); }
     SSAOEffect* getSSAOEffect() { return m_ssaoEffect.get(); }
     
+    // HDR ACES tone-mapping resolve (issue #235). When enabled, endFrame() resolves
+    // the HDR scene through exposure + ACES in a single pass; when disabled (the
+    // default), the existing LDR effect chain is the unchanged fallback.
+    void setToneMapEnabled(bool enabled) { m_toneMapEnabled = enabled; }
+    bool isToneMapEnabled() const { return m_toneMapEnabled; }
+    void setExposure(float exposure) { m_exposure = exposure > 0.0f ? exposure : 0.0f; }
+    float getExposure() const { return m_exposure; }
+
     // Getters
     bool isInitialized() const { return m_initialized; }
     int getWidth() const { return m_width; }
