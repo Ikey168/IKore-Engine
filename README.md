@@ -5,73 +5,62 @@
 [![Documentation](https://github.com/Ikey168/IKore-Engine/actions/workflows/docs.yml/badge.svg)](https://github.com/Ikey168/IKore-Engine/actions/workflows/docs.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**IKore Engine** is a modern 3D game engine written in C++17 and OpenGL, built
-around an Entity-Component System with physics, audio, animation, and a forward
-renderer with shadows and post-processing.
+> **The engine that turns real-world and 2D data into living, rewindable,
+> AI-driven 3D simulations.**
 
-> **Where it's headed.** IKore is evolving from a general-purpose engine toward a
-> focused identity: **building living 3D worlds from real data** — turning
-> floor plans, maps, and sketches into navigable, simulated spaces. See
-> [`EXPANSION_IDEAS.md`](EXPANSION_IDEAS.md) for the thesis and
-> [`PHONE_GAME_CONCEPT.md`](PHONE_GAME_CONCEPT.md) /
-> [`PHONE_GAME_DESIGN.md`](PHONE_GAME_DESIGN.md) for the flagship use case
-> (a phone game that turns hand-drawn floor plans into playable 3D maps).
+**IKore Engine** is a C++17 / OpenGL engine built around a data-oriented
+(archetype) Entity-Component System. On top of a conventional renderer + physics +
+audio stack, it does something general-purpose engines do not ship out of the box:
+it **imports real-world and 2D data** (OpenStreetMap / GeoJSON, tilemaps, SVG floor
+plans) into navigable 3D scenes, **simulates crowds of agents** with
+**deterministic, rewindable time control**, and drives it all from an **in-engine
+ImGui editor**.
 
----
+The end-to-end proof of that identity is the vertical slice
+([`src/game/VerticalSlice.h`](src/game/VerticalSlice.h)): import a neighborhood,
+bake a nav grid, send a crowd to a goal, then rewind time and replay it
+deterministically. Run it in one command (see [Samples](#samples)).
 
-## Features
-
-Everything below is implemented in the source tree today.
-
-### Core architecture
-- **Entity-Component System** with both a `shared_ptr`-based component model and a
-  pooled variant (`EntityPool` / `PooledEntityManager`) for high entity counts.
-- **Scene graph** with parent/child transforms.
-- **Event system** for decoupled entity communication.
-- **JSON serialization** of scenes and components.
-- **Logging** and an **ECS micro-benchmark** harness.
-
-### Components
-`Transform` · `Mesh` (procedural cube/plane/sphere builders) · `Material` ·
-`Renderable` · `Velocity` · `Physics` (Bullet) · `LOD` ·
-`Animation` (skeletal, via Assimp) · `AI` (FSM: patrol / chase / flee / guard /
-wander) · `Sound` / `Audio` (3D positional, OpenAL) · `Particle` · `Network`.
-
-### Rendering
-- Forward renderer (Phong/Blinn lighting).
-- **Shadow mapping** — directional and point (cubemap) shadows.
-- **Frustum culling**.
-- **GPU/compute-shader particle system**.
-- **Post-processing**: bloom, SSAO, FXAA.
-- Skybox.
-
-### Audio
-- 3D positional audio with distance attenuation (OpenAL).
-
-### Scripting
-- **Lua scripting** (via sol2) bound to the ECS and event system, with
-  **hot reload** of scripts/shaders/assets. See [`docs/SCRIPTING.md`](docs/SCRIPTING.md).
+The full thesis and roadmap are in
+[`EXPANSION_IDEAS.md`](EXPANSION_IDEAS.md); the consumer flagship concept (a phone
+game that turns hand-drawn floor plans into playable 3D maps) is in
+[`PHONE_GAME_CONCEPT.md`](PHONE_GAME_CONCEPT.md) and
+[`PHONE_GAME_DESIGN.md`](PHONE_GAME_DESIGN.md).
 
 ---
 
-## Tech stack
+## Feature matrix
 
-- **Language:** C++17
-- **Graphics:** OpenGL, [GLFW](https://github.com/glfw/glfw),
-  [GLAD](https://github.com/Dav1dde/glad), [GLM](https://github.com/g-truc/glm)
-- **Physics:** [Bullet3](https://github.com/bulletphysics/bullet3)
-- **Audio:** OpenAL
-- **Model/animation loading:** [Assimp](https://github.com/assimp/assimp) (OBJ, FBX)
-- **Image loading:** [stb_image](https://github.com/nothings/stb)
-- **Build:** CMake (dependencies fetched automatically via `FetchContent`)
+"Tested" means the system has unit tests that run headless (built and exercised
+under AddressSanitizer / UBSan); the GL/runtime systems are compiled in CI.
+
+| System | Status | Notes |
+|---|---|---|
+| Data-oriented ECS | Implemented, tested | Archetype / SoA storage, generational handles, cache-friendly views (`src/core/ecs`) |
+| In-engine editor & tooling (ImGui) | Implemented, tested | Perf overlay, debug console, HUD framework, entity inspector, viewport picking, menus + persisted settings, scene hierarchy, input remapping, DPI/UI scaling, benchmarking, log viewer (`src/ui`) |
+| World-from-data importers | Implemented, tested | GeoJSON / OpenStreetMap, TMX tilemaps, SVG floor plans (`src/world`) |
+| Navigation | Implemented, tested | Nav-grid bake, A* pathfinding, flow fields (`src/world`, `src/core/sim`) |
+| Crowd simulation | Implemented, tested | Flow-field agents on the ECS hot path (`src/core/sim/Crowd.h`) |
+| Deterministic time control | Implemented, tested | Fixed-step, snapshot rewind/replay, deterministic RNG (`src/core/sim`) |
+| Rollback netcode | Implemented, tested | Rollback + desync detection (`src/net`) |
+| AI | Implemented, tested | Behavior trees, steering/NPCs, LLM-driven brain, quest + scene authoring (`src/ai`) |
+| Scripting | Implemented, tested | Lua (sol2) bound to the ECS + events, with hot reload (`src/scripting`) |
+| Data export | Implemented, tested | Deterministic CSV / JSON exporter (`src/core/sim/DataExport.h`) |
+| Vertical slice | Implemented, tested | Import -> nav -> crowd -> rewind, end to end (`src/game/VerticalSlice.h`) |
+| Rendering | Implemented | Forward renderer, directional + point shadow maps, frustum culling, GPU particles, bloom / SSAO / FXAA, skybox (`src/shaders`) |
+| Physics | Implemented | Rigid bodies via Bullet3 |
+| Audio | Implemented | OpenAL 3D positional audio (with a no-OpenAL fallback) |
+| Animation | Implemented | Skeletal animation via Assimp |
+
+Per-subsystem implementation notes live in [`docs/`](docs/).
 
 ---
 
-## Building
+## Getting started
 
-IKore Engine uses CMake. GLFW, GLAD, GLM, stb_image, Assimp, and Bullet are
-downloaded automatically at configure time via `FetchContent`. OpenAL is located
-via your system package manager (`pkg-config`).
+IKore uses CMake. GLFW, GLAD, GLM, stb_image, Assimp, Bullet, Dear ImGui, Lua, and
+sol2 are downloaded automatically at configure time via `FetchContent`. OpenAL is
+located via your system package manager (`pkg-config`).
 
 ```bash
 # From the repository root
@@ -80,22 +69,52 @@ cmake ..
 cmake --build .
 ```
 
-On Windows you can generate Visual Studio project files instead:
-
-```powershell
-mkdir build && cd build
-cmake .. -G "Visual Studio 17 2022"
-```
-
-On macOS you can generate Xcode projects:
-
-```bash
-mkdir build && cd build
-cmake .. -G Xcode
-```
-
 > **Linux audio prerequisite:** install OpenAL development headers, e.g.
 > `sudo apt-get install libopenal-dev` (Debian/Ubuntu).
+
+On Windows use `-G "Visual Studio 17 2022"`; on macOS use `-G Xcode`.
+
+### Run the tests
+
+The CMake build produces a `test_*` executable per subsystem (for example
+`test_vertical_slice`, `test_ecs_query`, `test_menu_system`); run them directly.
+The header-only cores also compile stand-alone with just an include path, which is
+the fastest way to iterate:
+
+```bash
+g++ -std=c++17 -I src tests/test_vertical_slice.cpp -o test_vertical_slice
+./test_vertical_slice
+```
+
+### Samples
+
+Small, self-contained programs that run headless (no GL context) live in
+[`samples/`](samples/):
+
+```bash
+cmake --build . --target sample_vertical_slice
+./sample_vertical_slice
+```
+
+- `sample_vertical_slice` - the vertical slice end to end (import -> crowd -> rewind).
+- `sample_benchmark_export` - capture FPS/frame-time/memory and export CSV + JSON.
+
+See [`samples/README.md`](samples/README.md) for details.
+
+---
+
+## Tech stack
+
+- **Language:** C++17
+- **Graphics:** OpenGL, [GLFW](https://github.com/glfw/glfw),
+  [GLAD](https://github.com/Dav1dde/glad), [GLM](https://github.com/g-truc/glm)
+- **UI:** [Dear ImGui](https://github.com/ocornut/imgui) (docking)
+- **Physics:** [Bullet3](https://github.com/bulletphysics/bullet3)
+- **Audio:** OpenAL
+- **Scripting:** [Lua](https://www.lua.org/) + [sol2](https://github.com/ThePhd/sol2)
+- **Model/animation loading:** [Assimp](https://github.com/assimp/assimp) (OBJ, FBX)
+- **Image loading:** [stb_image](https://github.com/nothings/stb)
+- **Build:** CMake (dependencies fetched automatically via `FetchContent`)
 
 ---
 
@@ -103,41 +122,43 @@ cmake .. -G Xcode
 
 ```
 src/
-  core/                Engine core: ECS, Entity, Transform, EventSystem, Logger
-    components/         Component implementations (Transform, Mesh, Material, …)
-  scene/               Scene graph & scene management
-  audio/               OpenAL 3D audio engine and ambient zones
-  shaders/             GLSL shaders (shadows, bloom, SSAO, FXAA, particles, …)
-  demos/               Standalone demos
-  tests/               Engine unit/component tests (built by CMake)
-  main.cpp             Entry point / sample application
-tests/                 Standalone test programs and shell test runners
-assets/                Models, textures, and other runtime assets
-docs/                  Per-subsystem implementation notes
+  core/          Engine core: ECS (core/ecs), sim (core/sim), events, logging, transforms
+    components/  Class-based component implementations
+    ecs/         Data-oriented archetype ECS + components/systems
+    sim/         Fixed-step simulation, timeline/rewind, crowd, data export, state hashing
+  ui/            In-engine ImGui editor & tooling (Milestone 9) and reusable UI cores
+  world/         World-from-data importers (GeoJSON, TMX, SVG) and nav mesh
+  ai/            Behavior trees, steering/NPCs, LLM-driven brain, quest/scene authoring
+  net/           Rollback netcode and desync detection
+  scripting/     Lua scripting layer (sol2) with hot reload
+  audio/         OpenAL 3D audio engine and ambient zones
+  scene/         Scene graph & scene management
+  shaders/       GLSL shaders (shadows, bloom, SSAO, FXAA, particles, ...)
+  game/          Higher-level composition (the vertical slice, sample games)
+  main.cpp       Entry point / sample application
+tests/           Unit tests (header-only cores; built by CMake as test_* targets)
+samples/         Small runnable examples (built as sample_* targets)
+docs/            Per-subsystem implementation notes
+assets/          Models, textures, and other runtime assets
 ```
-
-Per-subsystem implementation notes live in [`docs/`](docs/). The project's
-direction is documented in [`EXPANSION_IDEAS.md`](EXPANSION_IDEAS.md),
-[`PHONE_GAME_CONCEPT.md`](PHONE_GAME_CONCEPT.md), and
-[`PHONE_GAME_DESIGN.md`](PHONE_GAME_DESIGN.md).
 
 ---
 
 ## Roadmap & vision
 
-IKore's near-term direction is to differentiate around **world-from-data**:
+IKore's direction is to differentiate around **world-from-data**:
 
-1. **Foundations** — a data-oriented (archetype) ECS, scripting + hot reload, and
-   an in-engine editor (ImGui) that closes the open UI/debugging backlog.
-2. **Flagship importer** — turn 2D/vector inputs (SVG floor plans, tilemaps, and
-   later GeoJSON/OpenStreetMap) into 3D scenes with collision and navigation.
-3. **Simulation & AI** — large-scale agent simulation with time control
-   (pause / rewind / replay) and an AI-native authoring/NPC layer.
+1. **Foundations** - a data-oriented (archetype) ECS, scripting + hot reload, and an
+   in-engine ImGui editor. (Implemented.)
+2. **Flagship importer** - turn 2D/vector inputs (SVG floor plans, tilemaps, GeoJSON /
+   OpenStreetMap) into 3D scenes with collision and navigation. (Implemented.)
+3. **Simulation & AI** - large-scale agent simulation with time control
+   (pause / rewind / replay) and an AI-native authoring/NPC layer. (Implemented.)
 
-The full strategy and rationale are in:
-- [`EXPANSION_IDEAS.md`](EXPANSION_IDEAS.md) — the engine's unique-identity thesis.
-- [`PHONE_GAME_CONCEPT.md`](PHONE_GAME_CONCEPT.md) — the consumer flagship concept.
-- [`PHONE_GAME_DESIGN.md`](PHONE_GAME_DESIGN.md) — deep design + market analysis.
+The full strategy and rationale are in
+[`EXPANSION_IDEAS.md`](EXPANSION_IDEAS.md),
+[`PHONE_GAME_CONCEPT.md`](PHONE_GAME_CONCEPT.md), and
+[`PHONE_GAME_DESIGN.md`](PHONE_GAME_DESIGN.md).
 
 ---
 
@@ -145,11 +166,11 @@ The full strategy and rationale are in:
 
 Issues and pull requests are welcome. Development happens against feature branches;
 CI (build, CodeQL analysis, and docs) runs on every push. Please keep new code
-consistent with the surrounding style and add tests under `src/tests/` where it
-makes sense.
+consistent with the surrounding style and add a test under `tests/` where it makes
+sense - the header-only cores are designed to be unit-testable without a GL context.
 
 ---
 
 ## License
 
-Released under the [MIT License](LICENSE). © 2025 Ikey168.
+Released under the [MIT License](LICENSE). (c) 2025 Ikey168.
