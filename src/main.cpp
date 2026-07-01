@@ -793,7 +793,11 @@ int main() {
                 shaderPtr->setFloat("dirLight.shadowBias", dirShadowMap->getShadowBias());
                 shaderPtr->setFloat("dirLight.softShadows", dirShadowMap->getSoftShadows() ? 1.0f : 0.0f);
                 shaderPtr->setInt("dirLight.pcfKernelSize", dirShadowMap->getPCFKernelSize());
-                
+                // PCF filtering options (issue #237). Defaults (box kernel, softness
+                // 1.0) reproduce the prior soft-shadow output.
+                shaderPtr->setFloat("dirLight.poissonShadows", dirShadowMap->getPoissonSampling() ? 1.0f : 0.0f);
+                shaderPtr->setFloat("dirLight.shadowSoftness", dirShadowMap->getShadowSoftness());
+
                 // Bind shadow map texture
                 dirShadowMap->bindShadowMap(15); // Use texture unit 15 for shadow map
                 shaderPtr->setInt("dirLight.shadowMap", 15);
