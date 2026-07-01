@@ -571,6 +571,11 @@ add_executable(test_symbols
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_symbols.cpp
 )
 
+# Confidence + repair review model (Milestone 16 / #170) - header-only.
+add_executable(test_level_review
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_level_review.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
