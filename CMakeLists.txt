@@ -571,6 +571,12 @@ add_executable(test_symbols
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_symbols.cpp
 )
 
+# Phase 2 CV robustness: lighting/skew/paper/wobble + corpus (Milestone 16 / #239)
+# - header-only.
+add_executable(test_cv_robust
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cv_robust.cpp
+)
+
 # Confidence + repair review model (Milestone 16 / #170) - header-only.
 add_executable(test_level_review
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_level_review.cpp
