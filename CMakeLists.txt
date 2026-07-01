@@ -617,6 +617,11 @@ add_executable(test_level_catalog
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_level_catalog.cpp
 )
 
+# UGC Phase 5: stable share codes + level browser (Milestone 17 / #241) - header-only.
+add_executable(test_level_share
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_level_share.cpp
+)
+
 # Performance-overlay stats core (Milestone 9 / #53) - header-only.
 add_executable(test_perf_stats
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_perf_stats.cpp
