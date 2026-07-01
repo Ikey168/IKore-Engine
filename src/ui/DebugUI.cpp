@@ -305,6 +305,15 @@ bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
     m_inputMap.addAction("AltFire", {InputDevice::Mouse, 1});
     m_inputMap.loadFromFile("ikore_input.ini");
 
+    // Logging + in-engine viewer (#63): mirror every log line into the debug
+    // console (#54), open a readable file sink, and seed a few example records.
+    m_log.addSink([this](const LogRecord& record) { m_console.print(record.format()); });
+    m_log.openFile("ikore_log.txt");
+    m_log.info("engine", "Log system online");
+    m_log.debug("physics", "Broadphase pairs: 128");
+    m_log.warning("render", "Shader cache miss for 'pbr'");
+    m_log.error("audio", "Failed to open device (using fallback)");
+
     m_initialized = true;
     LOG_INFO("DebugUI: Dear ImGui initialized (press F1 to toggle)");
     return true;
@@ -312,6 +321,7 @@ bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
 
 void DebugUI::shutdown() {
     if (!m_initialized) return;
+    m_log.closeFile(); // flush any buffered log lines to disk (#63)
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
@@ -327,6 +337,14 @@ void DebugUI::update(float deltaTimeSeconds) {
     // capturing this is a single branch, so it costs nothing when idle/disabled.
     if (m_benchmark.capturing()) {
         m_benchmark.record(static_cast<double>(deltaTimeSeconds), PerfStats::residentBytes());
+    }
+
+    // Demo heartbeat log (#63) every ~2s, to show the viewer's real-time tail and
+    // the console feed updating live.
+    m_logClock += deltaTimeSeconds;
+    if (m_logClock >= 2.0f) {
+        m_logClock = 0.0f;
+        m_log.info("engine", "Heartbeat at frame " + std::to_string(m_perf.frameCount()));
     }
 
     // Animate the demo HUD state so the data-bound widgets visibly update. In a
@@ -384,6 +402,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     ImGui::Checkbox("Show input bindings (#60)", &m_showInput);
     ImGui::Checkbox("Show UI scaling (#61)", &m_showScaling);
     ImGui::Checkbox("Show benchmark (#62)", &m_showBenchmark);
+    ImGui::Checkbox("Show log viewer (#63)", &m_showLog);
     ImGui::Checkbox("Show ImGui demo window", &m_showDemoWindow);
     ImGui::End();
 
@@ -397,6 +416,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     renderInputBindings();
     renderScaling();
     renderBenchmark();
+    renderLog();
 
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
@@ -849,6 +869,72 @@ void DebugUI::renderBenchmark() {
         }
     }
     if (!m_benchmarkStatus.empty()) ImGui::TextUnformatted(m_benchmarkStatus.c_str());
+
+    ImGui::End();
+}
+
+static ImVec4 colorForLogLevel(LogLevel level) {
+    switch (level) {
+        case LogLevel::Trace: return ImVec4(0.55f, 0.55f, 0.55f, 1.0f);
+        case LogLevel::Debug: return ImVec4(0.65f, 0.75f, 0.95f, 1.0f);
+        case LogLevel::Info: return ImVec4(0.85f, 0.85f, 0.85f, 1.0f);
+        case LogLevel::Warning: return ImVec4(0.95f, 0.80f, 0.35f, 1.0f);
+        case LogLevel::Error: return ImVec4(0.95f, 0.40f, 0.40f, 1.0f);
+    }
+    return ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+void DebugUI::renderLog() {
+    if (!m_showLog) return;
+
+    ImGui::Begin("Log Viewer", &m_showLog);
+
+    // Filter controls: minimum level and category.
+    static const char* levelNames[] = {"TRACE", "DEBUG", "INFO", "WARN", "ERROR"};
+    ImGui::SetNextItemWidth(110.0f);
+    ImGui::Combo("Min level", &m_logFilterLevel, levelNames, IM_ARRAYSIZE(levelNames));
+
+    const std::vector<std::string> cats = m_log.categories();
+    if (m_logCategoryIndex > static_cast<int>(cats.size())) m_logCategoryIndex = 0;
+    const char* catPreview =
+        m_logCategoryIndex == 0 ? "(all)" : cats[static_cast<std::size_t>(m_logCategoryIndex - 1)].c_str();
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(150.0f);
+    if (ImGui::BeginCombo("Category", catPreview)) {
+        if (ImGui::Selectable("(all)", m_logCategoryIndex == 0)) m_logCategoryIndex = 0;
+        for (int i = 0; i < static_cast<int>(cats.size()); ++i) {
+            if (ImGui::Selectable(cats[static_cast<std::size_t>(i)].c_str(), m_logCategoryIndex == i + 1)) {
+                m_logCategoryIndex = i + 1;
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    ImGui::Checkbox("Auto-scroll", &m_logAutoScroll);
+    ImGui::SameLine();
+    if (ImGui::Button("Clear")) m_log.clear();
+
+    ImGui::Text("Total: %llu    Warnings+: %zu    Errors: %zu",
+                static_cast<unsigned long long>(m_log.totalLogged()),
+                m_log.countAtLeast(LogLevel::Warning), m_log.countAtLeast(LogLevel::Error));
+    ImGui::Separator();
+
+    const LogLevel minLevel = static_cast<LogLevel>(m_logFilterLevel);
+    const std::string catFilter =
+        m_logCategoryIndex > 0 ? cats[static_cast<std::size_t>(m_logCategoryIndex - 1)] : std::string();
+
+    // Real-time tail: iterate the ring in place (no per-frame allocation) and
+    // auto-scroll to the newest line while pinned to the bottom.
+    ImGui::BeginChild("log_scroll", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_HorizontalScrollbar);
+    for (const LogRecord& record : m_log.records()) {
+        if (static_cast<int>(record.level) < static_cast<int>(minLevel)) continue;
+        if (!catFilter.empty() && record.category != catFilter) continue;
+        ImGui::PushStyleColor(ImGuiCol_Text, colorForLogLevel(record.level));
+        ImGui::TextUnformatted(record.format().c_str());
+        ImGui::PopStyleColor();
+    }
+    if (m_logAutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) ImGui::SetScrollHereY(1.0f);
+    ImGui::EndChild();
 
     ImGui::End();
 }
