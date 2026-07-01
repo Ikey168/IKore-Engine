@@ -5,6 +5,7 @@ in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoord;
 in vec4 FragPosLightSpace; // Position in light space for shadow mapping
+in mat3 TBN;               // tangent-space -> world basis for normal mapping (issue #238)
 
 struct Material {
     // Support for both texture-based and color-based materials
@@ -119,11 +120,21 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 
 void main() {
-    vec3 norm = normalize(Normal);
+    // Surface normal: perturb by the normal map when one is bound, else use the
+    // interpolated vertex normal (the unchanged path). Mirrors unpackNormal +
+    // transformNormalToWorld in src/render/NormalMapping.h. A flat map (0.5,0.5,1)
+    // unpacks to (0,0,1) and maps back to the geometric normal, so it is a no-op.
+    vec3 norm;
+    if (material.useNormalTexture) {
+        vec3 tangentNormal = texture(material.normal, TexCoord).rgb * 2.0 - 1.0;
+        norm = normalize(TBN * tangentNormal);
+    } else {
+        norm = normalize(Normal);
+    }
     vec3 viewDir = normalize(viewPos - FragPos);
-    
+
     vec3 result = vec3(0.0);
-    
+
     // Directional light
     if (useDirLight) {
         result += CalcDirLight(dirLight, norm, viewDir);

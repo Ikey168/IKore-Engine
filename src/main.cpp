@@ -757,7 +757,11 @@ int main() {
             
             // Set material properties (support both textured and non-textured materials)
             bool hasTextures = textureManager.getTextureCount() > 0;
-            
+
+            // These primitives carry no normal map; pin the flag off so a value left
+            // over from a prior normal-mapped model draw cannot leak in (issue #238).
+            shaderPtr->setFloat("material.useNormalTexture", 0.0f);
+
             if (hasTextures) {
                 // Using textures - set flags
                 shaderPtr->setFloat("material.useDiffuseTexture", 1.0f);
