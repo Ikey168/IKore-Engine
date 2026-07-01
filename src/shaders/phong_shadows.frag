@@ -35,6 +35,8 @@ struct DirectionalLight {
     float shadowBias;
     bool softShadows;
     int pcfKernelSize;
+    bool poissonShadows;  // use the Poisson disk instead of the box kernel (issue #237)
+    float shadowSoftness; // scales the PCF tap footprint; 1.0 keeps prior behavior
 };
 
 struct PointLight {
@@ -76,6 +78,8 @@ struct SpotLight {
     float shadowBias;
     bool softShadows;
     int pcfKernelSize;
+    bool poissonShadows;  // use the Poisson disk instead of the box kernel (issue #237)
+    float shadowSoftness; // scales the PCF tap footprint; 1.0 keeps prior behavior
 };
 
 #define MAX_POINT_LIGHTS 4
@@ -91,8 +95,22 @@ uniform bool useDirLight;
 
 uniform vec3 viewPos;
 
+// 16-tap Poisson disk mirroring poissonDiskOffsets() in src/render/ShadowFiltering.h
+// (issue #237). Sampling this instead of the box grid trades structured banding for
+// noise that reads as a smoother penumbra at the same tap count.
+const vec2 poissonDisk[16] = vec2[](
+    vec2(-0.94201624, -0.39906216), vec2( 0.94558609, -0.76890725),
+    vec2(-0.09418410, -0.92938870), vec2( 0.34495938,  0.29387760),
+    vec2(-0.91588581,  0.45771432), vec2(-0.81544232, -0.87912464),
+    vec2(-0.38277543,  0.27676845), vec2( 0.97484398,  0.75648379),
+    vec2( 0.44323325, -0.97511554), vec2( 0.53742981, -0.47373420),
+    vec2(-0.26496911, -0.41893023), vec2( 0.79197514,  0.19090188),
+    vec2(-0.24188840,  0.99706507), vec2(-0.81409955,  0.91437590),
+    vec2( 0.19984126,  0.78641367), vec2( 0.14383161, -0.14100790)
+);
+
 // Shadow mapping functions
-float ShadowCalculation(vec4 fragPosLightSpace, sampler2D shadowMap, float bias, bool softShadows, int kernelSize);
+float ShadowCalculation(vec4 fragPosLightSpace, sampler2D shadowMap, float bias, bool softShadows, int kernelSize, bool usePoisson, float softness);
 float PointShadowCalculation(vec3 fragPos, vec3 lightPos, samplerCube shadowCubemap, float farPlane, float bias, bool softShadows);
 
 // Lighting calculation functions
@@ -148,8 +166,9 @@ vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
     // Calculate shadow
     float shadow = 0.0;
     if (light.castShadows) {
-        shadow = ShadowCalculation(FragPosLightSpace, light.shadowMap, light.shadowBias, 
-                                 light.softShadows, light.pcfKernelSize);
+        shadow = ShadowCalculation(FragPosLightSpace, light.shadowMap, light.shadowBias,
+                                 light.softShadows, light.pcfKernelSize,
+                                 light.poissonShadows, light.shadowSoftness);
     }
     
     // Apply shadow to diffuse and specular components (not ambient)
@@ -230,8 +249,9 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
     float shadow = 0.0;
     if (light.castShadows && intensity > 0.0) {
         vec4 fragPosLightSpace = light.lightSpaceMatrix * vec4(fragPos, 1.0);
-        shadow = ShadowCalculation(fragPosLightSpace, light.shadowMap, light.shadowBias, 
-                                 light.softShadows, light.pcfKernelSize);
+        shadow = ShadowCalculation(fragPosLightSpace, light.shadowMap, light.shadowBias,
+                                 light.softShadows, light.pcfKernelSize,
+                                 light.poissonShadows, light.shadowSoftness);
     }
     
     // Apply attenuation, intensity, and shadow
@@ -243,43 +263,57 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
 }
 
 // Shadow mapping calculation for directional and spot lights
-float ShadowCalculation(vec4 fragPosLightSpace, sampler2D shadowMap, float bias, bool softShadows, int kernelSize) {
+float ShadowCalculation(vec4 fragPosLightSpace, sampler2D shadowMap, float bias, bool softShadows, int kernelSize, bool usePoisson, float softness) {
     // Perform perspective divide
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    
+
     // Transform to [0,1] range
     projCoords = projCoords * 0.5 + 0.5;
-    
-    // Get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-    float closestDepth = texture(shadowMap, projCoords.xy).r;
-    
+
     // Get depth of current fragment from light's perspective
     float currentDepth = projCoords.z;
-    
+
     // Check if current fragment is in shadow
     if (projCoords.z > 1.0) {
         return 0.0; // Outside far plane, not in shadow
     }
-    
+
     if (!softShadows || kernelSize <= 1) {
-        // Hard shadows
+        // Hard shadows: a single tap. Equivalent to pcfFilter() with one offset.
+        float closestDepth = texture(shadowMap, projCoords.xy).r;
         return currentDepth - bias > closestDepth ? 1.0 : 0.0;
-    } else {
-        // Soft shadows using PCF (Percentage Closer Filtering)
-        float shadow = 0.0;
-        vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
-        int halfKernel = kernelSize / 2;
-        
-        for(int x = -halfKernel; x <= halfKernel; ++x) {
-            for(int y = -halfKernel; y <= halfKernel; ++y) {
-                float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
-                shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
-            }    
-        }
-        shadow /= float(kernelSize * kernelSize);
-        
-        return shadow;
     }
+
+    // Soft shadows via PCF. Mirrors pcfFilter() in src/render/ShadowFiltering.h:
+    // average the depth comparison over a tap set (box grid or Poisson disk), each
+    // tap offset scaled by texel size and softness. Dividing by the true tap count
+    // keeps the average correct for any kernel size (the old code divided by
+    // kernelSize*kernelSize, which is wrong for even sizes).
+    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+    float shadow = 0.0;
+
+    if (usePoisson) {
+        for (int i = 0; i < 16; ++i) {
+            vec2 offset = poissonDisk[i] * texelSize * softness;
+            float pcfDepth = texture(shadowMap, projCoords.xy + offset).r;
+            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+        }
+        shadow /= 16.0;
+    } else {
+        int halfKernel = kernelSize / 2;
+        int taps = 0;
+        for (int x = -halfKernel; x <= halfKernel; ++x) {
+            for (int y = -halfKernel; y <= halfKernel; ++y) {
+                vec2 offset = vec2(x, y) * texelSize * softness;
+                float pcfDepth = texture(shadowMap, projCoords.xy + offset).r;
+                shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+                taps++;
+            }
+        }
+        shadow /= float(taps);
+    }
+
+    return shadow;
 }
 
 // Shadow mapping calculation for point lights (omnidirectional)

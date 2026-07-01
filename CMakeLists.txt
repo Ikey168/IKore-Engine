@@ -709,6 +709,12 @@ add_executable(test_shadow_cascades
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_shadow_cascades.cpp
 )
 
+# PCF soft-shadow filtering math: tap sets / averaging / softness (rendering P4 /
+# #237) - header-only.
+add_executable(test_shadow_filtering
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_shadow_filtering.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting

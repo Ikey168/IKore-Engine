@@ -16,6 +16,8 @@ ShadowMap::ShadowMap(Type type, int resolution)
     , m_softShadows(true)
     , m_pcfKernelSize(3)
     , m_shadowBias(0.005f)
+    , m_poissonSampling(false)
+    , m_shadowSoftness(1.0f)
 {
     m_pointLightMatrices.resize(6);
     for (int i = 0; i < 4; i++) {
@@ -249,6 +251,12 @@ void ShadowMap::setPCFKernelSize(int size) {
         size = std::max(1, size - 1);
     }
     m_pcfKernelSize = std::clamp(size, 1, 7);
+}
+
+void ShadowMap::setShadowSoftness(float softness) {
+    // Keep the footprint positive and bounded so a stray value cannot collapse the
+    // filter (0) or smear it across the whole map.
+    m_shadowSoftness = std::clamp(softness, 0.0f, 8.0f);
 }
 
 void ShadowMap::cleanup() {

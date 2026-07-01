@@ -117,6 +117,20 @@ public:
     int getPCFKernelSize() const { return m_pcfKernelSize; }
 
     /**
+     * Use a Poisson-disk tap set instead of the box kernel for PCF (issue #237).
+     * Poisson sampling trades the regular grid's banding for smoother noise.
+     */
+    void setPoissonSampling(bool enabled) { m_poissonSampling = enabled; }
+    bool getPoissonSampling() const { return m_poissonSampling; }
+
+    /**
+     * Softness multiplier on the PCF tap footprint (issue #237). 1.0 keeps the
+     * prior one-texel-per-offset spacing; larger values widen the penumbra.
+     */
+    void setShadowSoftness(float softness);
+    float getShadowSoftness() const { return m_shadowSoftness; }
+
+    /**
      * Set shadow bias to reduce shadow acne
      */
     void setShadowBias(float bias) { m_shadowBias = bias; }
@@ -144,6 +158,8 @@ private:
     bool m_softShadows;
     int m_pcfKernelSize;
     float m_shadowBias;
+    bool m_poissonSampling;  // issue #237: Poisson-disk PCF instead of the box kernel
+    float m_shadowSoftness;  // issue #237: PCF tap footprint scale (1.0 = prior behavior)
 
     // Store previous viewport for restoration
     GLint m_previousViewport[4];
