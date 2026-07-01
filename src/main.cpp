@@ -946,7 +946,9 @@ int main() {
         // Render Entity Debug Overlay (after all scene rendering)
         IKore::getEntityDebugSystem().renderDebugOverlay();
 
-        // Render the Dear ImGui debug overlay on top (no-op while hidden)
+        // Record frame timing for the perf overlay, then draw the Dear ImGui
+        // debug overlay on top (both cheap / no-op while hidden).
+        debugUI.update(static_cast<float>(deltaTime));
         debugUI.render(static_cast<float>(deltaTime));
 
         glfwSwapBuffers(window);

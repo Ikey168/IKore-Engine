@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/PerfStats.h"
+
 struct GLFWwindow;
 
 /**
@@ -41,16 +43,28 @@ public:
      */
     void render(float deltaTimeSeconds);
 
+    /**
+     * @brief Record this frame's timing into the perf stats (issue #53).
+     *
+     * Called every frame regardless of visibility - a cheap deque push - so the
+     * FPS/frame-time graph has history the moment the overlay is opened, while a
+     * hidden overlay still costs nothing to draw.
+     */
+    void update(float deltaTimeSeconds);
+
     void setVisible(bool visible) { m_visible = visible; }
     bool isVisible() const { return m_visible; }
     void toggle() { m_visible = !m_visible; }
 
 private:
     void buildUI(float deltaTimeSeconds);
+    void renderPerfOverlay();
 
     bool m_initialized{false};
     bool m_visible{false};
     bool m_showDemoWindow{false};
+    bool m_showPerf{true};
+    PerfStats m_perf;
 };
 
 } // namespace IKore
