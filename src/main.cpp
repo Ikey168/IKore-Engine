@@ -1117,6 +1117,23 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
                 LOG_INFO("SSAO effect " + std::string(ssao->isEnabled() ? "enabled" : "disabled"));
             }
         }
+        else if (key == GLFW_KEY_H && g_postProcessor) {
+            // Toggle HDR ACES tone-mapping resolve (issue #235). Off by default; the
+            // LDR effect chain is the fallback.
+            const bool on = !g_postProcessor->isToneMapEnabled();
+            g_postProcessor->setToneMapEnabled(on);
+            LOG_INFO(std::string("HDR ACES tone mapping ") + (on ? "enabled" : "disabled"));
+        }
+        else if ((key == GLFW_KEY_EQUAL || key == GLFW_KEY_KP_ADD) && g_postProcessor) {
+            // Increase exposure.
+            g_postProcessor->setExposure(g_postProcessor->getExposure() * 1.25f);
+            LOG_INFO("Exposure: " + std::to_string(g_postProcessor->getExposure()));
+        }
+        else if ((key == GLFW_KEY_MINUS || key == GLFW_KEY_KP_SUBTRACT) && g_postProcessor) {
+            // Decrease exposure.
+            g_postProcessor->setExposure(g_postProcessor->getExposure() / 1.25f);
+            LOG_INFO("Exposure: " + std::to_string(g_postProcessor->getExposure()));
+        }
         else if (key == GLFW_KEY_4 && g_skybox) {
             // Toggle Skybox
             g_skybox->setEnabled(!g_skybox->isEnabled());

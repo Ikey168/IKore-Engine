@@ -529,11 +529,17 @@ void PostProcessor::initialize(int width, int height) {
     // Load copy shader
     std::string shaderError;
     m_copyShader = Shader::loadFromFilesCached("src/shaders/copy.vert", "src/shaders/copy.frag", shaderError);
-    
+
     if (!m_copyShader) {
         LOG_ERROR("Failed to load copy shader: " + shaderError);
     }
-    
+
+    // Load the HDR ACES tone-map resolve shader (issue #235).
+    m_toneMapShader = Shader::loadFromFilesCached("src/shaders/tonemap.vert", "src/shaders/tonemap.frag", shaderError);
+    if (!m_toneMapShader) {
+        LOG_ERROR("Failed to load tonemap shader: " + shaderError);
+    }
+
     m_initialized = true;
     LOG_INFO("PostProcessor initialized with resolution: " + std::to_string(width) + "x" + std::to_string(height));
 }
@@ -568,7 +574,24 @@ void PostProcessor::endFrame() {
 
 void PostProcessor::renderEffectChain(GLuint inputTexture, GLuint outputFramebuffer) {
     if (!m_initialized) return;
-    
+
+    // Opt-in HDR resolve (issue #235): tone-map the raw HDR scene through exposure +
+    // ACES in a single pass, so bright highlights roll off instead of clipping.
+    // Disabled by default, so the LDR effect chain below is the unchanged fallback.
+    // (Composing ACES with the bloom/FXAA chain is a follow-up.)
+    if (m_toneMapEnabled && m_toneMapShader) {
+        glBindFramebuffer(GL_FRAMEBUFFER, outputFramebuffer);
+        glDisable(GL_DEPTH_TEST);
+        m_toneMapShader->use();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, inputTexture);
+        glUniform1i(glGetUniformLocation(m_toneMapShader->id(), "hdrScene"), 0);
+        m_toneMapShader->setFloat("exposure", m_exposure);
+        renderQuad();
+        glEnable(GL_DEPTH_TEST);
+        return;
+    }
+
     GLuint currentTexture = inputTexture;
     
     // Apply effects in order: SSAO -> Bloom -> FXAA

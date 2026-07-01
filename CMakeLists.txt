@@ -698,6 +698,11 @@ add_executable(test_pbr_material
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_pbr_material.cpp
 )
 
+# HDR exposure + ACES tone-mapping resolve math (rendering P3 / #235) - header-only.
+add_executable(test_tone_mapping
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_tone_mapping.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
