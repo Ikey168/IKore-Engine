@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/DebugConsole.h"
+#include "core/InputMap.h"
 #include "core/PerfStats.h"
 #include "core/Picking.h"
 #include "core/Settings.h"
@@ -95,6 +96,7 @@ private:
     void renderPicking();
     void renderMenus();
     void renderHierarchy();
+    void renderInputBindings();
 
     bool m_initialized{false};
     bool m_visible{false};
@@ -106,6 +108,7 @@ private:
     bool m_showPicking{true};
     bool m_showMenus{true};
     bool m_showHierarchy{true};
+    bool m_showInput{true};
     float m_hudScale{1.0f};
     PerfStats m_perf;
     DebugConsole m_console;
@@ -148,6 +151,12 @@ private:
     char m_renameBuffer[64]{};
     SceneHierarchy::NodeId m_renameFor{SceneHierarchy::kNoNode};
     int m_nextEntityLabel{1};
+
+    // Input remapping (#60): rebindable actions with conflict detection, persisted
+    // to disk. m_rebinding is the index of the action currently capturing input, or
+    // -1 when not listening.
+    InputMap m_inputMap;
+    int m_rebinding{-1};
 };
 
 } // namespace IKore

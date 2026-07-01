@@ -115,6 +115,65 @@ static void drawMenuItem(Menu& menu, int index, const MenuItem& item, bool focus
     ImGui::PopID();
 }
 
+// Gamepad buttons we let the user bind (an explicit list avoids depending on the
+// exact ImGuiKey gamepad range bounds).
+static const ImGuiKey kBindableGamepad[] = {
+    ImGuiKey_GamepadFaceDown,  ImGuiKey_GamepadFaceRight, ImGuiKey_GamepadFaceLeft,
+    ImGuiKey_GamepadFaceUp,    ImGuiKey_GamepadDpadUp,    ImGuiKey_GamepadDpadDown,
+    ImGuiKey_GamepadDpadLeft,  ImGuiKey_GamepadDpadRight, ImGuiKey_GamepadL1,
+    ImGuiKey_GamepadR1,        ImGuiKey_GamepadStart,     ImGuiKey_GamepadBack,
+};
+
+static bool isBindableGamepad(ImGuiKey key) {
+    for (ImGuiKey g : kBindableGamepad) {
+        if (g == key) return true;
+    }
+    return false;
+}
+
+// Poll for the next pressed input this frame, to capture a rebind. Mouse buttons
+// and gamepad buttons are checked explicitly; everything else is treated as a key.
+static InputBinding captureInput() {
+    for (int b = 0; b < 5; ++b) {
+        if (ImGui::IsMouseClicked(b)) return InputBinding{InputDevice::Mouse, b};
+    }
+    for (ImGuiKey g : kBindableGamepad) {
+        if (ImGui::IsKeyPressed(g, false)) return InputBinding{InputDevice::Gamepad, static_cast<int>(g)};
+    }
+    for (int k = ImGuiKey_NamedKey_BEGIN; k < ImGuiKey_NamedKey_END; ++k) {
+        const ImGuiKey key = static_cast<ImGuiKey>(k);
+        if (!ImGui::IsKeyPressed(key, false)) continue;
+        if (key >= ImGuiKey_MouseLeft && key <= ImGuiKey_MouseWheelY) continue; // handled above
+        if (isBindableGamepad(key)) continue;                                   // handled above
+        return InputBinding{InputDevice::Keyboard, static_cast<int>(key)};
+    }
+    return InputBinding{};
+}
+
+// Human-readable label for a binding, for the panel.
+static std::string bindingLabel(const InputBinding& binding) {
+    if (!binding.bound()) return "(unbound)";
+    if (binding.device == InputDevice::Mouse) {
+        switch (binding.code) {
+            case 0: return "Mouse Left";
+            case 1: return "Mouse Right";
+            case 2: return "Mouse Middle";
+            default: return "Mouse " + std::to_string(binding.code);
+        }
+    }
+    const char* name = ImGui::GetKeyName(static_cast<ImGuiKey>(binding.code)); // keys + gamepad
+    return (name != nullptr && name[0] != '\0') ? std::string(name) : std::string("code ") +
+                                                                          std::to_string(binding.code);
+}
+
+// Whether the input a binding refers to is currently held (shows rebinds taking
+// effect immediately).
+static bool bindingActive(const InputBinding& binding) {
+    if (!binding.bound()) return false;
+    if (binding.device == InputDevice::Mouse) return ImGui::IsMouseDown(binding.code);
+    return ImGui::IsKeyDown(static_cast<ImGuiKey>(binding.code));
+}
+
 bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
     if (m_initialized) return true;
     if (window == nullptr) return false;
@@ -225,6 +284,18 @@ bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
 
     m_menuStack.open(&m_mainMenu);
 
+    // Input remapping (#60): register the default action bindings (ImGui key /
+    // mouse-button codes), then load any rebindings saved from a prior session.
+    m_inputMap.addAction("MoveForward", {InputDevice::Keyboard, static_cast<int>(ImGuiKey_W)});
+    m_inputMap.addAction("MoveBack", {InputDevice::Keyboard, static_cast<int>(ImGuiKey_S)});
+    m_inputMap.addAction("MoveLeft", {InputDevice::Keyboard, static_cast<int>(ImGuiKey_A)});
+    m_inputMap.addAction("MoveRight", {InputDevice::Keyboard, static_cast<int>(ImGuiKey_D)});
+    m_inputMap.addAction("Jump", {InputDevice::Keyboard, static_cast<int>(ImGuiKey_Space)});
+    m_inputMap.addAction("Interact", {InputDevice::Keyboard, static_cast<int>(ImGuiKey_E)});
+    m_inputMap.addAction("Fire", {InputDevice::Mouse, 0});
+    m_inputMap.addAction("AltFire", {InputDevice::Mouse, 1});
+    m_inputMap.loadFromFile("ikore_input.ini");
+
     m_initialized = true;
     LOG_INFO("DebugUI: Dear ImGui initialized (press F1 to toggle)");
     return true;
@@ -295,6 +366,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     ImGui::Checkbox("Show scene view / picking (#57)", &m_showPicking);
     ImGui::Checkbox("Show menus (#58)", &m_showMenus);
     ImGui::Checkbox("Show scene hierarchy (#59)", &m_showHierarchy);
+    ImGui::Checkbox("Show input bindings (#60)", &m_showInput);
     ImGui::Checkbox("Show ImGui demo window", &m_showDemoWindow);
     ImGui::End();
 
@@ -305,6 +377,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     renderPicking();
     renderMenus();
     renderHierarchy();
+    renderInputBindings();
 
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
@@ -593,6 +666,72 @@ void DebugUI::renderHierarchy() {
         if (ImGui::Selectable(m_hierarchy.name(id).c_str(), selected)) m_inspector.select(id);
         if (depth > 0) ImGui::Unindent(static_cast<float>(depth) * 16.0f);
         ImGui::PopID();
+    }
+
+    ImGui::End();
+}
+
+void DebugUI::renderInputBindings() {
+    if (!m_showInput) return;
+
+    ImGui::Begin("Input Bindings", &m_showInput);
+
+    // While capturing a rebind, watch for the next input (Esc cancels). Rebinding
+    // updates the map in place, so it takes effect immediately.
+    if (m_rebinding >= 0 && m_rebinding < static_cast<int>(m_inputMap.actionCount())) {
+        ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.3f, 1.0f),
+                           "Press an input for '%s' (Esc to cancel)...",
+                           m_inputMap.actionName(static_cast<std::size_t>(m_rebinding)).c_str());
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            m_rebinding = -1;
+        } else {
+            const InputBinding captured = captureInput();
+            if (captured.bound()) {
+                m_inputMap.rebind(m_inputMap.actionName(static_cast<std::size_t>(m_rebinding)), captured);
+                m_rebinding = -1;
+            }
+        }
+    }
+
+    for (int i = 0; i < static_cast<int>(m_inputMap.actionCount()); ++i) {
+        const std::string& name = m_inputMap.actionName(static_cast<std::size_t>(i));
+        const InputBinding binding = m_inputMap.bindingAt(static_cast<std::size_t>(i));
+        const bool conflict = m_inputMap.hasConflict(name);
+
+        ImGui::PushID(i);
+        ImGui::Text("%-14s", name.c_str());
+        ImGui::SameLine(150.0f);
+        if (conflict) ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(240, 90, 90, 255));
+        ImGui::TextUnformatted(bindingLabel(binding).c_str());
+        if (conflict) {
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.95f, 0.35f, 0.35f, 1.0f), "(conflict)");
+        }
+        ImGui::SameLine(300.0f);
+        if (ImGui::SmallButton("Rebind")) m_rebinding = i;
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Clear")) m_inputMap.unbind(name);
+        ImGui::PopID();
+    }
+
+    ImGui::Separator();
+    if (ImGui::Button("Save")) m_inputMap.saveToFile("ikore_input.ini");
+    ImGui::SameLine();
+    if (ImGui::Button("Load")) m_inputMap.loadFromFile("ikore_input.ini");
+    ImGui::SameLine();
+    if (ImGui::Button("Reset to defaults")) m_inputMap.resetToDefaults();
+    if (m_inputMap.anyConflicts()) {
+        ImGui::TextColored(ImVec4(0.95f, 0.35f, 0.35f, 1.0f), "Some actions share the same input.");
+    }
+
+    // Live view: which actions are currently active, proving rebinds apply at once.
+    ImGui::Separator();
+    ImGui::TextDisabled("Active now:");
+    for (int i = 0; i < static_cast<int>(m_inputMap.actionCount()); ++i) {
+        if (bindingActive(m_inputMap.bindingAt(static_cast<std::size_t>(i)))) {
+            ImGui::BulletText("%s", m_inputMap.actionName(static_cast<std::size_t>(i)).c_str());
+        }
     }
 
     ImGui::End();
