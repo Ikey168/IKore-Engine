@@ -576,6 +576,18 @@ add_executable(test_level_review
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_level_review.cpp
 )
 
+# Portable Doodle Dungeon converter library (Milestone 17 / #171). Header-only and
+# renderer-agnostic (no OpenGL, no glm), so it builds independently of the engine
+# renderer and can be consumed from a mobile app or any engine.
+add_library(doodle INTERFACE)
+target_include_directories(doodle INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+# Isolated tests for the library, linking only the standalone `doodle` target.
+add_executable(test_doodle_library
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_doodle_library.cpp
+)
+target_link_libraries(test_doodle_library PRIVATE doodle)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
