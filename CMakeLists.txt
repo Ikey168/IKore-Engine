@@ -670,6 +670,14 @@ add_executable(test_vertical_slice
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_vertical_slice.cpp
 )
 
+# Runnable samples (roadmap section 7 / #224) - header-only, no GL context needed.
+add_executable(sample_vertical_slice
+    ${CMAKE_CURRENT_SOURCE_DIR}/samples/vertical_slice_demo.cpp
+)
+add_executable(sample_benchmark_export
+    ${CMAKE_CURRENT_SOURCE_DIR}/samples/benchmark_export_demo.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
