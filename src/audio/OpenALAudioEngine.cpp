@@ -688,12 +688,11 @@ namespace IKore {
     void OpenALAudioEngine::updateStreamingSources() {
         std::lock_guard<std::mutex> lock(m_audioMutex);
         
-        // Update streaming sources (placeholder for full streaming implementation)
+        // Full buffer queue/unqueue streaming is tracked in #258.
         for (uint32_t sourceId : m_streamingSources) {
             auto it = m_audioSources.find(sourceId);
             if (it != m_audioSources.end()) {
-                // In a full implementation, this would handle buffer queuing/unqueuing
-                // for continuous streaming audio
+                // Continuous-streaming buffer management goes here (see #258).
             }
         }
     }
@@ -752,24 +751,22 @@ namespace IKore {
     }
 
     bool OpenALAudioEngine::loadOGG(const std::string& filename, AudioBuffer& buffer) {
-        // Placeholder for OGG Vorbis loading
-        // In a full implementation, this would use libvorbis
+        // OGG Vorbis decoding is not built in (needs libvorbis). Tracked in #258.
         #ifdef HAVE_VORBIS
-        // OGG Vorbis loading implementation would go here
+        // OGG Vorbis decode goes here (see #258).
         #endif
-        
-        m_lastError = "OGG format not yet implemented";
+
+        m_lastError = "OGG format not supported";
         return false;
     }
 
     bool OpenALAudioEngine::loadMP3(const std::string& filename, AudioBuffer& buffer) {
-        // Placeholder for MP3 loading
-        // In a full implementation, this would use libsndfile or similar
+        // MP3 decoding is not built in (needs libsndfile or a decoder). Tracked in #258.
         #ifdef HAVE_LIBSNDFILE
-        // MP3 loading implementation would go here
+        // MP3 decode goes here (see #258).
         #endif
-        
-        m_lastError = "MP3 format not yet implemented";
+
+        m_lastError = "MP3 format not supported";
         return false;
     }
 
@@ -1047,11 +1044,13 @@ namespace IKore {
     }
 
     void OpenALAudioEngine::setDopplerFactor(float factor) {
-        // Fallback stub
+        // No-op in fallback mode (OpenAL unavailable).
+        (void)factor;
     }
 
     void OpenALAudioEngine::setSpeedOfSound(float speed) {
-        // Fallback stub
+        // No-op in fallback mode (OpenAL unavailable).
+        (void)speed;
     }
 
     size_t OpenALAudioEngine::getActiveSourceCount() const {

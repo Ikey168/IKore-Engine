@@ -77,14 +77,12 @@ AmbientSoundZone* AmbientSoundZoneManager::findBestZone() {
 }
 
 void AmbientSoundZoneManager::transitionToZone(AmbientSoundZone* newZone, float /* deltaTime */) {
-    // For now, we just update the current zone pointer
-    // TODO: Implement smooth audio transitions when AudioSystem3D supports streaming ambient audio
+    // For now we just swap the current zone pointer; cross-faded transitions need
+    // streaming ambient audio, tracked in #258.
     currentZone = newZone;
-    
+
     if (newZone) {
-        // Calculate volume based on position for debugging
-        // TODO: When ambient audio streaming is implemented in AudioSystem3D,
-        // we'll use this volume calculation for playback
+        // Once streaming ambient audio lands (#258), this per-position volume drives playback.
         [[maybe_unused]] float volume = newZone->getVolumeAtPosition(listenerPosition);
     }
 }

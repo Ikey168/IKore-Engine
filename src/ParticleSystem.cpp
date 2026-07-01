@@ -341,9 +341,8 @@ void ParticleSystem::updateCPU(float deltaTime) {
 }
 
 void ParticleSystem::updateGPU(float deltaTime) {
-    // GPU update using compute shaders
-    // This is a placeholder for future implementation
-    updateCPU(deltaTime); // Fallback to CPU for now
+    // GPU compute-shader particle update is tracked in #259; use the CPU path for now.
+    updateCPU(deltaTime);
 }
 
 void ParticleSystem::emitParticles(float deltaTime) {
