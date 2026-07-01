@@ -14,6 +14,11 @@
 
 namespace IKore {
 
+// Unscaled base style, captured once at init. Each frame applyScaling() copies it
+// back and re-applies ScaleAllSizes(scale), so scaling is not cumulative (#61).
+static ImGuiStyle s_baseStyle;
+static bool s_baseStyleCaptured = false;
+
 // File-static trampoline: ImGui's InputText callback dispatches here, then into
 // the DebugUI instance passed as user data.
 static int consoleTextEditStub(ImGuiInputTextCallbackData* data) {
@@ -187,6 +192,8 @@ bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;    // allow panels to be docked together
 
     ImGui::StyleColorsDark();
+    s_baseStyle = ImGui::GetStyle(); // remember the unscaled style for #61
+    s_baseStyleCaptured = true;
 
     if (!ImGui_ImplGlfw_InitForOpenGL(window, /*install_callbacks=*/true)) {
         LOG_ERROR("DebugUI: ImGui GLFW backend init failed");
@@ -256,8 +263,10 @@ bool DebugUI::initialize(GLFWwindow* window, const char* glslVersion) {
     // menus on the navigation core and open the main menu.
     m_settings.setBool("vsync", true);
     m_settings.setFloat("volume", 0.8f);
-    m_settings.setInt("quality", 2); // index into {Low, Medium, High}
+    m_settings.setInt("quality", 2);       // index into {Low, Medium, High}
+    m_settings.setFloat("ui.scale", 1.0f); // user-facing UI scale (#61)
     m_settings.loadFromFile("ikore_settings.ini");
+    m_uiScale.userScale = m_settings.getFloat("ui.scale", 1.0f); // persisted scale
 
     m_settingsMenu.add(menuToggle("VSync", [this] { return m_settings.getBool("vsync"); },
                                   [this](bool b) { m_settings.setBool("vsync", b); }));
@@ -330,6 +339,7 @@ void DebugUI::render(float deltaTimeSeconds) {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
+    applyScaling(); // DPI / resolution aware scaling (#61), before any widgets
     buildUI(deltaTimeSeconds);
 
     ImGui::Render();
@@ -361,12 +371,12 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     ImGui::Checkbox("Show performance overlay (#53)", &m_showPerf);
     ImGui::Checkbox("Show console (#54)", &m_showConsole);
     ImGui::Checkbox("Show HUD (#55)", &m_showHud);
-    ImGui::SliderFloat("HUD scale (#61)", &m_hudScale, 0.5f, 2.0f, "%.2f");
     ImGui::Checkbox("Show entity inspector (#56)", &m_showInspector);
     ImGui::Checkbox("Show scene view / picking (#57)", &m_showPicking);
     ImGui::Checkbox("Show menus (#58)", &m_showMenus);
     ImGui::Checkbox("Show scene hierarchy (#59)", &m_showHierarchy);
     ImGui::Checkbox("Show input bindings (#60)", &m_showInput);
+    ImGui::Checkbox("Show UI scaling (#61)", &m_showScaling);
     ImGui::Checkbox("Show ImGui demo window", &m_showDemoWindow);
     ImGui::End();
 
@@ -378,6 +388,7 @@ void DebugUI::buildUI(float deltaTimeSeconds) {
     renderMenus();
     renderHierarchy();
     renderInputBindings();
+    renderScaling();
 
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
@@ -565,9 +576,10 @@ void DebugUI::renderMenus() {
     Menu* menu = m_menuStack.current();
     if (menu == nullptr) return;
 
-    // Center the menu window using the HUD framework's anchoring (#55).
+    // Center the menu window using the HUD framework's anchoring (#55), sizing it by
+    // the effective UI scale (#61) so it stays proportionate across resolutions.
     const ImGuiIO& io = ImGui::GetIO();
-    const HudVec2 size{340.0f, 320.0f};
+    const HudVec2 size{340.0f * m_effectiveScale, 320.0f * m_effectiveScale};
     const HudVec2 pos =
         resolveAnchor(HudAnchor::Center, {io.DisplaySize.x, io.DisplaySize.y}, size, {0.0f, 0.0f});
     ImGui::SetNextWindowPos(ImVec2(pos.x, pos.y), ImGuiCond_Always);
@@ -737,12 +749,58 @@ void DebugUI::renderInputBindings() {
     ImGui::End();
 }
 
+void DebugUI::applyScaling() {
+    ImGuiIO& io = ImGui::GetIO();
+    const float dpi = io.DisplayFramebufferScale.y > 0.0f ? io.DisplayFramebufferScale.y : 1.0f;
+    m_effectiveScale = computeUiScale(m_uiScale, io.DisplaySize.y, dpi);
+
+    // Re-apply the unscaled base style, then scale it - cheap (a struct copy plus
+    // ScaleAllSizes), with no font-atlas rebuild, so the cost is negligible (#61).
+    if (s_baseStyleCaptured) {
+        ImGui::GetStyle() = s_baseStyle;
+        ImGui::GetStyle().ScaleAllSizes(m_effectiveScale);
+    }
+    io.FontGlobalScale = m_effectiveScale;
+    m_hud.setScale(m_effectiveScale);
+}
+
+void DebugUI::renderScaling() {
+    if (!m_showScaling) return;
+
+    ImGui::Begin("UI Scaling", &m_showScaling);
+
+    const ImGuiIO& io = ImGui::GetIO();
+    const float w = io.DisplaySize.x;
+    const float h = io.DisplaySize.y;
+    ImGui::Text("Resolution: %.0f x %.0f", w, h);
+    ImGui::Text("DPI / framebuffer scale: %.2f", io.DisplayFramebufferScale.y);
+    ImGui::Text("Aspect: %.3f (%s)", aspectRatio(w, h), aspectCategoryName(classifyAspect(w, h)));
+    ImGui::Text("Effective UI scale: %.2f", m_effectiveScale);
+
+    ImGui::Separator();
+    float userScale = m_uiScale.userScale;
+    if (ImGui::SliderFloat("User scale", &userScale, m_uiScale.minScale, m_uiScale.maxScale, "%.2f")) {
+        m_uiScale.userScale = userScale;
+        m_settings.setFloat("ui.scale", userScale);
+    }
+    if (ImGui::IsItemDeactivatedAfterEdit()) saveSettings(); // persist once, on release
+    ImGui::Checkbox("Auto-scale with resolution", &m_uiScale.autoResolutionScale);
+
+    if (ImGui::Button("Reset")) {
+        m_uiScale.userScale = 1.0f;
+        m_settings.setFloat("ui.scale", 1.0f);
+        saveSettings();
+    }
+
+    ImGui::End();
+}
+
 void DebugUI::renderHud() {
     if (!m_showHud) return;
 
     const ImGuiIO& io = ImGui::GetIO();
     m_hud.setScreenSize(io.DisplaySize.x, io.DisplaySize.y); // resolution aware (#55)
-    m_hud.setScale(m_hudScale);                              // scale aware (#61)
+    // HUD scale is set globally by applyScaling() (#61).
 
     // Borderless, click-through overlays so the HUD never obstructs gameplay input.
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |

@@ -12,6 +12,7 @@
 #include "ui/HudFramework.h"
 #include "ui/MenuSystem.h"
 #include "ui/SceneHierarchy.h"
+#include "ui/UiScaling.h"
 
 #include <string>
 #include <vector>
@@ -97,6 +98,8 @@ private:
     void renderMenus();
     void renderHierarchy();
     void renderInputBindings();
+    void renderScaling();
+    void applyScaling();
 
     bool m_initialized{false};
     bool m_visible{false};
@@ -109,7 +112,7 @@ private:
     bool m_showMenus{true};
     bool m_showHierarchy{true};
     bool m_showInput{true};
-    float m_hudScale{1.0f};
+    bool m_showScaling{true};
     PerfStats m_perf;
     DebugConsole m_console;
     Hud m_hud;
@@ -157,6 +160,12 @@ private:
     // -1 when not listening.
     InputMap m_inputMap;
     int m_rebinding{-1};
+
+    // DPI / resolution UI scaling (#61). applyScaling() computes the effective
+    // scale each frame from the framebuffer size and DPI and applies it cheaply to
+    // ImGui (font + style) and the HUD; the user scale persists in settings.
+    UiScaleConfig m_uiScale;
+    float m_effectiveScale{1.0f};
 };
 
 } // namespace IKore
