@@ -7,6 +7,8 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -144,6 +146,48 @@ public:
 
     int numClasses() const { return m_numClasses; }
     int featureDim() const { return m_featDim; }
+    const std::vector<std::string>& labels() const { return m_labels; }
+
+    /// Export the trained model to a portable, whitespace-separated text blob so it
+    /// can ship on-device and be reloaded with deserialize() (issue #240).
+    std::string serialize() const {
+        std::ostringstream os;
+        os << "GLYPHNET1\n" << m_numClasses << ' ' << m_featDim << '\n';
+        for (const std::string& l : m_labels) os << l << '\n';
+        os << std::scientific << std::setprecision(9);
+        for (int c = 0; c < m_numClasses; ++c) os << m_b[static_cast<std::size_t>(c)] << '\n';
+        for (float w : m_W) os << w << '\n';
+        return os.str();
+    }
+
+    /// Load a model previously produced by serialize(). Returns false (leaving the
+    /// classifier unchanged) on a malformed or truncated blob, so callers can fall
+    /// back to the heuristic path when a model is unavailable.
+    bool deserialize(const std::string& blob) {
+        std::istringstream is(blob);
+        std::string magic;
+        if (!(is >> magic) || magic != "GLYPHNET1") return false;
+        int K = 0, D = 0;
+        if (!(is >> K >> D) || K <= 0 || D <= 0) return false;
+        std::vector<std::string> labels(static_cast<std::size_t>(K));
+        for (int c = 0; c < K; ++c) {
+            if (!(is >> labels[static_cast<std::size_t>(c)])) return false;
+        }
+        std::vector<float> b(static_cast<std::size_t>(K), 0.0f);
+        for (int c = 0; c < K; ++c) {
+            if (!(is >> b[static_cast<std::size_t>(c)])) return false;
+        }
+        std::vector<float> W(static_cast<std::size_t>(K) * D, 0.0f);
+        for (std::size_t i = 0; i < W.size(); ++i) {
+            if (!(is >> W[i])) return false;
+        }
+        m_numClasses = K;
+        m_featDim = D;
+        m_labels = std::move(labels);
+        m_b = std::move(b);
+        m_W = std::move(W);
+        return true;
+    }
 
 private:
     std::vector<float> softmaxLogits(const std::vector<float>& x) const {

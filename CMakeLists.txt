@@ -606,6 +606,12 @@ add_executable(test_glyph_net
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_glyph_net.cpp
 )
 
+# Phase 4 symbol recognizer: data pipeline, export, accuracy/confusion harness,
+# heuristic fallback (Milestone 16/17 / #240) - header-only.
+add_executable(test_symbol_recognizer
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_symbol_recognizer.cpp
+)
+
 # UGC catalog: share codes, feed, stars (Milestone 17 / #174) - header-only.
 add_executable(test_level_catalog
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_level_catalog.cpp
