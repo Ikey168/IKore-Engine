@@ -19,19 +19,27 @@ post-processing (bloom, SSAO, FXAA) plus a skybox.
 
 ## Prioritized improvements
 
-### P1 - Render-pass graph / pass abstraction (foundation, started here)
+### P1 - Render-pass graph / pass abstraction (foundation + adoption, done)
 
 Describe the frame as named passes with explicit dependencies and compute the
 execution order, instead of hard-coding the sequence in the renderer. This makes
 inserting or reordering passes (deferred shading, HDR, extra post) a data change.
 
-- **Delivered in this issue (isolated, tested):** `src/render/RenderPassGraph.h`
-  plus `tests/test_render_pass_graph.cpp` - deterministic topological ordering
-  with cycle detection. It is not yet wired into the GL renderer, so it cannot
-  regress anything.
-- **Next (needs agreement):** adopt the graph in the renderer to sequence the
-  existing passes, one pass at a time, verifying each against the current output.
-- Effort: medium. Risk: low while unwired; medium during adoption.
+- **Foundation (#226, isolated, tested):** `src/render/RenderPassGraph.h` plus
+  `tests/test_render_pass_graph.cpp` - deterministic topological ordering with
+  cycle detection, header-only and GL-free.
+- **Adoption (#232, done):** `src/render/FrameGraph.h` defines the renderer's real
+  pass set as data (`buildDefaultFrameGraph()`:
+  `shadow -> scene_begin -> skybox -> forward -> particles -> postprocess`) and a
+  `FrameGraphExecutor` that runs each pass's handler in the computed order. The
+  main render loop (`src/main.cpp`) now binds a handler per pass and calls
+  `execute()` instead of a hard-coded sequence, so reordering/inserting a pass is a
+  change to `buildDefaultFrameGraph()`, not to the loop. The graph is built to
+  reproduce the exact pre-adoption order, so existing scenes render unchanged;
+  `tests/test_frame_graph.cpp` pins that order headlessly.
+- **Next:** as later passes land (P2/P3), express them as nodes in
+  `buildDefaultFrameGraph()` rather than new inline code in the loop.
+- Effort: medium. Risk: low (order is byte-identical to the previous sequence).
 
 ### P2 - PBR materials (metallic-roughness)
 

@@ -683,6 +683,11 @@ add_executable(test_render_pass_graph
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_render_pass_graph.cpp
 )
 
+# Concrete frame graph + executor adoption (rendering modernization P1 / #232) - header-only.
+add_executable(test_frame_graph
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_frame_graph.cpp
+)
+
 # Lua scripting layer test (Milestone 10 / #145). Links the self-built Lua
 # static lib and uses sol2 (header-only) + the header-only ECS.
 add_executable(test_scripting
