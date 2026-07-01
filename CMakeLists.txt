@@ -622,6 +622,12 @@ add_executable(test_level_share
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_level_share.cpp
 )
 
+# UGC Phase 5: fastest-clear leaderboards with replay anti-cheat (Milestone 17 /
+# #242) - header-only.
+add_executable(test_leaderboard
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_leaderboard.cpp
+)
+
 # Performance-overlay stats core (Milestone 9 / #53) - header-only.
 add_executable(test_perf_stats
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_perf_stats.cpp
