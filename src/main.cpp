@@ -27,6 +27,7 @@
 #include "CascadedShadowMap.h"
 #include "Frustum.h"
 #include "render/FrameGraph.h"
+#include "render/ShadowSkinning.h"
 #include "core/Entity.h"
 #include "core/EntityTypes.h"
 #include "core/Transform.h"
@@ -46,9 +47,14 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
-// Function to render scene objects (for both shadow pass and main rendering)
-void renderSceneObjects(std::shared_ptr<IKore::Shader> shader, GLuint VAO, bool modelLoaded, 
-                       const IKore::Model& cubeModel, double currentFrameTime);
+// Function to render scene objects (for both shadow pass and main rendering).
+// For the shadow pass, an optional skinned depth program and bone palette let a mesh
+// with bones deform to its animated pose (issue #266); boneless meshes keep the
+// static path unchanged.
+void renderSceneObjects(std::shared_ptr<IKore::Shader> shader, GLuint VAO, bool modelLoaded,
+                       const IKore::Model& cubeModel, double currentFrameTime,
+                       std::shared_ptr<IKore::Shader> skinnedShadowShader = nullptr,
+                       const std::vector<glm::mat4>* bonePalette = nullptr);
 
 // Global camera instance and controller
 IKore::Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
@@ -513,6 +519,14 @@ int main() {
         LOG_ERROR(std::string("Shadow shader file load/compile failed: ") + shaderError);
     }
 
+    // Skinned directional shadow-depth program (issue #266): reuses shadow_depth.frag
+    // but skins the vertex so an animated mesh casts its posed shadow. Selected per
+    // mesh by hasBones(); boneless meshes keep shadowShaderPtr above.
+    auto skinnedShadowShaderPtr = IKore::Shader::loadFromFilesCached("src/shaders/skinned_shadow_depth.vert", "src/shaders/shadow_depth.frag", shaderError);
+    if(!skinnedShadowShaderPtr){
+        LOG_ERROR(std::string("Skinned shadow shader file load/compile failed: ") + shaderError);
+    }
+
     // Setup lights
     IKore::DirectionalLight dirLight(glm::vec3(-0.2f, -1.0f, -0.3f));
     dirLight.ambient = glm::vec3(0.05f, 0.05f, 0.05f);
@@ -756,15 +770,25 @@ int main() {
                 for (int c = 0; c < g_cascadedShadowMap->cascadeCount(); ++c) {
                     g_cascadedShadowMap->beginCascadePass(c);
                     shadowShaderPtr->setMat4("lightSpaceMatrix", glm::value_ptr(mats[static_cast<std::size_t>(c)]));
-                    renderSceneObjects(shadowShaderPtr, VAO, modelLoaded, cubeModel, currentFrameTime);
+                    // The skinned depth program shares the same light matrix (issue #266).
+                    if (skinnedShadowShaderPtr) {
+                        skinnedShadowShaderPtr->use();
+                        skinnedShadowShaderPtr->setMat4("lightSpaceMatrix", glm::value_ptr(mats[static_cast<std::size_t>(c)]));
+                    }
+                    renderSceneObjects(shadowShaderPtr, VAO, modelLoaded, cubeModel, currentFrameTime, skinnedShadowShaderPtr);
                 }
                 g_cascadedShadowMap->endShadowPass();
             } else if (dirShadowMap && shadowShaderPtr) {
                 dirShadowMap->beginShadowPass();
-                shadowShaderPtr->use();
                 glm::mat4 lightSpaceMatrix = dirShadowMap->getLightSpaceMatrix();
+                shadowShaderPtr->use();
                 shadowShaderPtr->setMat4("lightSpaceMatrix", glm::value_ptr(lightSpaceMatrix));
-                renderSceneObjects(shadowShaderPtr, VAO, modelLoaded, cubeModel, currentFrameTime);
+                // The skinned depth program shares the same light matrix (issue #266).
+                if (skinnedShadowShaderPtr) {
+                    skinnedShadowShaderPtr->use();
+                    skinnedShadowShaderPtr->setMat4("lightSpaceMatrix", glm::value_ptr(lightSpaceMatrix));
+                }
+                renderSceneObjects(shadowShaderPtr, VAO, modelLoaded, cubeModel, currentFrameTime, skinnedShadowShaderPtr);
                 dirShadowMap->endShadowPass();
             }
             // Point light shadow map needs a geometry-shader path; not rendered yet.
@@ -1606,8 +1630,10 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
 }
 
 // Function to render scene objects (for both shadow pass and main rendering)
-void renderSceneObjects(std::shared_ptr<IKore::Shader> shader, GLuint VAO, bool modelLoaded, 
-                       const IKore::Model& cubeModel, double currentFrameTime) {
+void renderSceneObjects(std::shared_ptr<IKore::Shader> shader, GLuint VAO, bool modelLoaded,
+                       const IKore::Model& cubeModel, double currentFrameTime,
+                       std::shared_ptr<IKore::Shader> skinnedShadowShader,
+                       const std::vector<glm::mat4>* bonePalette) {
     // Create a larger grid of objects for better frustum culling demonstration
     std::vector<glm::vec3> cubePositions;
     
@@ -1622,22 +1648,43 @@ void renderSceneObjects(std::shared_ptr<IKore::Shader> shader, GLuint VAO, bool 
     
     // Render models if available, otherwise fallback to primitive cubes
     if (modelLoaded && !cubeModel.getMeshes().empty()) {
+        // Shadow pass: choose the skinned depth program for a mesh with bones so its
+        // shadow follows the animated pose, else the static program (issue #266). The
+        // choice mirrors the forward pass's skinned-vs-static shader selection.
+        const bool useSkinned =
+            IKore::render::shadowProgramFor(cubeModel.hasBones()) == IKore::render::ShadowProgram::Skinned &&
+            skinnedShadowShader != nullptr;
+        std::shared_ptr<IKore::Shader> activeShader = useSkinned ? skinnedShadowShader : shader;
+        activeShader->use();
+
+        // Upload the bone palette once for the skinned program (clamped to the shader's
+        // finalBonesMatrices[MAX_BONES] capacity); the shaders' rigid fallback covers a
+        // missing palette.
+        if (useSkinned && bonePalette != nullptr) {
+            const int count =
+                IKore::render::shadowPaletteUploadCount(static_cast<int>(bonePalette->size()));
+            for (int b = 0; b < count; ++b) {
+                activeShader->setMat4(("finalBonesMatrices[" + std::to_string(b) + "]").c_str(),
+                                      glm::value_ptr((*bonePalette)[static_cast<std::size_t>(b)]));
+            }
+        }
+
         for (size_t i = 0; i < cubePositions.size(); i++) {
             // Calculate individual model matrix for each cube
             glm::mat4 instanceModel = glm::mat4(1.0f);
             instanceModel = glm::translate(instanceModel, cubePositions[i]);
             float angle = 20.0f * i + (float)currentFrameTime * 30.0f;
-            instanceModel = glm::rotate(instanceModel, glm::radians(angle), 
+            instanceModel = glm::rotate(instanceModel, glm::radians(angle),
                                   glm::vec3(1.0f, 0.3f, 0.5f));
-            
+
             glm::mat3 cubeNormalMatrix = glm::mat3(glm::transpose(glm::inverse(instanceModel)));
-            
+
             // Set matrices for this instance
-            shader->setMat4("model", glm::value_ptr(instanceModel));
-            shader->setMat3("normalMatrix", glm::value_ptr(cubeNormalMatrix));
-            
+            activeShader->setMat4("model", glm::value_ptr(instanceModel));
+            activeShader->setMat3("normalMatrix", glm::value_ptr(cubeNormalMatrix));
+
             // Render the model
-            cubeModel.render(shader);
+            cubeModel.render(activeShader);
         }
     } else {
         // Fallback: render primitive cubes using VAO

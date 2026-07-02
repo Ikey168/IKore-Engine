@@ -671,6 +671,12 @@ add_executable(test_skinning
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_skinning.cpp
 )
 
+# Skinned shadow-depth pass: shadow-program selection + palette-upload policy, and
+# the shadow vertex shader's skinning matching the tested core (#266) - header-only.
+add_executable(test_skinned_shadow
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_skinned_shadow.cpp
+)
+
 # Performance-overlay stats core (Milestone 9 / #53) - header-only.
 add_executable(test_perf_stats
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_perf_stats.cpp
