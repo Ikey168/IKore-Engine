@@ -239,6 +239,7 @@ set(ENGINE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Skybox.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ParticleSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ShadowMap.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CascadedShadowMap.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Frustum.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/InputComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ControllableEntities.cpp
@@ -772,6 +773,13 @@ add_executable(test_tone_mapping
 # (rendering P4 / #236) - header-only.
 add_executable(test_shadow_cascades
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_shadow_cascades.cpp
+)
+
+# Per-cascade light-matrix assembly: matrix algebra, slice fit, split monotonicity,
+# CPU/GPU cascade-selection agreement, count==1 degradation (rendering / #265) -
+# header-only, glm-free.
+add_executable(test_shadow_cascade_build
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_shadow_cascade_build.cpp
 )
 
 # PCF soft-shadow filtering math: tap sets / averaging / softness (rendering P4 /

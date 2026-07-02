@@ -6,6 +6,8 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <cmath>
+#include <string>
 #include <filesystem>
 #include <fstream>
 #include <thread>
@@ -22,6 +24,7 @@
 #include "Skybox.h"
 #include "ParticleSystem.h"
 #include "ShadowMap.h"
+#include "CascadedShadowMap.h"
 #include "Frustum.h"
 #include "render/FrameGraph.h"
 #include "core/Entity.h"
@@ -65,6 +68,14 @@ IKore::ParticleSystemManager* g_particleManager = nullptr;
 
 // Global shadow map manager for keyboard callbacks
 IKore::ShadowMapManager* g_shadowManager = nullptr;
+
+// Cascaded shadow maps for the directional light (issue #265). Opt-in: while
+// g_useCascadedShadows is false the directional light keeps the original single map
+// and the render is unchanged. Toggle with K; cycle the split lambda with J.
+IKore::CascadedShadowMap* g_cascadedShadowMap = nullptr;
+bool g_useCascadedShadows = false;
+float g_cascadeSplitLambda = 0.5f;   // 0 uniform .. 1 logarithmic split
+float g_cascadeBlendBand = 2.0f;     // view-depth width of the cross-cascade seam blend
 
 // Global frustum culler for rendering optimization
 IKore::FrustumCuller g_frustumCuller;
@@ -528,6 +539,17 @@ int main() {
     } else {
         LOG_INFO("Directional shadow map created successfully");
     }
+
+    // Cascaded shadow map for the directional light (issue #265). Additive and
+    // opt-in: it is only used while g_useCascadedShadows is true (toggle with K), so
+    // the default path stays the single directional map above.
+    IKore::CascadedShadowMap cascadedShadowMap(4 /* cascades */, 2048);
+    if (!cascadedShadowMap.initialize()) {
+        LOG_WARNING("Failed to create cascaded shadow map - CSM path will be unavailable");
+    } else {
+        g_cascadedShadowMap = &cascadedShadowMap;
+        LOG_INFO("Cascaded shadow map created successfully (press K to toggle)");
+    }
     
     // Create shadow map for point light
     auto* pointShadowMap = shadowManager.createPointShadowMap(1, 1024);
@@ -712,8 +734,32 @@ int main() {
             if (pointShadowMap) {
                 pointShadowMap->setPointLightMatrices(pointLight.position, 25.0f);
             }
-            // Render directional light shadow map
-            if (dirShadowMap && shadowShaderPtr) {
+            // Render directional light shadow map. When the CSM path is on, render
+            // one depth pass per cascade into the texture array; otherwise the
+            // original single directional pass (unchanged).
+            if (g_useCascadedShadows && g_cascadedShadowMap && shadowShaderPtr) {
+                // Recover the frustum parameters from this frame's projection so the
+                // cascade fit matches the camera exactly (works for either camera path).
+                const float p00 = projection[0][0];
+                const float p11 = projection[1][1];
+                const float p22 = projection[2][2];
+                const float p32 = projection[3][2];
+                const float fovY = 2.0f * std::atan(1.0f / p11);
+                const float aspect = p11 / p00;
+                const float nearZ = p32 / (p22 - 1.0f);
+                const float farZ = p32 / (p22 + 1.0f);
+
+                g_cascadedShadowMap->computeCascades(view, fovY, aspect, nearZ, farZ,
+                                                     dirLight.direction, g_cascadeSplitLambda);
+                shadowShaderPtr->use();
+                const auto& mats = g_cascadedShadowMap->lightMatrices();
+                for (int c = 0; c < g_cascadedShadowMap->cascadeCount(); ++c) {
+                    g_cascadedShadowMap->beginCascadePass(c);
+                    shadowShaderPtr->setMat4("lightSpaceMatrix", glm::value_ptr(mats[static_cast<std::size_t>(c)]));
+                    renderSceneObjects(shadowShaderPtr, VAO, modelLoaded, cubeModel, currentFrameTime);
+                }
+                g_cascadedShadowMap->endShadowPass();
+            } else if (dirShadowMap && shadowShaderPtr) {
                 dirShadowMap->beginShadowPass();
                 shadowShaderPtr->use();
                 glm::mat4 lightSpaceMatrix = dirShadowMap->getLightSpaceMatrix();
@@ -818,7 +864,31 @@ int main() {
             if (dirShadowMap) {
                 shaderPtr->setMat4("lightSpaceMatrix", glm::value_ptr(dirShadowMap->getLightSpaceMatrix()));
             }
-            
+
+            // Cascaded shadow map uniforms (issue #265). When off, the shader ignores
+            // all of these and takes the single-map path, so this is regression-safe.
+            if (g_useCascadedShadows && g_cascadedShadowMap) {
+                shaderPtr->setFloat("useCascades", 1.0f);
+                shaderPtr->setFloat("dirLight.castShadows", 1.0f);
+                const auto& mats = g_cascadedShadowMap->lightMatrices();
+                const auto& splits = g_cascadedShadowMap->splitDepths();
+                const int count = g_cascadedShadowMap->cascadeCount();
+                shaderPtr->setInt("dirCascadeCount", count);
+                for (int c = 0; c < count; ++c) {
+                    const std::string idx = std::to_string(c);
+                    shaderPtr->setMat4(("dirCascadeMatrices[" + idx + "]").c_str(),
+                                       glm::value_ptr(mats[static_cast<std::size_t>(c)]));
+                    shaderPtr->setFloat(("dirCascadeSplits[" + idx + "]").c_str(),
+                                        splits[static_cast<std::size_t>(c)]);
+                }
+                shaderPtr->setMat4("cascadeViewMatrix", glm::value_ptr(view));
+                shaderPtr->setFloat("cascadeBlendBand", g_cascadeBlendBand);
+                g_cascadedShadowMap->bindArray(14); // texture unit 14 for the cascade array
+                shaderPtr->setInt("dirCascadeMaps", 14);
+            } else {
+                shaderPtr->setFloat("useCascades", 0.0f);
+            }
+
             // Set point light
             shaderPtr->setFloat("numPointLights", 1.0f);
             shaderPtr->setVec3("pointLights[0].position", pointLight.position.x, pointLight.position.y, pointLight.position.z);
@@ -1208,6 +1278,20 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
             g_shadowManager->setShadowQuality(quality);
             std::string qualityName = qualityLevel == 0 ? "Low" : (qualityLevel == 1 ? "Medium" : "High");
             LOG_INFO("Shadow quality set to: " + qualityName);
+        }
+        else if (key == GLFW_KEY_K && g_cascadedShadowMap) {
+            // Toggle cascaded shadow maps for the directional light (issue #265).
+            g_useCascadedShadows = !g_useCascadedShadows;
+            LOG_INFO("Cascaded shadow maps " + std::string(g_useCascadedShadows ? "enabled" : "disabled") +
+                     " (" + std::to_string(g_cascadedShadowMap->cascadeCount()) + " cascades)");
+        }
+        else if (key == GLFW_KEY_J && g_cascadedShadowMap) {
+            // Cycle the cascade split lambda (uniform <-> logarithmic split blend).
+            static const float lambdas[] = {0.0f, 0.25f, 0.5f, 0.75f, 1.0f};
+            static int li = 2; // starts at 0.5
+            li = (li + 1) % 5;
+            g_cascadeSplitLambda = lambdas[li];
+            LOG_INFO("Cascade split lambda: " + std::to_string(g_cascadeSplitLambda));
         }
         else if (key == GLFW_KEY_C) {
             // Toggle frustum culling

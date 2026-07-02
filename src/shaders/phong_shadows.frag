@@ -85,6 +85,7 @@ struct SpotLight {
 
 #define MAX_POINT_LIGHTS 4
 #define MAX_SPOT_LIGHTS 4
+#define MAX_CASCADES 4
 
 uniform Material material;
 uniform DirectionalLight dirLight;
@@ -95,6 +96,21 @@ uniform int numSpotLights;
 uniform bool useDirLight;
 
 uniform vec3 viewPos;
+
+// Cascaded shadow maps for the directional light (issue #265). When useCascades is
+// false every one of these is ignored and the directional shadow takes the original
+// single-map path above, so the default render is byte-identical. When true, the
+// directional light samples dirCascadeMaps (one depth layer per cascade) using the
+// per-cascade matrices, selecting a cascade per fragment by view depth exactly as
+// render::selectCascade does on the CPU, with a cross-cascade blend band to hide the
+// resolution seam.
+uniform bool useCascades;
+uniform sampler2DArray dirCascadeMaps;         // one fitted depth layer per cascade
+uniform mat4 dirCascadeMatrices[MAX_CASCADES]; // world -> cascade clip, per cascade
+uniform float dirCascadeSplits[MAX_CASCADES];  // far view-depth boundary per cascade
+uniform int dirCascadeCount;
+uniform mat4 cascadeViewMatrix;                // camera view, for per-fragment view depth
+uniform float cascadeBlendBand;                // view-depth width of the seam blend (0 = off)
 
 // 16-tap Poisson disk mirroring poissonDiskOffsets() in src/render/ShadowFiltering.h
 // (issue #237). Sampling this instead of the box grid trades structured banding for
@@ -113,6 +129,10 @@ const vec2 poissonDisk[16] = vec2[](
 // Shadow mapping functions
 float ShadowCalculation(vec4 fragPosLightSpace, sampler2D shadowMap, float bias, bool softShadows, int kernelSize, bool usePoisson, float softness);
 float PointShadowCalculation(vec3 fragPos, vec3 lightPos, samplerCube shadowCubemap, float farPlane, float bias, bool softShadows);
+// Cascaded directional shadow (issue #265).
+int SelectCascadeIndex(float viewDepth);
+float ShadowCalculationArray(vec4 fragPosLightSpace, int layer, float bias, bool softShadows, int kernelSize, bool usePoisson, float softness);
+float CascadedShadowCalculation(DirectionalLight light);
 
 // Lighting calculation functions
 vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir);
@@ -177,11 +197,17 @@ vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
     // Calculate shadow
     float shadow = 0.0;
     if (light.castShadows) {
-        shadow = ShadowCalculation(FragPosLightSpace, light.shadowMap, light.shadowBias,
-                                 light.softShadows, light.pcfKernelSize,
-                                 light.poissonShadows, light.shadowSoftness);
+        if (useCascades) {
+            // CSM path (issue #265): pick a cascade by view depth and sample its layer.
+            shadow = CascadedShadowCalculation(light);
+        } else {
+            // Original single-map path (unchanged).
+            shadow = ShadowCalculation(FragPosLightSpace, light.shadowMap, light.shadowBias,
+                                     light.softShadows, light.pcfKernelSize,
+                                     light.poissonShadows, light.shadowSoftness);
+        }
     }
-    
+
     // Apply shadow to diffuse and specular components (not ambient)
     return ambient + (1.0 - shadow) * (diffuse + specular);
 }
@@ -324,6 +350,86 @@ float ShadowCalculation(vec4 fragPosLightSpace, sampler2D shadowMap, float bias,
         shadow /= float(taps);
     }
 
+    return shadow;
+}
+
+// Pick the cascade for a positive view-space depth. Mirrors render::selectCascade in
+// src/render/ShadowCascades.h: the first cascade whose far split covers the depth,
+// clamping to the last cascade beyond the final split, so CPU and GPU always agree.
+int SelectCascadeIndex(float viewDepth) {
+    int count = dirCascadeCount < MAX_CASCADES ? dirCascadeCount : MAX_CASCADES;
+    if (count < 1) count = 1;
+    for (int i = 0; i < count; ++i) {
+        if (viewDepth <= dirCascadeSplits[i]) return i;
+    }
+    return count - 1;
+}
+
+// PCF depth compare against one layer of the cascade depth array. Identical filtering
+// to ShadowCalculation() (hard tap, box kernel, or Poisson disk), but sampling a
+// sampler2DArray layer instead of a sampler2D.
+float ShadowCalculationArray(vec4 fragPosLightSpace, int layer, float bias, bool softShadows, int kernelSize, bool usePoisson, float softness) {
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projCoords = projCoords * 0.5 + 0.5;
+    float currentDepth = projCoords.z;
+    if (projCoords.z > 1.0) {
+        return 0.0; // beyond this cascade's far plane, treat as lit
+    }
+
+    if (!softShadows || kernelSize <= 1) {
+        float closestDepth = texture(dirCascadeMaps, vec3(projCoords.xy, float(layer))).r;
+        return currentDepth - bias > closestDepth ? 1.0 : 0.0;
+    }
+
+    vec2 texelSize = 1.0 / vec2(textureSize(dirCascadeMaps, 0).xy);
+    float shadow = 0.0;
+    if (usePoisson) {
+        for (int i = 0; i < 16; ++i) {
+            vec2 offset = poissonDisk[i] * texelSize * softness;
+            float pcfDepth = texture(dirCascadeMaps, vec3(projCoords.xy + offset, float(layer))).r;
+            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+        }
+        shadow /= 16.0;
+    } else {
+        int halfKernel = kernelSize / 2;
+        int taps = 0;
+        for (int x = -halfKernel; x <= halfKernel; ++x) {
+            for (int y = -halfKernel; y <= halfKernel; ++y) {
+                vec2 offset = vec2(x, y) * texelSize * softness;
+                float pcfDepth = texture(dirCascadeMaps, vec3(projCoords.xy + offset, float(layer))).r;
+                shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+                taps++;
+            }
+        }
+        shadow /= float(taps);
+    }
+    return shadow;
+}
+
+// Directional shadow via cascades: select a cascade by the fragment's view depth,
+// sample it, and blend into the next cascade across a band before the split so the
+// resolution change does not visibly pop at the seam.
+float CascadedShadowCalculation(DirectionalLight light) {
+    float viewDepth = -(cascadeViewMatrix * vec4(FragPos, 1.0)).z;
+    int idx = SelectCascadeIndex(viewDepth);
+
+    vec4 lsp = dirCascadeMatrices[idx] * vec4(FragPos, 1.0);
+    float shadow = ShadowCalculationArray(lsp, idx, light.shadowBias, light.softShadows,
+                                          light.pcfKernelSize, light.poissonShadows, light.shadowSoftness);
+
+    int count = dirCascadeCount < MAX_CASCADES ? dirCascadeCount : MAX_CASCADES;
+    if (count < 1) count = 1;
+    // Blend toward the next cascade as the fragment nears this cascade's far split.
+    if (cascadeBlendBand > 0.0 && idx < count - 1) {
+        float dist = dirCascadeSplits[idx] - viewDepth; // > 0 before the boundary
+        if (dist < cascadeBlendBand) {
+            vec4 lspNext = dirCascadeMatrices[idx + 1] * vec4(FragPos, 1.0);
+            float shadowNext = ShadowCalculationArray(lspNext, idx + 1, light.shadowBias, light.softShadows,
+                                                      light.pcfKernelSize, light.poissonShadows, light.shadowSoftness);
+            float t = clamp(dist / cascadeBlendBand, 0.0, 1.0); // 1 deep in cascade, 0 at seam
+            shadow = mix(shadowNext, shadow, t);
+        }
+    }
     return shadow;
 }
 
