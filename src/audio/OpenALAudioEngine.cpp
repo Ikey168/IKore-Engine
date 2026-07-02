@@ -1,5 +1,6 @@
 #include "OpenALAudioEngine.h"
 #include "AudioDecode.h"
+#include "AudioDecodeCompressed.h"
 #include <iostream>
 #include <fstream>
 #include <iterator>
@@ -18,6 +19,13 @@
 #endif
 
 namespace IKore {
+
+namespace {
+    // Streaming ring parameters (issue #258): four buffers of ~1/3 second at
+    // 44.1 kHz stereo keeps latency low with headroom against underruns.
+    constexpr int kStreamBufferCount = 4;
+    constexpr std::size_t kStreamChunkBytes = 65536;
+} // namespace
 
 #if OPENAL_AVAILABLE
     // Full OpenAL implementation when available
@@ -159,42 +167,99 @@ namespace IKore {
             m_audioBuffers[filename] = std::move(newBuffer);
         }
 
-        // Create new audio source
+        // Create new audio source. Insert it into the map BEFORE createAudioSource:
+        // that call looks the source up by id, so the old order (create first,
+        // insert after) made it fail unconditionally.
         uint32_t sourceId = m_nextSourceId++;
         auto audioSource = std::make_unique<AudioSource>();
         audioSource->bufferId = buffer->bufferId;
         audioSource->audioFile = filename;
-        
+        m_audioSources[sourceId] = std::move(audioSource);
+
         if (!createAudioSource(sourceId)) {
+            m_audioSources.erase(sourceId);
             m_lastError = "Failed to create audio source for: " + filename;
             return 0;
         }
 
         // Configure source with buffer
-        alSourcei(audioSource->sourceId, AL_BUFFER, buffer->bufferId);
-        
+        AudioSource* source = m_audioSources[sourceId].get();
+        alSourcei(source->sourceId, AL_BUFFER, buffer->bufferId);
+
         if (!checkALError("Bind buffer to source")) {
             cleanupSource(sourceId);
+            m_audioSources.erase(sourceId);
             return 0;
         }
 
-        m_audioSources[sourceId] = std::move(audioSource);
-        
         std::cout << "Loaded 3D audio: " << filename << " (Source ID: " << sourceId << ")" << std::endl;
         return sourceId;
     }
 
     uint32_t OpenALAudioEngine::loadStreamingSound(const std::string& filename) {
-        // For now, treat streaming sounds the same as regular sounds
-        // In a full implementation, this would set up streaming buffers
-        uint32_t sourceId = loadSound(filename);
-        
-        if (sourceId != 0) {
-            std::lock_guard<std::mutex> lock(m_audioMutex);
-            m_audioSources[sourceId]->streaming = true;
-            m_streamingSources.push_back(sourceId);
+        std::lock_guard<std::mutex> lock(m_audioMutex);
+
+        if (!m_initialized) {
+            m_lastError = "Audio engine not initialized";
+            return 0;
         }
-        
+
+        // Decode the whole file to PCM up front (issue #258); the source then
+        // streams it through a small ring of buffers instead of one static buffer,
+        // so playback starts immediately and memory stays bounded per chunk on the
+        // device side. A chunked decoder can later replace the full decode without
+        // touching the queue logic.
+        std::ifstream file(filename, std::ios::binary);
+        if (!file.is_open()) {
+            m_lastError = "Could not open audio file: " + filename;
+            return 0;
+        }
+        std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(file)),
+                                         std::istreambuf_iterator<char>());
+        file.close();
+
+        audio::PcmAudio pcm;
+        std::string decodeErr;
+        if (!audio::decodeAudio(filename, bytes.data(), bytes.size(), pcm, decodeErr) || !pcm.valid()) {
+            m_lastError = "Failed to decode " + filename + ": " + decodeErr;
+            return 0;
+        }
+
+        const uint32_t sourceId = m_nextSourceId++;
+        auto audioSource = std::make_unique<AudioSource>();
+        audioSource->audioFile = filename;
+        audioSource->streaming = true;
+        audioSource->streamPcm = std::move(pcm);
+        m_audioSources[sourceId] = std::move(audioSource);
+
+        if (!createAudioSource(sourceId)) {
+            m_audioSources.erase(sourceId);
+            m_lastError = "Failed to create audio source for: " + filename;
+            return 0;
+        }
+
+        // Prime the ring: generate the stream buffers, fill each with the next
+        // chunk, and queue them on the source.
+        AudioSource* source = m_audioSources[sourceId].get();
+        source->streamBuffers.assign(kStreamBufferCount, 0);
+        alGenBuffers(static_cast<ALsizei>(source->streamBuffers.size()), source->streamBuffers.data());
+        if (!checkALError("Generate stream buffers")) {
+            cleanupSource(sourceId);
+            m_audioSources.erase(sourceId);
+            return 0;
+        }
+        for (ALuint buf : source->streamBuffers) {
+            if (!fillStreamBuffer(*source, buf)) break; // stream shorter than the ring
+            alSourceQueueBuffers(source->sourceId, 1, &buf);
+        }
+        if (!checkALError("Queue stream buffers")) {
+            cleanupSource(sourceId);
+            m_audioSources.erase(sourceId);
+            return 0;
+        }
+
+        m_streamingSources.push_back(sourceId);
+        std::cout << "Loaded streaming audio: " << filename << " (Source ID: " << sourceId << ")" << std::endl;
         return sourceId;
     }
 
@@ -674,9 +739,17 @@ namespace IKore {
 
     void OpenALAudioEngine::cleanupSource(uint32_t sourceId) {
         auto it = m_audioSources.find(sourceId);
-        if (it != m_audioSources.end() && it->second->sourceId != 0) {
+        if (it == m_audioSources.end()) return;
+        if (it->second->sourceId != 0) {
             alDeleteSources(1, &it->second->sourceId);
             it->second->sourceId = 0;
+        }
+        // Release this source's streaming ring (deleting the source above detaches
+        // any still-queued buffers, so they are safe to delete here).
+        if (!it->second->streamBuffers.empty()) {
+            alDeleteBuffers(static_cast<ALsizei>(it->second->streamBuffers.size()),
+                            it->second->streamBuffers.data());
+            it->second->streamBuffers.clear();
         }
     }
 
@@ -687,14 +760,72 @@ namespace IKore {
         }
     }
 
+    bool OpenALAudioEngine::fillStreamBuffer(AudioSource& source, ALuint bufferId) {
+        const audio::PcmAudio& pcm = source.streamPcm;
+        const std::size_t bytesPerFrame = pcm.bytesPerFrame();
+        if (bytesPerFrame == 0 || pcm.data.empty()) return false;
+
+        // Wrap for looping sources; otherwise the stream ends when the cursor does.
+        if (source.streamCursor >= pcm.data.size()) {
+            if (!source.looping) {
+                source.streamEnded = true;
+                return false;
+            }
+            source.streamCursor = 0;
+        }
+
+        // Next chunk, clipped to the end of the PCM and to whole frames.
+        std::size_t take = pcm.data.size() - source.streamCursor;
+        if (take > kStreamChunkBytes) take = kStreamChunkBytes;
+        take -= take % bytesPerFrame;
+        if (take == 0) {
+            source.streamEnded = !source.looping;
+            return false;
+        }
+
+        const ALenum format = (pcm.channels == 2)
+            ? (pcm.bitsPerSample == 8 ? AL_FORMAT_STEREO8 : AL_FORMAT_STEREO16)
+            : (pcm.bitsPerSample == 8 ? AL_FORMAT_MONO8 : AL_FORMAT_MONO16);
+        alBufferData(bufferId, format, pcm.data.data() + source.streamCursor,
+                     static_cast<ALsizei>(take), pcm.sampleRate);
+        source.streamCursor += take;
+        return checkALError("Fill stream buffer");
+    }
+
     void OpenALAudioEngine::updateStreamingSources() {
         std::lock_guard<std::mutex> lock(m_audioMutex);
-        
-        // Full buffer queue/unqueue streaming is tracked in #258.
+
+        // Real buffer recycling (issue #258): unqueue the buffers OpenAL reports as
+        // played and refill them with the next PCM chunk, wrapping when looping.
         for (uint32_t sourceId : m_streamingSources) {
             auto it = m_audioSources.find(sourceId);
-            if (it != m_audioSources.end()) {
-                // Continuous-streaming buffer management goes here (see #258).
+            if (it == m_audioSources.end()) continue;
+            AudioSource* source = it->second.get();
+            if (source->streamBuffers.empty() || source->streamPcm.data.empty()) continue;
+
+            ALint processed = 0;
+            alGetSourcei(source->sourceId, AL_BUFFERS_PROCESSED, &processed);
+            while (processed-- > 0) {
+                ALuint buf = 0;
+                alSourceUnqueueBuffers(source->sourceId, 1, &buf);
+                if (alGetError() != AL_NO_ERROR) break;
+                if (!fillStreamBuffer(*source, buf)) continue; // drained (non-looping)
+                alSourceQueueBuffers(source->sourceId, 1, &buf);
+            }
+
+            // Recover from an underrun: still marked playing with data queued but
+            // the device ran dry before we refilled - restart it.
+            if (source->isPlaying && !source->isPaused) {
+                ALint state = 0, queued = 0;
+                alGetSourcei(source->sourceId, AL_SOURCE_STATE, &state);
+                alGetSourcei(source->sourceId, AL_BUFFERS_QUEUED, &queued);
+                if (state == AL_STOPPED) {
+                    if (queued > 0) {
+                        alSourcePlay(source->sourceId);
+                    } else if (source->streamEnded) {
+                        source->isPlaying = false; // finished naturally
+                    }
+                }
             }
         }
     }
@@ -741,24 +872,67 @@ namespace IKore {
         return checkALError("Upload audio data to buffer");
     }
 
-    bool OpenALAudioEngine::loadOGG(const std::string& filename, AudioBuffer& buffer) {
-        // OGG Vorbis decoding is not built in (needs libvorbis). Tracked in #258.
-        #ifdef HAVE_VORBIS
-        // OGG Vorbis decode goes here (see #258).
-        #endif
+    namespace {
+        // Shared tail for the compressed loaders: upload decoded PCM to a new AL
+        // buffer (issue #258).
+        bool uploadPcmToBuffer(const audio::PcmAudio& pcm, AudioBuffer& buffer) {
+            buffer.format = (pcm.channels == 2)
+                ? (pcm.bitsPerSample == 8 ? AL_FORMAT_STEREO8 : AL_FORMAT_STEREO16)
+                : (pcm.bitsPerSample == 8 ? AL_FORMAT_MONO8 : AL_FORMAT_MONO16);
+            buffer.frequency = pcm.sampleRate;
+            buffer.size = static_cast<ALsizei>(pcm.data.size());
+            alGenBuffers(1, &buffer.bufferId);
+            if (alGetError() != AL_NO_ERROR) return false;
+            alBufferData(buffer.bufferId, buffer.format, pcm.data.data(), buffer.size, buffer.frequency);
+            return alGetError() == AL_NO_ERROR;
+        }
 
-        m_lastError = "OGG format not supported";
-        return false;
+        bool readFileBytes(const std::string& filename, std::vector<unsigned char>& out) {
+            std::ifstream file(filename, std::ios::binary);
+            if (!file.is_open()) return false;
+            out.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+            return true;
+        }
+    } // namespace
+
+    bool OpenALAudioEngine::loadOGG(const std::string& filename, AudioBuffer& buffer) {
+        // OGG Vorbis decode via the vendored stb_vorbis (issue #258).
+        std::vector<unsigned char> bytes;
+        if (!readFileBytes(filename, bytes)) {
+            m_lastError = "Could not open OGG file: " + filename;
+            return false;
+        }
+        audio::PcmAudio pcm;
+        std::string err;
+        if (!audio::decodeOgg(bytes.data(), bytes.size(), pcm, err)) {
+            m_lastError = "Invalid OGG file (" + filename + "): " + err;
+            return false;
+        }
+        if (!uploadPcmToBuffer(pcm, buffer)) {
+            m_lastError = "Failed to upload OGG audio to buffer: " + filename;
+            return false;
+        }
+        return true;
     }
 
     bool OpenALAudioEngine::loadMP3(const std::string& filename, AudioBuffer& buffer) {
-        // MP3 decoding is not built in (needs libsndfile or a decoder). Tracked in #258.
-        #ifdef HAVE_LIBSNDFILE
-        // MP3 decode goes here (see #258).
-        #endif
-
-        m_lastError = "MP3 format not supported";
-        return false;
+        // MP3 decode via the vendored dr_mp3 (issue #258).
+        std::vector<unsigned char> bytes;
+        if (!readFileBytes(filename, bytes)) {
+            m_lastError = "Could not open MP3 file: " + filename;
+            return false;
+        }
+        audio::PcmAudio pcm;
+        std::string err;
+        if (!audio::decodeMp3(bytes.data(), bytes.size(), pcm, err)) {
+            m_lastError = "Invalid MP3 file (" + filename + "): " + err;
+            return false;
+        }
+        if (!uploadPcmToBuffer(pcm, buffer)) {
+            m_lastError = "Failed to upload MP3 audio to buffer: " + filename;
+            return false;
+        }
+        return true;
     }
 
     void OpenALAudioEngine::logALError(ALenum error, const std::string& operation) const {
