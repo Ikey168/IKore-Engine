@@ -63,18 +63,26 @@ struct Material {
 class Mesh {
 private:
     std::vector<Vertex> m_vertices;
+    // Skinned path (issue #260): bone-carrying vertices kept intact instead of
+    // being flattened to Vertex, so GPU skinning gets ids/weights.
+    std::vector<AnimatedVertex> m_animatedVertices;
+    bool m_hasBones = false;
     std::vector<unsigned int> m_indices;
     Material m_material;
     BoundingBox m_boundingBox;
-    
+
     GLuint m_VAO, m_VBO, m_EBO;
     bool m_isSetup;
-    
+
     void setupMesh();
     void calculateBoundingBox();
 
 public:
     Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, Material material);
+    /// Skinned mesh (issue #260): keeps bone ids/weights and uploads them as
+    /// vertex attributes 5 (ivec4) and 6 (vec4) for skinned_phong.vert.
+    Mesh(std::vector<AnimatedVertex> animatedVertices, std::vector<unsigned int> indices,
+         Material material);
     ~Mesh();
     
     // Delete copy constructor and assignment operator
@@ -93,6 +101,10 @@ public:
     const Material& getMaterial() const { return m_material; }
     const BoundingBox& getBoundingBox() const { return m_boundingBox; }
     bool isSetup() const { return m_isSetup; }
+
+    // Skinned path (issue #260)
+    bool hasBones() const { return m_hasBones; }
+    const std::vector<AnimatedVertex>& getAnimatedVertices() const { return m_animatedVertices; }
 };
 
 class Model {

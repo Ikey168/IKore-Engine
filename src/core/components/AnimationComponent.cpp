@@ -3,6 +3,7 @@
 #include "TransformComponent.h"
 #include <algorithm>
 #include <cassert>
+#include <cctype>
 
 namespace IKore {
 
@@ -201,6 +202,9 @@ namespace IKore {
         m_currentState.finished = false;
         m_transition.active = false;
         m_triggeredEvents.clear();
+        // Re-prime root motion on the next play so no stale delta is emitted.
+        m_previousRootTime = -1.0f;
+        m_rootMotionDelta = glm::mat4(1.0f);
     }
 
     void AnimationComponent::pauseAnimation() {
@@ -496,12 +500,70 @@ namespace IKore {
         }
     }
 
-    void AnimationComponent::updateRootMotion(float deltaTime) {
-        // Root motion currently yields no delta; extracting the root-bone movement
-        // from the active animation is tracked in #260.
-        if (m_currentState.animation && m_currentState.playing) {
-            m_rootMotionDelta = glm::mat4(1.0f);
+    void AnimationComponent::updateRootMotion(float /*deltaTime*/) {
+        // Extract the root bone's per-frame movement from the active animation
+        // (issue #260). The translation semantics (including the loop-wrap step)
+        // mirror the unit-tested rootMotionTranslationDelta(+Looped) in
+        // src/render/Skinning.h.
+        m_rootMotionDelta = glm::mat4(1.0f);
+        if (!m_currentState.animation || !m_currentState.playing) {
+            return;
         }
+        Animation* animation = m_currentState.animation;
+        Bone* root = findRootMotionBone(animation);
+        if (!root) {
+            return;
+        }
+
+        const float currentTime = m_currentState.currentTime;
+
+        // Sample the root's local pose at the current time (restored last so the
+        // bone is left at the frame's pose for any later reader).
+        auto sampleAt = [&](float t) {
+            root->update(t);
+            return root->localTransform;
+        };
+
+        if (m_previousRootTime < 0.0f) {
+            // First sample after (re)start: prime, no delta this frame.
+            m_previousRootTransform = sampleAt(currentTime);
+            m_previousRootTime = currentTime;
+            return;
+        }
+
+        glm::mat4 current;
+        if (currentTime >= m_previousRootTime) {
+            // Within the same loop iteration: delta = current * previous^-1.
+            current = sampleAt(currentTime);
+            m_rootMotionDelta = current * glm::inverse(m_previousRootTransform);
+        } else {
+            // The clip wrapped: remainder to the clip end plus advance from the
+            // clip start (rootMotionTranslationDeltaLooped in matrix form).
+            const float endTime = std::max(0.0f, animation->duration - 1e-4f);
+            const glm::mat4 endPose = sampleAt(endTime);
+            const glm::mat4 startPose = sampleAt(0.0f);
+            current = sampleAt(currentTime);
+            m_rootMotionDelta = (current * glm::inverse(startPose)) *
+                                (endPose * glm::inverse(m_previousRootTransform));
+        }
+        m_previousRootTransform = current;
+        m_previousRootTime = currentTime;
+    }
+
+    Bone* AnimationComponent::findRootMotionBone(Animation* animation) {
+        if (!animation || animation->bones.empty()) return nullptr;
+        auto nameContains = [](const std::string& name, const char* needle) {
+            std::string lower = name;
+            std::transform(lower.begin(), lower.end(), lower.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            return lower.find(needle) != std::string::npos;
+        };
+        for (Bone& bone : animation->bones) {
+            if (nameContains(bone.name, "root") || nameContains(bone.name, "hips")) {
+                return &bone;
+            }
+        }
+        return &animation->bones.front();
     }
 
     // Utility conversion methods
