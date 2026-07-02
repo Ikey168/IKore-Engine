@@ -647,6 +647,23 @@ add_executable(test_audio_compressed
 )
 target_include_directories(test_audio_compressed PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
+# SSAO kernel/occlusion math mirrored by ssao.frag (#259) - header-only.
+add_executable(test_ssao_kernel
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ssao_kernel.cpp
+)
+
+# Shared particle update step mirrored by updateCPU + particle_update.compute
+# (#259) - header-only.
+add_executable(test_particle_sim
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_particle_sim.cpp
+)
+
+# Debug-text font atlas + quad geometry for the overlay renderer (#259) -
+# header-only.
+add_executable(test_debug_text
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_debug_text.cpp
+)
+
 # Performance-overlay stats core (Milestone 9 / #53) - header-only.
 add_executable(test_perf_stats
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_perf_stats.cpp

@@ -1,6 +1,7 @@
 #include "core/EntityDebugSystem.h"
 #include "core/EntityTypes.h"
 #include "core/Logger.h"
+#include <glad/glad.h>
 #include <chrono>
 #include <algorithm>
 #include <sstream>
@@ -276,7 +277,7 @@ namespace IKore {
 
             if (lightEntity->getLightType() == LightEntity::LightType::SPOT) {
                 lightStream.str("");
-                lightStream << "Spot Angle: " << lightEntity->getSpotAngle() << "°";
+                lightStream << "Spot Angle: " << lightEntity->getSpotAngle() << " deg";
                 details.push_back(lightStream.str());
             }
         }
@@ -284,7 +285,7 @@ namespace IKore {
         // Check for CameraEntity-specific components
         else if (auto cameraEntity = std::dynamic_pointer_cast<CameraEntity>(entity)) {
             std::ostringstream cameraStream;
-            cameraStream << "FOV: " << cameraEntity->getFieldOfView() << "°";
+            cameraStream << "FOV: " << cameraEntity->getFieldOfView() << " deg";
             details.push_back(cameraStream.str());
 
             cameraStream.str("");
@@ -354,19 +355,156 @@ namespace IKore {
         }
     }
 
-    void EntityDebugSystem::renderDebugText(const std::string& text, [[maybe_unused]] float x, [[maybe_unused]] float y, [[maybe_unused]] const glm::vec4& color) {
-        // On-screen debug text is not wired to a text renderer yet (tracked in #259);
-        // log the first request so the call path stays visible.
-        static bool firstCall = true;
-        if (firstCall) {
-            LOG_INFO("EntityDebugSystem: debug text rendering pending (see #259). Would display: " + text);
-            firstCall = false;
+    namespace {
+        // Minimal overlay shader (issue #259): positions arrive in normalized
+        // top-left screen coordinates ([0,1], y down) and map to NDC here; the
+        // fragment stage reads coverage from the font atlas's red channel, or
+        // draws solid when untextured (the background panel).
+        const char* kDebugTextVert = R"GLSL(
+#version 330 core
+layout (location = 0) in vec4 aPosUV;
+out vec2 TexCoord;
+void main() {
+    TexCoord = aPosUV.zw;
+    gl_Position = vec4(aPosUV.x * 2.0 - 1.0, 1.0 - aPosUV.y * 2.0, 0.0, 1.0);
+}
+)GLSL";
+
+        const char* kDebugTextFrag = R"GLSL(
+#version 330 core
+in vec2 TexCoord;
+out vec4 FragColor;
+uniform sampler2D fontAtlas;
+uniform vec4 uColor;
+uniform bool uTextured;
+void main() {
+    float coverage = uTextured ? texture(fontAtlas, TexCoord).r : 1.0;
+    FragColor = vec4(uColor.rgb, uColor.a * coverage);
+}
+)GLSL";
+
+        GLuint compileStage(GLenum type, const char* source) {
+            GLuint shader = glCreateShader(type);
+            glShaderSource(shader, 1, &source, nullptr);
+            glCompileShader(shader);
+            GLint ok = GL_FALSE;
+            glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+            if (!ok) {
+                char log[512] = {0};
+                glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
+                LOG_ERROR(std::string("Debug text shader compile failed: ") + log);
+                glDeleteShader(shader);
+                return 0;
+            }
+            return shader;
         }
+    } // namespace
+
+    bool EntityDebugSystem::ensureTextRenderer() {
+        if (m_textRendererReady) return true;
+        if (m_textRendererFailed) return false;
+
+        const GLuint vs = compileStage(GL_VERTEX_SHADER, kDebugTextVert);
+        const GLuint fs = compileStage(GL_FRAGMENT_SHADER, kDebugTextFrag);
+        if (vs == 0 || fs == 0) {
+            if (vs) glDeleteShader(vs);
+            if (fs) glDeleteShader(fs);
+            m_textRendererFailed = true;
+            return false;
+        }
+        GLuint program = glCreateProgram();
+        glAttachShader(program, vs);
+        glAttachShader(program, fs);
+        glLinkProgram(program);
+        glDeleteShader(vs);
+        glDeleteShader(fs);
+        GLint ok = GL_FALSE;
+        glGetProgramiv(program, GL_LINK_STATUS, &ok);
+        if (!ok) {
+            char log[512] = {0};
+            glGetProgramInfoLog(program, sizeof(log), nullptr, log);
+            LOG_ERROR(std::string("Debug text shader link failed: ") + log);
+            glDeleteProgram(program);
+            m_textRendererFailed = true;
+            return false;
+        }
+        m_textProgram = program;
+
+        // Font atlas from the unit-tested geometry core; uploaded verbatim, so the
+        // UVs buildTextQuads() emits sample it exactly as the tests verify.
+        const std::vector<std::uint8_t> atlas = render::buildFontAtlas();
+        GLuint texture = 0;
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, render::kDebugAtlasWidth, render::kDebugAtlasHeight,
+                     0, GL_RED, GL_UNSIGNED_BYTE, atlas.data());
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        m_fontTexture = texture;
+
+        GLuint vao = 0, vbo = 0;
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(render::TextVertex), (void*)0);
+        glBindVertexArray(0);
+        m_textVAO = vao;
+        m_textVBO = vbo;
+
+        m_textRendererReady = true;
+        return true;
     }
 
-    void EntityDebugSystem::renderDebugBackground([[maybe_unused]] float x, [[maybe_unused]] float y, [[maybe_unused]] float width, [[maybe_unused]] float height) {
-        // The debug background quad needs a renderer hookup (tracked in #259);
-        // the interface is kept ready.
+    void EntityDebugSystem::drawTextQuads(const std::vector<render::TextVertex>& vertices,
+                                          const glm::vec4& color, bool textured) {
+        if (vertices.empty() || !ensureTextRenderer()) return;
+
+        const GLboolean depthWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+        const GLboolean blendWasEnabled = glIsEnabled(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        glUseProgram(m_textProgram);
+        glUniform4f(glGetUniformLocation(m_textProgram, "uColor"), color.r, color.g, color.b, color.a);
+        glUniform1i(glGetUniformLocation(m_textProgram, "uTextured"), textured ? 1 : 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_fontTexture);
+        glUniform1i(glGetUniformLocation(m_textProgram, "fontAtlas"), 0);
+
+        glBindVertexArray(m_textVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, m_textVBO);
+        glBufferData(GL_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>(vertices.size() * sizeof(render::TextVertex)),
+                     vertices.data(), GL_STREAM_DRAW);
+        glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size()));
+        glBindVertexArray(0);
+        glUseProgram(0);
+
+        if (!blendWasEnabled) glDisable(GL_BLEND);
+        if (depthWasEnabled) glEnable(GL_DEPTH_TEST);
+    }
+
+    void EntityDebugSystem::renderDebugText(const std::string& text, float x, float y, const glm::vec4& color) {
+        // On-screen bitmap text (issue #259): geometry and atlas come from the
+        // unit-tested render::DebugTextGeometry core; this is only the GL draw.
+        const float charH = 0.018f * m_textSize; // slightly under the overlay line height
+        const float charW = charH * 0.5f;
+        std::vector<render::TextVertex> vertices;
+        render::buildTextQuads(text, x, y, charW, charH, vertices);
+        drawTextQuads(vertices, color, /*textured=*/true);
+    }
+
+    void EntityDebugSystem::renderDebugBackground(float x, float y, float width, float height) {
+        // Semi-transparent backdrop behind the overlay text (issue #259).
+        drawTextQuads(render::buildSolidQuad(x, y, width, height), m_backgroundColor,
+                      /*textured=*/false);
     }
 
     float EntityDebugSystem::getCurrentTimeMs() const {

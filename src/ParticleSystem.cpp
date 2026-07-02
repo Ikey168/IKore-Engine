@@ -2,6 +2,8 @@
 #include "core/Logger.h"
 #include <stb_image.h>
 #include <algorithm>
+#include <fstream>
+#include <iterator>
 #include <random>
 #include <cstring>
 #include <glm/gtc/type_ptr.hpp>
@@ -156,9 +158,53 @@ bool ParticleSystem::loadShaders() {
 }
 
 bool ParticleSystem::createComputeShaders() {
-    // For now, return false to use CPU fallback
-    // Compute shaders will be implemented after basic system works
+#ifdef GL_COMPUTE_SHADER
+    if (!m_computeShadersSupported) return false;
+
+    // Compile + link the update compute program (issue #259). Emission stays on
+    // the CPU (initializeParticle uses engine-side randomness), so only the
+    // update stage moves to the GPU; m_emitComputeShader remains unused.
+    std::ifstream file("src/shaders/particle_update.compute");
+    if (!file.is_open()) {
+        LOG_ERROR("Failed to open particle_update.compute");
+        return false;
+    }
+    std::string source((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+
+    const GLuint shader = glCreateShader(GL_COMPUTE_SHADER);
+    const char* src = source.c_str();
+    glShaderSource(shader, 1, &src, nullptr);
+    glCompileShader(shader);
+    GLint ok = GL_FALSE;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+    if (!ok) {
+        char log[1024] = {0};
+        glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
+        LOG_ERROR(std::string("Particle update compute shader compile failed: ") + log);
+        glDeleteShader(shader);
+        return false;
+    }
+
+    const GLuint program = glCreateProgram();
+    glAttachShader(program, shader);
+    glLinkProgram(program);
+    glGetProgramiv(program, GL_LINK_STATUS, &ok);
+    glDeleteShader(shader);
+    if (!ok) {
+        char log[1024] = {0};
+        glGetProgramInfoLog(program, sizeof(log), nullptr, log);
+        LOG_ERROR(std::string("Particle update compute shader link failed: ") + log);
+        glDeleteProgram(program);
+        return false;
+    }
+
+    m_updateComputeShader = program;
+    LOG_INFO("Particle update compute shader ready");
+    return true;
+#else
     return false;
+#endif
 }
 
 void ParticleSystem::setupVertexAttributes() {
@@ -189,18 +235,24 @@ void ParticleSystem::setupVertexAttributes() {
 }
 
 void ParticleSystem::checkComputeShaderSupport() {
-    // Check if compute shaders are supported
-    GLint computeShaderSupported = 0;
-    glGetIntegerv(GL_COMPUTE_SHADER, &computeShaderSupported);
-    
-    if (computeShaderSupported) {
-        glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_SIZE, &m_maxWorkGroupSize);
+    // Compute shaders need GL 4.3 (the engine requests a 3.3 core context, but
+    // desktop drivers commonly hand back a newer one). The old check queried
+    // glGetIntegerv(GL_COMPUTE_SHADER), which is a shader-type enum, not a
+    // queryable state - it always failed with GL_INVALID_ENUM. Gate on the
+    // loaded GL version and the actual entry point instead (issue #259).
+#ifdef GL_COMPUTE_SHADER
+    const bool versionOk = (GLVersion.major > 4) || (GLVersion.major == 4 && GLVersion.minor >= 3);
+    if (versionOk && glDispatchCompute != nullptr) {
+        GLint maxSize = 0;
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &maxSize);
+        m_maxWorkGroupSize = maxSize;
         m_computeShadersSupported = true;
         LOG_INFO("Compute shaders supported, max work group size: " + std::to_string(m_maxWorkGroupSize));
-    } else {
-        m_computeShadersSupported = false;
-        LOG_INFO("Compute shaders not supported, using CPU fallback");
+        return;
     }
+#endif
+    m_computeShadersSupported = false;
+    LOG_INFO("Compute shaders not supported, using CPU fallback");
 }
 
 void ParticleSystem::setEmitterConfig(const ParticleEmitterConfig& config) {
@@ -316,6 +368,9 @@ void ParticleSystem::update(float deltaTime) {
 }
 
 void ParticleSystem::updateCPU(float deltaTime) {
+    // Keep in lockstep with particle_update.compute; both mirror the unit-tested
+    // render::simulateParticleStep (src/render/ParticleSim.h), so the CPU and GPU
+    // paths advance particles identically.
     m_activeParticles = 0;
     
     for (auto& particle : m_particles) {
@@ -341,8 +396,45 @@ void ParticleSystem::updateCPU(float deltaTime) {
 }
 
 void ParticleSystem::updateGPU(float deltaTime) {
-    // GPU compute-shader particle update is tracked in #259; use the CPU path for now.
+#ifdef GL_COMPUTE_SHADER
+    if (!m_computeShadersSupported || m_updateComputeShader == 0 || m_particleSSBO == 0) {
+        updateCPU(deltaTime);
+        return;
+    }
+    // The C++ Particle must match the std430 struct in particle_update.compute
+    // byte for byte, since the buffer is uploaded/read back verbatim.
+    static_assert(sizeof(Particle) == 80, "Particle layout must match particle_update.compute");
+
+    // Upload the current particle state (CPU-side emission writes new particles
+    // into m_particles between updates).
+    const GLsizeiptr bytes = static_cast<GLsizeiptr>(m_particles.size() * sizeof(Particle));
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_particleSSBO);
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, bytes, m_particles.data());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_particleSSBO);
+
+    // Dispatch one thread per particle (local_size_x = 64 in the shader). The
+    // update math mirrors the unit-tested render::simulateParticleStep.
+    glUseProgram(m_updateComputeShader);
+    glUniform1f(glGetUniformLocation(m_updateComputeShader, "deltaTime"), deltaTime);
+    glUniform1f(glGetUniformLocation(m_updateComputeShader, "time"), m_emissionTimer);
+    const GLuint groups = static_cast<GLuint>((m_particles.size() + 63) / 64);
+    glDispatchCompute(groups, 1, 1);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    // Read the advanced state back so the CPU-side render/emission paths keep
+    // working unchanged. Rendering directly from the SSBO (zero readback) is a
+    // follow-up optimization.
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, bytes, m_particles.data());
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    glUseProgram(0);
+
+    m_activeParticles = 0;
+    for (const auto& particle : m_particles) {
+        if (particle.life > 0.0f) ++m_activeParticles;
+    }
+#else
     updateCPU(deltaTime);
+#endif
 }
 
 void ParticleSystem::emitParticles(float deltaTime) {

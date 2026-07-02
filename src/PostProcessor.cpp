@@ -1,5 +1,8 @@
 #include "PostProcessor.h"
 #include "core/Logger.h"
+#include "render/SsaoKernel.h"
+#include <glm/gtc/matrix_inverse.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <random>
 #include <algorithm>
 
@@ -348,8 +351,9 @@ void SSAOEffect::initialize(int width, int height) {
     std::string shaderError;
     m_ssaoShader = Shader::loadFromFilesCached("src/shaders/ssao.vert", "src/shaders/ssao.frag", shaderError);
     m_blurShader = Shader::loadFromFilesCached("src/shaders/ssao_blur.vert", "src/shaders/ssao_blur.frag", shaderError);
-    
-    if (!m_ssaoShader || !m_blurShader) {
+    m_combineShader = Shader::loadFromFilesCached("src/shaders/ssao_combine.vert", "src/shaders/ssao_combine.frag", shaderError);
+
+    if (!m_ssaoShader || !m_blurShader || !m_combineShader) {
         LOG_ERROR("Failed to load SSAO shaders: " + shaderError);
     }
 }
@@ -360,64 +364,87 @@ void SSAOEffect::resize(int width, int height) {
 }
 
 void SSAOEffect::render(GLuint inputTexture, GLuint outputFramebuffer) {
-    // SSAO requires depth and normal textures, so this is a simplified version
-    // In a real implementation, you'd pass these as parameters
+    // The PostProcessEffect interface carries no depth/projection, which SSAO
+    // needs; the effect chain calls renderWithDepth() instead. Passthrough here.
     if (!m_enabled || !m_ssaoShader || !m_blurBuffer) return;
-    
+
     glBindFramebuffer(GL_FRAMEBUFFER, outputFramebuffer);
     glDisable(GL_DEPTH_TEST);
-    
-    // Passthrough for now: full SSAO needs a G-buffer (depth + normals). Tracked in #259.
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, inputTexture);
     renderQuad();
-    
+
     glEnable(GL_DEPTH_TEST);
 }
 
-void SSAOEffect::renderSSAO(GLuint /*colorTexture*/, GLuint depthTexture, GLuint normalTexture, GLuint outputFramebuffer) {
-    if (!m_enabled || !m_ssaoShader || !m_blurShader) return;
-    
+void SSAOEffect::renderWithDepth(GLuint colorTexture, GLuint depthTexture,
+                                 const glm::mat4& projection, GLuint outputFramebuffer) {
+    if (!m_enabled || !m_ssaoShader || !m_blurShader || !m_combineShader) return;
+    if (!m_ssaoBuffer || !m_blurBuffer) return;
+
     glDisable(GL_DEPTH_TEST);
-    
-    // Generate SSAO texture
+
+    // Pass 1: occlusion from the depth buffer (ssao.frag mirrors SsaoKernel.h).
     m_ssaoBuffer->bind();
     glClear(GL_COLOR_BUFFER_BIT);
     m_ssaoShader->use();
-    
-    // Set uniforms
+
+    const int sampleCount = std::min(m_sampleCount, static_cast<int>(m_samples.size()));
     m_ssaoShader->setFloat("radius", m_radius);
     m_ssaoShader->setFloat("bias", m_bias);
-    m_ssaoShader->setInt("sampleCount", m_sampleCount);
-    
-    // Bind textures
+    m_ssaoShader->setInt("sampleCount", sampleCount);
+    if (sampleCount > 0) {
+        glUniform3fv(glGetUniformLocation(m_ssaoShader->id(), "samples"), sampleCount,
+                     glm::value_ptr(m_samples[0]));
+    }
+    m_ssaoShader->setMat4("projection", glm::value_ptr(projection));
+    const glm::mat4 invProjection = glm::inverse(projection);
+    m_ssaoShader->setMat4("invProjection", glm::value_ptr(invProjection));
+    float noiseScaleX = 0.0f, noiseScaleY = 0.0f;
+    render::ssaoNoiseScale(m_ssaoBuffer->getWidth(), m_ssaoBuffer->getHeight(),
+                           noiseScaleX, noiseScaleY);
+    glUniform2f(glGetUniformLocation(m_ssaoShader->id(), "noiseScale"), noiseScaleX, noiseScaleY);
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, depthTexture);
     glUniform1i(glGetUniformLocation(m_ssaoShader->id(), "gDepth"), 0);
-    
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, normalTexture);
-    glUniform1i(glGetUniformLocation(m_ssaoShader->id(), "gNormal"), 1);
-    
+
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, m_noiseTexture);
     glUniform1i(glGetUniformLocation(m_ssaoShader->id(), "texNoise"), 2);
-    
+
     renderQuad();
-    
-    // Blur SSAO texture to remove noise
+
+    // Pass 2: 4x4 box blur to remove the noise pattern.
     m_blurBuffer->bind();
     glClear(GL_COLOR_BUFFER_BIT);
     m_blurShader->use();
     m_ssaoBuffer->bindColorTexture(0);
     glUniform1i(glGetUniformLocation(m_blurShader->id(), "ssaoInput"), 0);
     renderQuad();
-    
-    // Apply SSAO to final image
+
+    // Pass 3: composite AO onto the lit scene (ssao_combine.frag mirrors
+    // ssaoCombineWeight in SsaoKernel.h; m_intensity scales the effect).
     glBindFramebuffer(GL_FRAMEBUFFER, outputFramebuffer);
-    // Combining the SSAO term with the lit image is part of the G-buffer work in #259.
+    m_combineShader->use();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, colorTexture);
+    glUniform1i(glGetUniformLocation(m_combineShader->id(), "sceneColor"), 0);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, m_blurBuffer->getColorTexture());
+    glUniform1i(glGetUniformLocation(m_combineShader->id(), "ssao"), 1);
+    m_combineShader->setFloat("intensity", m_intensity);
+    renderQuad();
 
     glEnable(GL_DEPTH_TEST);
+}
+
+void SSAOEffect::renderSSAO(GLuint colorTexture, GLuint depthTexture, GLuint /*normalTexture*/,
+                            GLuint outputFramebuffer) {
+    // Normals are reconstructed from depth now; delegate to the full pass.
+    if (!m_hasProjection) return;
+    renderWithDepth(colorTexture, depthTexture, m_projection, outputFramebuffer);
 }
 
 void SSAOEffect::setupQuad() {
@@ -449,43 +476,21 @@ void SSAOEffect::renderQuad() {
 }
 
 void SSAOEffect::generateSamples() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dis(0.0, 1.0);
-    
+    // Deterministic hemisphere kernel from the unit-tested core (issue #259);
+    // ssao.frag consumes exactly this layout.
     m_samples.clear();
-    for (int i = 0; i < m_sampleCount; ++i) {
-        glm::vec3 sample(
-            dis(gen) * 2.0 - 1.0,
-            dis(gen) * 2.0 - 1.0,
-            dis(gen)
-        );
-        sample = glm::normalize(sample);
-        sample *= dis(gen);
-        
-        // Scale samples s.t. they're more aligned to center of kernel
-        float scale = (float)i / (float)m_sampleCount;
-        scale = 0.1f + (scale * scale) * 0.9f; // lerp(0.1f, 1.0f, scale * scale)
-        sample *= scale;
-        m_samples.push_back(sample);
+    for (const ecs::Vec3& s : render::generateSsaoKernel(m_sampleCount)) {
+        m_samples.push_back(glm::vec3(s.x, s.y, s.z));
     }
 }
 
 void SSAOEffect::generateNoise() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dis(0.0, 1.0);
-    
+    // Deterministic 4x4 tangent-rotation noise from the unit-tested core (#259).
     m_noise.clear();
-    for (int i = 0; i < 16; i++) {
-        glm::vec3 noise(
-            dis(gen) * 2.0 - 1.0,
-            dis(gen) * 2.0 - 1.0,
-            0.0f
-        );
-        m_noise.push_back(noise);
+    for (const ecs::Vec3& n : render::generateSsaoNoise()) {
+        m_noise.push_back(glm::vec3(n.x, n.y, n.z));
     }
-    
+
     glGenTextures(1, &m_noiseTexture);
     glBindTexture(GL_TEXTURE_2D, m_noiseTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 4, 4, 0, GL_RGB, GL_FLOAT, &m_noise[0]);
@@ -515,15 +520,21 @@ void PostProcessor::initialize(int width, int height) {
     // Create main framebuffers
     m_mainBuffer = std::make_unique<Framebuffer>(width, height, true);
     m_tempBuffer = std::make_unique<Framebuffer>(width, height, false);
-    
+    // Separate SSAO composite target so the AO stage never reads and writes the
+    // same buffer the bloom stage uses (issue #259).
+    m_ssaoOutputBuffer = std::make_unique<Framebuffer>(width, height, false);
+
     // Initialize effects
     m_bloomEffect = std::make_unique<BloomEffect>();
     m_fxaaEffect = std::make_unique<FXAAEffect>();
     m_ssaoEffect = std::make_unique<SSAOEffect>();
-    
+
     m_bloomEffect->initialize(width, height);
     m_fxaaEffect->initialize(width, height);
     m_ssaoEffect->initialize(width, height);
+    // SSAO is opt-in (issue #259): the chain previously skipped it entirely, so
+    // keeping it off by default preserves existing output; KEY 3 toggles it.
+    m_ssaoEffect->setEnabled(false);
     
     // Load copy shader
     std::string shaderError;
@@ -551,7 +562,8 @@ void PostProcessor::resize(int width, int height) {
     
     if (m_mainBuffer) m_mainBuffer->resize(width, height);
     if (m_tempBuffer) m_tempBuffer->resize(width, height);
-    
+    if (m_ssaoOutputBuffer) m_ssaoOutputBuffer->resize(width, height);
+
     if (m_bloomEffect) m_bloomEffect->resize(width, height);
     if (m_fxaaEffect) m_fxaaEffect->resize(width, height);
     if (m_ssaoEffect) m_ssaoEffect->resize(width, height);
@@ -595,10 +607,15 @@ void PostProcessor::renderEffectChain(GLuint inputTexture, GLuint outputFramebuf
     
     // Apply effects in order: SSAO -> Bloom -> FXAA
     
-    // SSAO (if enabled)
-    if (m_ssaoEffect && m_ssaoEffect->isEnabled()) {
-        // Note: SSAO needs special handling with G-buffer
-        // For now, we skip it in the basic pipeline
+    // SSAO (issue #259): compute AO from the scene depth buffer and composite it
+    // onto the lit image before bloom/FXAA. Runs only when the effect is enabled
+    // AND the frame's projection was provided (setSceneProjection), so the chain
+    // is byte-identical to before when SSAO is off.
+    if (m_ssaoEffect && m_ssaoEffect->isEnabled() && m_ssaoEffect->hasProjection() &&
+        m_mainBuffer && m_ssaoOutputBuffer && m_mainBuffer->getDepthTexture() != 0) {
+        m_ssaoEffect->renderSSAO(currentTexture, m_mainBuffer->getDepthTexture(), 0,
+                                 m_ssaoOutputBuffer->getFramebuffer());
+        currentTexture = m_ssaoOutputBuffer->getColorTexture();
     }
     
     // Bloom (if enabled)
