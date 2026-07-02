@@ -80,6 +80,7 @@ private:
     float m_threshold;
     float m_intensity;
     int m_blurPasses;
+    bool m_toneMapResolve = false; // emit linear HDR for a later ACES resolve (#268)
 
     void setupQuad();
     void renderQuad();
@@ -94,6 +95,11 @@ public:
     bool isEnabled() const override { return m_enabled; }
     void setEnabled(bool enabled) override { m_enabled = enabled; }
     
+    // When true, the combine stage leaves the image in linear HDR (no Reinhard, no
+    // gamma) because the ACES resolve runs later in the chain (issue #268).
+    void setToneMapResolve(bool resolve) { m_toneMapResolve = resolve; }
+    bool getToneMapResolve() const { return m_toneMapResolve; }
+
     // Parameter control
     void setThreshold(float threshold) { m_threshold = threshold; }
     void setIntensity(float intensity) { m_intensity = intensity; }
@@ -216,6 +222,7 @@ private:
     std::unique_ptr<Framebuffer> m_mainBuffer;
     std::unique_ptr<Framebuffer> m_tempBuffer;
     std::unique_ptr<Framebuffer> m_ssaoOutputBuffer; // SSAO composite target (issue #259)
+    std::unique_ptr<Framebuffer> m_resolveBuffer;    // ACES resolve target before FXAA (issue #268)
 
     std::unique_ptr<BloomEffect> m_bloomEffect;
     std::unique_ptr<FXAAEffect> m_fxaaEffect;
