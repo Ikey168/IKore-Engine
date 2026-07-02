@@ -29,6 +29,8 @@
 #include <mutex>
 #include <functional>
 
+#include "AudioDecode.h" // audio::PcmAudio (streaming source state, issue #258)
+
 namespace IKore {
 
 #if OPENAL_AVAILABLE
@@ -65,7 +67,19 @@ namespace IKore {
         bool isPlaying = false;
         bool isPaused = false;
         std::string audioFile;
-        
+
+        // Streaming state (issue #258): the decoded PCM, a read cursor into it, and
+        // the ring of buffers cycled through the source's queue. Only populated for
+        // sources created by loadStreamingSound.
+        audio::PcmAudio streamPcm;
+        std::size_t streamCursor = 0; ///< byte offset into streamPcm.data
+        bool streamEnded = false;     ///< non-looping stream ran out of data
+#if OPENAL_AVAILABLE
+        std::vector<ALuint> streamBuffers;
+#else
+        std::vector<unsigned int> streamBuffers;
+#endif
+
         AudioSource() : sourceId(0), bufferId(0), position(0.0f), velocity(0.0f), direction(0.0f, 0.0f, -1.0f) {}
     };
 
@@ -274,6 +288,11 @@ namespace IKore {
         // OpenAL error checking
         void logALError(ALenum error, const std::string& operation) const;
         void logALCError(ALCdevice* device, const std::string& operation) const;
+
+        // Fill @p bufferId with the next PCM chunk of a streaming source, advancing
+        // its cursor (wrapping when looping). False when the stream is drained
+        // (issue #258).
+        bool fillStreamBuffer(AudioSource& source, ALuint bufferId);
 #else
         // Fallback error checking methods
         void logALError(int error, const std::string& operation) const;

@@ -219,6 +219,7 @@ set(CORE_SOURCES
 set(AUDIO_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/audio/OpenALAudioEngine.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/audio/AudioSystem3D.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/audio/AudioDecodeCompressed.cpp
 )
 
 set(SCENE_SOURCES
@@ -627,6 +628,24 @@ add_executable(test_level_share
 add_executable(test_leaderboard
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_leaderboard.cpp
 )
+
+# Audio decode core: robust WAV/PCM parser + tone generator (#258) - header-only.
+add_executable(test_audio_decode
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_audio_decode.cpp
+)
+
+# Audio cross-fade + streaming buffer-queue logic (#258) - header-only.
+add_executable(test_audio_streaming
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_audio_streaming.cpp
+)
+
+# OGG/MP3 decode via vendored stb_vorbis + dr_mp3, against real embedded test
+# vectors (#258). Links the decoders' implementation TU.
+add_executable(test_audio_compressed
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_audio_compressed.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/audio/AudioDecodeCompressed.cpp
+)
+target_include_directories(test_audio_compressed PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
 # Performance-overlay stats core (Milestone 9 / #53) - header-only.
 add_executable(test_perf_stats

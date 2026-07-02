@@ -42,10 +42,13 @@ void AmbientSoundZoneManager::clearZones() {
 
 void AmbientSoundZoneManager::update(const glm::vec3& position, float deltaTime) {
     listenerPosition = position;
-    
+
+    // Advance any in-progress cross-fade between the previous and current zone (#258).
+    transition.advance(deltaTime);
+
     // Find the best zone for current position
     AmbientSoundZone* bestZone = findBestZone();
-    
+
     // If we need to transition to a different zone
     if (bestZone != currentZone) {
         transitionToZone(bestZone, deltaTime);
@@ -77,14 +80,13 @@ AmbientSoundZone* AmbientSoundZoneManager::findBestZone() {
 }
 
 void AmbientSoundZoneManager::transitionToZone(AmbientSoundZone* newZone, float /* deltaTime */) {
-    // For now we just swap the current zone pointer; cross-faded transitions need
-    // streaming ambient audio, tracked in #258.
+    // Start a cross-fade from the current zone to the new one instead of a hard swap
+    // (issue #258). getPreviousZoneGain()/getCurrentZoneGain() expose the blend and
+    // update() advances it; the duration derives from transitionSpeed.
+    previousZone = currentZone;
     currentZone = newZone;
-
-    if (newZone) {
-        // Once streaming ambient audio lands (#258), this per-position volume drives playback.
-        [[maybe_unused]] float volume = newZone->getVolumeAtPosition(listenerPosition);
-    }
+    const float duration = transitionSpeed > 0.0f ? 1.0f / transitionSpeed : 0.0f;
+    transition.reset(duration);
 }
 
 } // namespace IKore
