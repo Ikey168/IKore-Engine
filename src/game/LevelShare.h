@@ -7,7 +7,7 @@
  * @file LevelShare.h
  * @brief Stable share codes and portable level sharing for UGC (issue #241).
  *
- * Milestone 17, "Doodle Dungeon" Phase 5. Turns a level (the doodle-level JSON,
+ * Milestone 17, "Doodlebound" Phase 5. Turns a level (the doodle-level JSON,
  * game::toLevelJson) into something friends can pass around:
  *
  *   - shareCodeFor(json): a stable, content-addressed code. The same level yields
@@ -112,6 +112,8 @@ inline bool base64Decode(const std::string& in, std::string& out) {
 
 /// A stable, content-addressed share code for a level's JSON (same input -> same
 /// code on any device). Format: "DD-" followed by 13 Crockford base32 digits.
+/// ("DD-" and the "DDL1:" prefix below predate the Doodlebound rename; they are
+/// frozen wire-format identifiers and must not change with branding.)
 inline std::string shareCodeFor(const std::string& levelJson) {
     return "DD-" + detail::base32Crockford(detail::fnv1a64(levelJson), 13);
 }

@@ -13,7 +13,7 @@
  * @file DoodleScene.h
  * @brief Renderer-agnostic drawing -> 3D scene converter (issue #162).
  *
- * Milestone 15 (Doodle Dungeon) core. Converts a LevelSpec - the output of a
+ * Milestone 15 (Doodlebound) core. Converts a LevelSpec - the output of a
  * hand-drawn floor plan: wall polylines plus placed symbols - into a 3D scene
  * description: extruded wall geometry and a list of entity spawns.
  *

@@ -1,12 +1,13 @@
-# Concept: "Doodle Dungeon" - turn hand-drawn floor plans into playable game maps
+# Concept: "Doodlebound" - turn hand-drawn floor plans into playable game maps
 
-> A consumer mobile game built on IKore's **world-from-data** thesis
+> A consumer mobile game built on Charta's **world-from-data** thesis
 > (see `EXPANSION_IDEAS.md`). The player draws a floor plan on paper, snaps a
 > photo, and seconds later is walking and playing inside their own drawing in 3D.
 > The drawing is not just geometry - drawn symbols are a tiny visual language that
 > places doors, enemies, loot, and the exit.
 
-*(Working title only - other names: PaperWorlds, Sketch2World, Crayon Castle.)*
+*(Named: **Doodlebound**. Previously working-titled "Doodle Dungeon"; other
+candidates considered: PaperWorlds, Sketch2World, Crayon Castle.)*
 
 ---
 
@@ -71,7 +72,7 @@ A map is not a game, so pick a core verb. Recommended first mode, in priority or
    drawing quality, classic and broadly appealing. **<- start here.**
 2. **First/third-person explorer**: "walk inside your drawing." Highest wow-factor
    for the share clip; great as a secondary "tour" mode.
-3. **Stealth / hide-and-seek vs. AI agents**: leans on IKore's `AIComponent` +
+3. **Stealth / hide-and-seek vs. AI agents**: leans on Charta's `AIComponent` +
    crowd simulation.
 4. **Tower defense**: enemies path through your rooms - leans on the nav-mesh.
 5. **Async multiplayer**: publish your map, friends play it with a share code;
@@ -97,7 +98,7 @@ This computer-vision pipeline is the make-or-break and the defensible IP. Stages
    with simple shape heuristics + template matching; graduate to a small on-device
    CNN trained on crowdsourced doodles as data accumulates. **This is where ML and
    the long-term data moat live** - every level players draw is training data.
-6. **Emit the scene.** Produce IKore's intermediate scene description (see §7),
+6. **Emit the scene.** Produce Charta's intermediate scene description (see §7),
    which the engine extrudes to 3D, populates with entities, and bakes a nav-mesh
    from.
 
@@ -110,15 +111,15 @@ Each phase is shippable and teaches you what real drawings look like.
 
 ---
 
-## 6. The honest tension: IKore is a *desktop* engine
+## 6. The honest tension: Charta is a *desktop* engine
 
-IKore today is **C++ + desktop OpenGL** (GLFW, classic GL - verified: no OpenGL ES,
+Charta today is **C++ + desktop OpenGL** (GLFW, classic GL - verified: no OpenGL ES,
 no EGL, no Android/iOS, no touch input, no OpenCV). It cannot ship to phones as-is.
 There are three viable paths; the recommendation combines them:
 
 | Path | What it means | Verdict |
 |---|---|---|
-| **A. Port IKore to mobile** | Add an OpenGL ES 3.0 / Vulkan backend, touch input, Android (NDK) + iOS build | Real work; do it *after* the loop is proven |
+| **A. Port Charta to mobile** | Add an OpenGL ES 3.0 / Vulkan backend, touch input, Android (NDK) + iOS build | Real work; do it *after* the loop is proven |
 | **B. Extract the converter as a portable C++ library** | The IP is the *drawing->scene* pipeline, not the renderer. Ship it as a standalone lib usable from any mobile app/engine | **Smartest hedge** - value isn't locked to the renderer |
 | **C. Prototype on desktop first** | Mouse-draw or load-photo -> extrude -> play, all in the engine you already have | **Start here** - proves the magic in days, not months |
 
@@ -155,7 +156,7 @@ the same project.
 
 ## 8. MVP - the smallest thing that proves the magic
 
-**Desktop "Doodle Dungeon" PoC (Phase 0), buildable on current IKore:**
+**Desktop "Doodlebound" PoC (Phase 0), buildable on current Charta:**
 
 1. A simple draw surface (mouse) on a grid: draw wall segments + place 4 symbols
    (start, exit, coin, enemy). *(Or: hand-author a small JSON level to start even faster.)*

@@ -1,9 +1,9 @@
-# IKore Engine - Expansion Ideas: Finding a Unique Identity
+# Charta - Expansion Ideas: Finding a Unique Identity
 
-> **Purpose of this document.** IKore Engine is technically competent, but in its
+> **Purpose of this document.** Charta is technically competent, but in its
 > current form it is hard to distinguish from the hundreds of other hobby
 > OpenGL/C++ ECS engines on GitHub. This document proposes a *point of view* -
-> a niche where IKore would be the obvious choice - and a concrete, phased plan
+> a niche where Charta would be the obvious choice - and a concrete, phased plan
 > to get there, grounded in the code that already exists.
 
 ---
@@ -44,7 +44,7 @@
 
 ### The core problem
 
-> IKore is a **general-purpose engine with no reason to exist** next to Godot,
+> Charta is a **general-purpose engine with no reason to exist** next to Godot,
 > Unreal, Bevy, or the next hobby engine. Every feature it has is a feature those
 > engines have, done better. To become interesting it needs a *thesis* - one
 > thing it does that mainstream engines do **not**.
@@ -57,7 +57,7 @@ the gap to lean into.
 
 ## 2. The thesis: *"The engine that builds living worlds from real data."*
 
-Instead of competing as a general game engine, position IKore as a
+Instead of competing as a general game engine, position Charta as a
 **world-from-data simulation engine**: feed it 2D/real-world inputs (floor plans,
 city maps, GIS data, tilemaps), and it produces a navigable, physically simulated
 3D world populated by autonomous agents - with the ability to pause, rewind,
@@ -109,7 +109,7 @@ navigable 3D scene with walls, roads, props, collision, and a baked nav-mesh.
   walked through it") - great for stars/visibility.
 - It reuses the scene graph, procedural mesh builders, and serialization that
   already work.
-- It creates a reason to choose IKore over Godot/Unreal for a whole class of
+- It creates a reason to choose Charta over Godot/Unreal for a whole class of
   users (GIS, architecture, simulation, viz).
 
 ### Rough effort
@@ -143,7 +143,7 @@ reproducible, rewindable simulation of large populations.
 - **Procedural quests/dialogue** generated from world state.
 
 *Unique because* very few open C++ engines ship an AI-native authoring + NPC
-layer, and IKore already has the `AIComponent`/`EventSystem`/`NetworkComponent`
+layer, and Charta already has the `AIComponent`/`EventSystem`/`NetworkComponent`
 scaffolding to host it.
 
 ### 4C. Deterministic replay & rollback netcode
@@ -170,7 +170,7 @@ viable.
 
 ### 5.2 Scripting + hot reload
 Embed **Lua** (or AngelScript) and expose components/events. Add **hot reload**
-of scripts, shaders, and assets. This turns IKore from "recompile to change
+of scripts, shaders, and assets. This turns Charta from "recompile to change
 anything" into a live creator loop, and lets non-C++ users drive the
 World-from-Data pipeline.
 
@@ -233,7 +233,7 @@ for any of the above to attract contributors:
 
 ## 8. Summary - pick a lane
 
-If IKore tries to be a better general-purpose engine, it loses. If it becomes
+If Charta tries to be a better general-purpose engine, it loses. If it becomes
 **the engine that turns real-world and 2D data into living, rewindable, AI-driven
 3D simulations**, it occupies a niche the big engines ignore - and it does so by
 *finishing the vision it already started* and *building on the systems it already

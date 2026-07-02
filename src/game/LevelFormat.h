@@ -13,7 +13,7 @@
 
 /**
  * @file LevelFormat.h
- * @brief Level-spec and 3D-scene JSON save/load for Doodle Dungeon (issue #163).
+ * @brief Level-spec and 3D-scene JSON save/load for Doodlebound (issue #163).
  *
  * Milestone 15. Defines two JSON formats and their (de)serialization:
  *   - "doodle-level": the intermediate, hand-authorable level spec (wall polylines

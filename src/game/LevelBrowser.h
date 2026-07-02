@@ -13,7 +13,7 @@
  * @file LevelBrowser.h
  * @brief Local level-browser view-model over the UGC catalog (issue #241).
  *
- * Milestone 17, "Doodle Dungeon" Phase 5. The headless UI model a mobile shell
+ * Milestone 17, "Doodlebound" Phase 5. The headless UI model a mobile shell
  * binds to for browsing published levels: pick a feed (New / Top / Hot), page
  * through the entries, move the selection, and get a preview of the highlighted
  * level - a small ASCII map plus counts (walls, coins, player/exit) so the list

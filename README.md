@@ -1,20 +1,25 @@
-# IKore Engine
+# Charta
 
 [![CI/CD Pipeline](https://github.com/Ikey168/IKore-Engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Ikey168/IKore-Engine/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/Ikey168/IKore-Engine/actions/workflows/analysis.yml/badge.svg)](https://github.com/Ikey168/IKore-Engine/actions/workflows/analysis.yml)
 [![Documentation](https://github.com/Ikey168/IKore-Engine/actions/workflows/docs.yml/badge.svg)](https://github.com/Ikey168/IKore-Engine/actions/workflows/docs.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> **The engine that turns real-world and 2D data into living, rewindable,
-> AI-driven 3D simulations.**
+> **From paper to playable: an engine that turns drawings, floor plans, and map
+> data into living, rewindable 3D worlds.**
 
-**IKore Engine** is a C++17 / OpenGL engine built around a data-oriented
-(archetype) Entity-Component System. On top of a conventional renderer + physics +
-audio stack, it does something general-purpose engines do not ship out of the box:
-it **imports real-world and 2D data** (OpenStreetMap / GeoJSON, tilemaps, SVG floor
-plans) into navigable 3D scenes, **simulates crowds of agents** with
-**deterministic, rewindable time control**, and drives it all from an **in-engine
-ImGui editor**.
+**Charta** (Latin for *paper* or *map*; formerly IKore Engine) is a C++17 / OpenGL
+engine built around a data-oriented (archetype) Entity-Component System. On top of
+a conventional renderer + physics + audio stack, it does something general-purpose
+engines do not ship out of the box: it **turns 2D and real-world data into
+navigable 3D scenes** - OpenStreetMap / GeoJSON, tilemaps, SVG floor plans, and
+even a **photo of a hand-drawn map** (the computer-vision pipeline behind
+Doodlebound) - then **simulates crowds of agents** with **deterministic,
+rewindable, replay-verifiable time control**, driven from an **in-engine ImGui
+editor**.
+
+> The C++ namespace remains `IKore::` and the repository slug is unchanged for
+> now; the rebrand is source-compatible.
 
 The end-to-end proof of that identity is the vertical slice
 ([`src/game/VerticalSlice.h`](src/game/VerticalSlice.h)): import a neighborhood,
@@ -22,8 +27,8 @@ bake a nav grid, send a crowd to a goal, then rewind time and replay it
 deterministically. Run it in one command (see [Samples](#samples)).
 
 The full thesis and roadmap are in
-[`EXPANSION_IDEAS.md`](EXPANSION_IDEAS.md); the consumer flagship concept (a phone
-game that turns hand-drawn floor plans into playable 3D maps) is in
+[`EXPANSION_IDEAS.md`](EXPANSION_IDEAS.md); the consumer flagship concept,
+**Doodlebound** (draw a dungeon on paper, photograph it, play it in 3D), is in
 [`PHONE_GAME_CONCEPT.md`](PHONE_GAME_CONCEPT.md) and
 [`PHONE_GAME_DESIGN.md`](PHONE_GAME_DESIGN.md).
 
@@ -58,7 +63,7 @@ Per-subsystem implementation notes live in [`docs/`](docs/).
 
 ## Getting started
 
-IKore uses CMake. GLFW, GLAD, GLM, stb_image, Assimp, Bullet, Dear ImGui, Lua, and
+Charta uses CMake. GLFW, GLAD, GLM, stb_image, Assimp, Bullet, Dear ImGui, Lua, and
 sol2 are downloaded automatically at configure time via `FetchContent`. OpenAL is
 located via your system package manager (`pkg-config`).
 
@@ -146,7 +151,7 @@ assets/          Models, textures, and other runtime assets
 
 ## Roadmap & vision
 
-IKore's direction is to differentiate around **world-from-data**:
+Charta's direction is to differentiate around **world-from-data**:
 
 1. **Foundations** - a data-oriented (archetype) ECS, scripting + hot reload, and an
    in-engine ImGui editor. (Implemented.)
