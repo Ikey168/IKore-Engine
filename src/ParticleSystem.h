@@ -87,7 +87,8 @@ private:
     GLuint m_particleTexture;           // Particle sprite texture
     
     // Shaders
-    std::shared_ptr<Shader> m_renderShader;
+    std::shared_ptr<Shader> m_renderShader;      // CPU-fed VBO render path
+    std::shared_ptr<Shader> m_renderShaderSSBO;  // GPU path: vertex-pull from the SSBO (#267)
     GLuint m_updateComputeShader;       // Compute shader for particle updates
     GLuint m_emitComputeShader;         // Compute shader for particle emission
     
@@ -102,6 +103,12 @@ private:
     bool m_initialized;
     bool m_enabled;
     bool m_playing;
+
+    // Emission / GPU-path bookkeeping (issue #267)
+    float m_emissionRemainder = 0.0f; // sub-particle emission carry (per system)
+    float m_emitSeed = 0.0f;          // varies the GPU emit shader's RNG each dispatch
+    float m_activeEstimate = 0.0f;    // readback-free live-count estimate for the GPU path
+    int m_pendingBirths = 0;          // particles emitted since the last estimate update
     
     // Performance tracking
     float m_lastUpdateTime;
@@ -171,7 +178,9 @@ private:
     
     void updateCPU(float deltaTime);      // Fallback CPU update
     void updateGPU(float deltaTime);      // GPU compute shader update
-    
+
+    void emitGPU(int count);              // Dispatch particle_emit.compute (#267)
+    void uploadParticlesToSSBO();         // Push m_particles into the SSBO (init/reset only)
     void emitParticles(float deltaTime);
     void initializeParticle(Particle& particle);
     float randomFloat(float min, float max);

@@ -659,6 +659,12 @@ add_executable(test_particle_sim
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_particle_sim.cpp
 )
 
+# Particle emitter cadence (rate/bursts/looping) + readback-free live-count estimate
+# shared by the CPU and GPU emission paths (#267) - header-only.
+add_executable(test_particle_emit
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_particle_emit.cpp
+)
+
 # Debug-text font atlas + quad geometry for the overlay renderer (#259) -
 # header-only.
 add_executable(test_debug_text

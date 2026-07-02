@@ -1,7 +1,9 @@
 #include "ParticleSystem.h"
 #include "core/Logger.h"
+#include "render/ParticleEmit.h" // particlesToEmit, emissionFinished, estimateActiveParticles (#267)
 #include <stb_image.h>
 #include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <iterator>
 #include <random>
@@ -16,6 +18,54 @@ namespace {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dis(0.0f, 1.0f);
+
+    // std140 mirror of the EmitterConfig block in particle_emit.compute /
+    // particle_ssbo.vert (issue #267). ParticleEmitterConfig is tightly packed glm
+    // types, which do not match std140 (vec3 aligns to 16, GLSL bool is 4 bytes), so
+    // the emitter UBO is uploaded through this padded layout instead. Keep field
+    // order and padding in lockstep with the shader block.
+    struct EmitterConfigGPU {
+        glm::vec3 position;            float _p1;
+        glm::vec3 positionVariance;    float _p2;
+        glm::vec3 velocity;            float _p3;
+        glm::vec3 velocityVariance;    float _p4;
+        glm::vec3 acceleration;        float _p5;
+        glm::vec3 accelerationVariance; float _p6;
+        glm::vec4 startColor;
+        glm::vec4 endColor;
+        glm::vec4 colorVariance;
+        float startSize; float endSize; float sizeVariance; float _p7;
+        float startLife; float lifeVariance; float emissionRate; float maxParticles;
+        float mass; float massVariance; float _p8; float _p9;
+        int looping; int worldSpace; float _p10; float _p11; // GLSL bool -> 4 bytes
+    };
+    static_assert(sizeof(EmitterConfigGPU) == 208,
+                  "EmitterConfigGPU must match the std140 EmitterConfig block in the shaders");
+
+    EmitterConfigGPU toGPU(const ParticleEmitterConfig& c) {
+        EmitterConfigGPU g{};
+        g.position = c.position;
+        g.positionVariance = c.positionVariance;
+        g.velocity = c.velocity;
+        g.velocityVariance = c.velocityVariance;
+        g.acceleration = c.acceleration;
+        g.accelerationVariance = c.accelerationVariance;
+        g.startColor = c.startColor;
+        g.endColor = c.endColor;
+        g.colorVariance = c.colorVariance;
+        g.startSize = c.startSize;
+        g.endSize = c.endSize;
+        g.sizeVariance = c.sizeVariance;
+        g.startLife = c.startLife;
+        g.lifeVariance = c.lifeVariance;
+        g.emissionRate = c.emissionRate;
+        g.maxParticles = c.maxParticles;
+        g.mass = c.mass;
+        g.massVariance = c.massVariance;
+        g.looping = c.looping ? 1 : 0;
+        g.worldSpace = c.worldSpace ? 1 : 0;
+        return g;
+    }
 }
 
 // ===== ParticleSystem Implementation =====
@@ -130,12 +180,14 @@ bool ParticleSystem::initializeBuffers() {
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_particleSSBO);
     }
     
-    // Create UBO for emitter configuration
+    // Create UBO for emitter configuration. Uploaded through the std140 mirror so the
+    // emit compute / SSBO render shaders read it correctly (issue #267).
+    const EmitterConfigGPU gpuConfig = toGPU(m_config);
     glGenBuffers(1, &m_emitterUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, m_emitterUBO);
-    glBufferData(GL_UNIFORM_BUFFER, sizeof(ParticleEmitterConfig), &m_config, GL_DYNAMIC_DRAW);
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(EmitterConfigGPU), &gpuConfig, GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_emitterUBO);
-    
+
     return true;
 }
 
@@ -153,7 +205,22 @@ bool ParticleSystem::loadShaders() {
         LOG_ERROR("Failed to load particle rendering shaders: " + shaderError);
         return false;
     }
-    
+
+    // GPU path: a vertex-pull program that reads particles straight from the SSBO, so
+    // rendering needs no per-frame readback (issue #267). Only meaningful where compute
+    // (GL 4.3, and thus SSBOs in the vertex stage) is available; the CPU path keeps
+    // using m_renderShader above.
+    if (m_computeShadersSupported) {
+        m_renderShaderSSBO = Shader::loadFromFilesCached(
+            "src/shaders/particle_ssbo.vert",
+            "src/shaders/particle.frag",
+            shaderError
+        );
+        if (!m_renderShaderSSBO) {
+            LOG_WARNING("Failed to load SSBO particle render shader, using CPU render path: " + shaderError);
+        }
+    }
+
     return true;
 }
 
@@ -161,45 +228,58 @@ bool ParticleSystem::createComputeShaders() {
 #ifdef GL_COMPUTE_SHADER
     if (!m_computeShadersSupported) return false;
 
-    // Compile + link the update compute program (issue #259). Emission stays on
-    // the CPU (initializeParticle uses engine-side randomness), so only the
-    // update stage moves to the GPU; m_emitComputeShader remains unused.
-    std::ifstream file("src/shaders/particle_update.compute");
-    if (!file.is_open()) {
-        LOG_ERROR("Failed to open particle_update.compute");
-        return false;
-    }
-    std::string source((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    file.close();
+    // Compile + link a compute program from a source file. Returns 0 on failure.
+    auto buildComputeProgram = [](const char* path) -> GLuint {
+        std::ifstream file(path);
+        if (!file.is_open()) {
+            LOG_ERROR(std::string("Failed to open ") + path);
+            return 0;
+        }
+        std::string source((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        file.close();
 
-    const GLuint shader = glCreateShader(GL_COMPUTE_SHADER);
-    const char* src = source.c_str();
-    glShaderSource(shader, 1, &src, nullptr);
-    glCompileShader(shader);
-    GLint ok = GL_FALSE;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
-    if (!ok) {
-        char log[1024] = {0};
-        glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
-        LOG_ERROR(std::string("Particle update compute shader compile failed: ") + log);
+        const GLuint shader = glCreateShader(GL_COMPUTE_SHADER);
+        const char* src = source.c_str();
+        glShaderSource(shader, 1, &src, nullptr);
+        glCompileShader(shader);
+        GLint ok = GL_FALSE;
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+        if (!ok) {
+            char log[1024] = {0};
+            glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
+            LOG_ERROR(std::string("Compute shader compile failed (") + path + "): " + log);
+            glDeleteShader(shader);
+            return 0;
+        }
+
+        const GLuint program = glCreateProgram();
+        glAttachShader(program, shader);
+        glLinkProgram(program);
+        glGetProgramiv(program, GL_LINK_STATUS, &ok);
         glDeleteShader(shader);
-        return false;
+        if (!ok) {
+            char log[1024] = {0};
+            glGetProgramInfoLog(program, sizeof(log), nullptr, log);
+            LOG_ERROR(std::string("Compute shader link failed (") + path + "): " + log);
+            glDeleteProgram(program);
+            return 0;
+        }
+        return program;
+    };
+
+    // The update stage is required for the GPU path (issue #259).
+    m_updateComputeShader = buildComputeProgram("src/shaders/particle_update.compute");
+    if (m_updateComputeShader == 0) return false;
+
+    // The emit stage moves emission onto the GPU (issue #267). If it fails to build,
+    // keep the update path and fall back to CPU emission (emit() checks the program).
+    m_emitComputeShader = buildComputeProgram("src/shaders/particle_emit.compute");
+    if (m_emitComputeShader == 0) {
+        LOG_WARNING("Particle emit compute shader unavailable, emission stays on the CPU");
+    } else {
+        LOG_INFO("Particle emit compute shader ready");
     }
 
-    const GLuint program = glCreateProgram();
-    glAttachShader(program, shader);
-    glLinkProgram(program);
-    glGetProgramiv(program, GL_LINK_STATUS, &ok);
-    glDeleteShader(shader);
-    if (!ok) {
-        char log[1024] = {0};
-        glGetProgramInfoLog(program, sizeof(log), nullptr, log);
-        LOG_ERROR(std::string("Particle update compute shader link failed: ") + log);
-        glDeleteProgram(program);
-        return false;
-    }
-
-    m_updateComputeShader = program;
     LOG_INFO("Particle update compute shader ready");
     return true;
 #else
@@ -262,8 +342,9 @@ void ParticleSystem::setEmitterConfig(const ParticleEmitterConfig& config) {
 
 void ParticleSystem::updateEmitterBuffer() {
     if (m_emitterUBO) {
+        const EmitterConfigGPU gpuConfig = toGPU(m_config);
         glBindBuffer(GL_UNIFORM_BUFFER, m_emitterUBO);
-        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(ParticleEmitterConfig), &m_config);
+        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(EmitterConfigGPU), &gpuConfig);
     }
 }
 
@@ -342,10 +423,19 @@ void ParticleSystem::stop() {
 void ParticleSystem::reset() {
     m_activeParticles = 0;
     m_emissionTimer = 0.0f;
-    
+    m_emissionRemainder = 0.0f;
+    m_activeEstimate = 0.0f;
+    m_pendingBirths = 0;
+
     // Kill all particles
     for (auto& particle : m_particles) {
         particle.life = 0.0f;
+    }
+
+    // Clear the GPU buffer too so the SSBO render/emit paths see an empty pool. This
+    // is a state-change upload, not the per-frame readback the GPU path avoids (#267).
+    if (m_computeShadersSupported && m_particleSSBO != 0) {
+        uploadParticlesToSSBO();
     }
 }
 
@@ -358,9 +448,14 @@ void ParticleSystem::update(float deltaTime) {
         // Emit new particles
         emitParticles(deltaTime);
     }
-    
+
     // Update particles
     if (m_computeShadersSupported) {
+        // Advance the readback-free live-count estimate from this frame's births and
+        // the per-particle death rate before the GPU update rounds it (issue #267).
+        m_activeEstimate = render::estimateActiveParticles(m_activeEstimate, m_pendingBirths,
+                                                           deltaTime, m_config.startLife, m_maxParticles);
+        m_pendingBirths = 0;
         updateGPU(deltaTime);
     } else {
         updateCPU(deltaTime);
@@ -401,62 +496,60 @@ void ParticleSystem::updateGPU(float deltaTime) {
         updateCPU(deltaTime);
         return;
     }
-    // The C++ Particle must match the std430 struct in particle_update.compute
-    // byte for byte, since the buffer is uploaded/read back verbatim.
+    // The C++ Particle must match the std430 struct in particle_update.compute byte
+    // for byte, since emission (emit compute) and rendering (SSBO vertex-pull) both
+    // read the buffer in place.
     static_assert(sizeof(Particle) == 80, "Particle layout must match particle_update.compute");
 
-    // Upload the current particle state (CPU-side emission writes new particles
-    // into m_particles between updates).
-    const GLsizeiptr bytes = static_cast<GLsizeiptr>(m_particles.size() * sizeof(Particle));
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_particleSSBO);
-    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, bytes, m_particles.data());
+    // The SSBO is the single source of truth now: emission writes into it on the GPU
+    // and rendering pulls from it, so there is no per-frame upload or readback (#267).
+    // Dispatch one thread per particle (local_size_x = 64). The update math mirrors the
+    // unit-tested render::simulateParticleStep.
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_particleSSBO);
-
-    // Dispatch one thread per particle (local_size_x = 64 in the shader). The
-    // update math mirrors the unit-tested render::simulateParticleStep.
     glUseProgram(m_updateComputeShader);
     glUniform1f(glGetUniformLocation(m_updateComputeShader, "deltaTime"), deltaTime);
     glUniform1f(glGetUniformLocation(m_updateComputeShader, "time"), m_emissionTimer);
     const GLuint groups = static_cast<GLuint>((m_particles.size() + 63) / 64);
     glDispatchCompute(groups, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-    // Read the advanced state back so the CPU-side render/emission paths keep
-    // working unchanged. Rendering directly from the SSBO (zero readback) is a
-    // follow-up optimization.
-    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, bytes, m_particles.data());
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glUseProgram(0);
 
-    m_activeParticles = 0;
-    for (const auto& particle : m_particles) {
-        if (particle.life > 0.0f) ++m_activeParticles;
-    }
+    // The live count is no longer read back from the GPU; track it on the CPU with the
+    // same birth/death rates (render::estimateActiveParticles).
+    m_activeParticles = static_cast<int>(std::lround(m_activeEstimate));
 #else
     updateCPU(deltaTime);
 #endif
 }
 
 void ParticleSystem::emitParticles(float deltaTime) {
-    if (!m_config.looping && m_emissionTimer > m_config.startLife) {
+    // Looping/rate/burst cadence is shared with the GPU path via the tested
+    // render::* helpers, so emitter behavior is identical however emission runs (#267).
+    if (render::emissionFinished(m_config.looping, m_emissionTimer, m_config.startLife)) {
         return; // Stop emitting for non-looping effects
     }
-    
+
     m_emissionTimer += deltaTime;
-    float particlesToEmit = m_config.emissionRate * deltaTime;
-    
-    // Handle fractional particles
-    static float particleRemainder = 0.0f;
-    particlesToEmit += particleRemainder;
-    int wholeParticles = static_cast<int>(particlesToEmit);
-    particleRemainder = particlesToEmit - wholeParticles;
-    
+    // The fractional carry is per-system state (a function-local static would have
+    // been shared across every particle system).
+    const int wholeParticles = render::particlesToEmit(m_config.emissionRate, deltaTime, m_emissionRemainder);
     emit(wholeParticles);
 }
 
 void ParticleSystem::emit(int count) {
     if (!m_initialized || count <= 0) return;
-    
+
+    // GPU path: dispatch the emit compute so emission runs on the GPU with no CPU
+    // particle writes (issue #267). Falls back to the CPU loop if the emit program is
+    // unavailable (sub-4.3).
+#ifdef GL_COMPUTE_SHADER
+    if (m_computeShadersSupported && m_emitComputeShader != 0 && m_particleSSBO != 0) {
+        emitGPU(count);
+        m_pendingBirths += count; // feed the readback-free live-count estimate
+        return;
+    }
+#endif
+
     int emitted = 0;
     for (int i = 0; i < m_maxParticles && emitted < count; ++i) {
         if (m_particles[i].life <= 0.0f) {
@@ -464,6 +557,35 @@ void ParticleSystem::emit(int count) {
             emitted++;
         }
     }
+}
+
+void ParticleSystem::emitGPU(int count) {
+#ifdef GL_COMPUTE_SHADER
+    if (count <= 0 || m_emitComputeShader == 0 || m_particleSSBO == 0) return;
+
+    // GPU-side RNG is seeded from a per-dispatch counter so successive emissions vary.
+    m_emitSeed += 1.0f;
+
+    glUseProgram(m_emitComputeShader);
+    glUniform1f(glGetUniformLocation(m_emitComputeShader, "time"), m_emitSeed);
+    glUniform1i(glGetUniformLocation(m_emitComputeShader, "particlesToEmit"), count);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_particleSSBO);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_emitterUBO);
+    // The emit shader scans the whole buffer in one invocation (local_size 1).
+    glDispatchCompute(1, 1, 1);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    glUseProgram(0);
+#else
+    (void)count;
+#endif
+}
+
+void ParticleSystem::uploadParticlesToSSBO() {
+    if (m_particleSSBO == 0) return;
+    const GLsizeiptr bytes = static_cast<GLsizeiptr>(m_particles.size() * sizeof(Particle));
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_particleSSBO);
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, bytes, m_particles.data());
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
 void ParticleSystem::burst(int count) {
@@ -516,13 +638,45 @@ glm::vec4 ParticleSystem::randomVec4(const glm::vec4& base, const glm::vec4& var
 }
 
 void ParticleSystem::render(const glm::mat4& view, const glm::mat4& projection) {
-    if (!m_initialized || !m_enabled || !m_renderShader || m_activeParticles == 0) return;
-    
+    if (!m_initialized || !m_enabled) return;
+
+    // GPU path: render straight from the SSBO with no readback (issue #267). Draw one
+    // point per slot; the vertex shader pulls each particle by gl_VertexID and culls
+    // dead ones, so the CPU never touches the particle data at render time.
+#ifdef GL_COMPUTE_SHADER
+    if (m_computeShadersSupported && m_renderShaderSSBO && m_particleSSBO != 0) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDepthMask(GL_FALSE);
+
+        m_renderShaderSSBO->use();
+        m_renderShaderSSBO->setMat4("view", glm::value_ptr(view));
+        m_renderShaderSSBO->setMat4("projection", glm::value_ptr(projection));
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_particleTexture);
+        m_renderShaderSSBO->setInt("particleTexture", 0);
+
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_particleSSBO);
+        glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_emitterUBO);
+
+        glBindVertexArray(m_particleVAO); // a bound VAO is required; attributes go unused
+        glDrawArrays(GL_POINTS, 0, m_maxParticles);
+        glBindVertexArray(0);
+
+        glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
+        return;
+    }
+#endif
+
+    if (!m_renderShader || m_activeParticles == 0) return;
+
     // Enable blending for particles
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDepthMask(GL_FALSE); // Don't write to depth buffer
-    
+
     // Use particle shader
     m_renderShader->use();
     m_renderShader->setMat4("view", glm::value_ptr(view));
