@@ -209,6 +209,8 @@ void BloomEffect::render(GLuint inputTexture, GLuint outputFramebuffer) {
     glBindFramebuffer(GL_FRAMEBUFFER, outputFramebuffer);
     m_combineShader->use();
     m_combineShader->setFloat("bloomIntensity", m_intensity);
+    // Emit linear HDR (skip Reinhard + gamma) when the ACES resolve runs later (#268).
+    m_combineShader->setInt("toneMapResolve", m_toneMapResolve ? 1 : 0);
     
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, inputTexture);
@@ -523,6 +525,9 @@ void PostProcessor::initialize(int width, int height) {
     // Separate SSAO composite target so the AO stage never reads and writes the
     // same buffer the bloom stage uses (issue #259).
     m_ssaoOutputBuffer = std::make_unique<Framebuffer>(width, height, false);
+    // Target for the ACES resolve when FXAA follows it, so the resolve never reads and
+    // writes the same buffer FXAA then samples (issue #268). RGBA16F like the rest.
+    m_resolveBuffer = std::make_unique<Framebuffer>(width, height, false);
 
     // Initialize effects
     m_bloomEffect = std::make_unique<BloomEffect>();
@@ -563,6 +568,7 @@ void PostProcessor::resize(int width, int height) {
     if (m_mainBuffer) m_mainBuffer->resize(width, height);
     if (m_tempBuffer) m_tempBuffer->resize(width, height);
     if (m_ssaoOutputBuffer) m_ssaoOutputBuffer->resize(width, height);
+    if (m_resolveBuffer) m_resolveBuffer->resize(width, height);
 
     if (m_bloomEffect) m_bloomEffect->resize(width, height);
     if (m_fxaaEffect) m_fxaaEffect->resize(width, height);
@@ -586,47 +592,62 @@ void PostProcessor::endFrame() {
 void PostProcessor::renderEffectChain(GLuint inputTexture, GLuint outputFramebuffer) {
     if (!m_initialized) return;
 
-    // Opt-in HDR resolve (issue #235): tone-map the raw HDR scene through exposure +
-    // ACES in a single pass, so bright highlights roll off instead of clipping.
-    // Disabled by default, so the LDR effect chain below is the unchanged fallback.
-    // (Composing ACES with the bloom/FXAA chain is a follow-up.)
-    if (m_toneMapEnabled && m_toneMapShader) {
-        glBindFramebuffer(GL_FRAMEBUFFER, outputFramebuffer);
-        glDisable(GL_DEPTH_TEST);
-        m_toneMapShader->use();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, inputTexture);
-        glUniform1i(glGetUniformLocation(m_toneMapShader->id(), "hdrScene"), 0);
-        m_toneMapShader->setFloat("exposure", m_exposure);
-        renderQuad();
-        glEnable(GL_DEPTH_TEST);
-        return;
-    }
+    // Composed HDR pipeline (issue #268). SSAO and bloom run on linear HDR; when the
+    // ACES resolve is on it applies exposure + ACES + gamma exactly once at the end,
+    // before FXAA (which wants display-space input). When it is off (the default), the
+    // chain is byte-identical to before: bloom applies its own Reinhard + gamma and
+    // FXAA/copy writes the LDR result.
+    const bool resolveHDR = m_toneMapEnabled && m_toneMapShader;
 
     GLuint currentTexture = inputTexture;
-    
-    // Apply effects in order: SSAO -> Bloom -> FXAA
-    
-    // SSAO (issue #259): compute AO from the scene depth buffer and composite it
-    // onto the lit image before bloom/FXAA. Runs only when the effect is enabled
-    // AND the frame's projection was provided (setSceneProjection), so the chain
-    // is byte-identical to before when SSAO is off.
+
+    // SSAO (issue #259): compute AO from the scene depth buffer and composite it onto
+    // the lit image before bloom. The composite is a linear multiply, so it is correct
+    // in linear HDR. Runs only when enabled AND the frame's projection was provided, so
+    // the chain is byte-identical to before when SSAO is off.
     if (m_ssaoEffect && m_ssaoEffect->isEnabled() && m_ssaoEffect->hasProjection() &&
         m_mainBuffer && m_ssaoOutputBuffer && m_mainBuffer->getDepthTexture() != 0) {
         m_ssaoEffect->renderSSAO(currentTexture, m_mainBuffer->getDepthTexture(), 0,
                                  m_ssaoOutputBuffer->getFramebuffer());
         currentTexture = m_ssaoOutputBuffer->getColorTexture();
     }
-    
-    // Bloom (if enabled)
+
+    // Bloom (if enabled). With the resolve on, bloom leaves linear HDR (no Reinhard,
+    // no gamma) so the end-of-chain resolve is the only tone-map + gamma.
     if (m_bloomEffect && m_bloomEffect->isEnabled()) {
+        m_bloomEffect->setToneMapResolve(resolveHDR);
         if (m_tempBuffer) {
             m_bloomEffect->render(currentTexture, m_tempBuffer->getFramebuffer());
             currentTexture = m_tempBuffer->getColorTexture();
         }
     }
-    
-    // FXAA (if enabled) - always render to output
+
+    // HDR resolve (issue #235 math, now composed): exposure -> ACES -> gamma, once.
+    if (resolveHDR) {
+        const bool fxaa = m_fxaaEffect && m_fxaaEffect->isEnabled();
+        // Resolve into a scratch buffer when FXAA follows (so it never reads and writes
+        // the same target); otherwise resolve straight to the output.
+        const GLuint resolveTarget = (fxaa && m_resolveBuffer)
+                                         ? m_resolveBuffer->getFramebuffer()
+                                         : outputFramebuffer;
+        glBindFramebuffer(GL_FRAMEBUFFER, resolveTarget);
+        glDisable(GL_DEPTH_TEST);
+        m_toneMapShader->use();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, currentTexture);
+        glUniform1i(glGetUniformLocation(m_toneMapShader->id(), "hdrScene"), 0);
+        m_toneMapShader->setFloat("exposure", m_exposure);
+        renderQuad();
+        glEnable(GL_DEPTH_TEST);
+
+        // FXAA on the resolved, display-space image.
+        if (fxaa && m_resolveBuffer) {
+            m_fxaaEffect->render(m_resolveBuffer->getColorTexture(), outputFramebuffer);
+        }
+        return;
+    }
+
+    // LDR path (tone map off): unchanged - FXAA, else copy.
     if (m_fxaaEffect && m_fxaaEffect->isEnabled()) {
         m_fxaaEffect->render(currentTexture, outputFramebuffer);
     } else {

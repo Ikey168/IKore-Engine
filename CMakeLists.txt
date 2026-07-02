@@ -781,6 +781,12 @@ add_executable(test_tone_mapping
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_tone_mapping.cpp
 )
 
+# Composing the ACES resolve with the bloom chain: linear-space compositing and the
+# single tone-map + gamma invariant (#268) - header-only.
+add_executable(test_tonemap_chain
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_tonemap_chain.cpp
+)
+
 # Cascaded shadow map math: splits / cascade selection / frustum fit / ortho
 # (rendering P4 / #236) - header-only.
 add_executable(test_shadow_cascades
