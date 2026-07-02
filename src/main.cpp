@@ -166,7 +166,9 @@ int main() {
     }
     
     if (auto* ssao = postProcessor.getSSAOEffect()) {
-        ssao->setEnabled(false); // Disabled for now since we don't have G-buffer
+        // Full depth-based SSAO (issue #259) is functional; keep it opt-in so the
+        // default image is unchanged. KEY 3 toggles it at runtime.
+        ssao->setEnabled(false);
     }
     
     LOG_INFO("Post-processing effects initialized");
@@ -725,6 +727,9 @@ int main() {
         frameGraph.setHandler(IKore::render::passes::SceneBegin, [&]() {
             // Bind the offscreen post-processing target and clear it.
             postProcessor.beginFrame();
+            // Hand the frame's projection to the effect chain so the SSAO stage
+            // can unproject the depth buffer (issue #259; no-op while SSAO is off).
+            postProcessor.setSceneProjection(projection);
         });
 
         frameGraph.setHandler(IKore::render::passes::Skybox, [&]() {

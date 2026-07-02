@@ -144,7 +144,8 @@ class SSAOEffect : public PostProcessEffect {
 private:
     std::shared_ptr<Shader> m_ssaoShader;
     std::shared_ptr<Shader> m_blurShader;
-    
+    std::shared_ptr<Shader> m_combineShader; // AO * scene composite (issue #259)
+
     std::unique_ptr<Framebuffer> m_ssaoBuffer;
     std::unique_ptr<Framebuffer> m_blurBuffer;
     
@@ -182,8 +183,29 @@ public:
     float getBias() const { return m_bias; }
     float getIntensity() const { return m_intensity; }
     
-    // Requires depth and normal textures
+    /**
+     * @brief Full SSAO pass (issue #259): compute AO from the scene depth buffer
+     *        (view-space normals are reconstructed from depth in the shader), blur
+     *        it, and composite it onto @p colorTexture into @p outputFramebuffer.
+     *        The kernel/occlusion math mirrors the unit-tested SsaoKernel.h.
+     */
+    void renderWithDepth(GLuint colorTexture, GLuint depthTexture, const glm::mat4& projection,
+                         GLuint outputFramebuffer);
+
+    // Back-compat wrapper: normals are now reconstructed from depth, so the
+    // normal texture is ignored. Needs setProjection() to have been called.
     void renderSSAO(GLuint colorTexture, GLuint depthTexture, GLuint normalTexture, GLuint outputFramebuffer);
+
+    /// Scene projection used to (un)project depth samples; set once per frame.
+    void setProjection(const glm::mat4& projection) {
+        m_projection = projection;
+        m_hasProjection = true;
+    }
+    bool hasProjection() const { return m_hasProjection; }
+
+private:
+    glm::mat4 m_projection{1.0f};
+    bool m_hasProjection{false};
 };
 
 /**
@@ -193,7 +215,8 @@ class PostProcessor {
 private:
     std::unique_ptr<Framebuffer> m_mainBuffer;
     std::unique_ptr<Framebuffer> m_tempBuffer;
-    
+    std::unique_ptr<Framebuffer> m_ssaoOutputBuffer; // SSAO composite target (issue #259)
+
     std::unique_ptr<BloomEffect> m_bloomEffect;
     std::unique_ptr<FXAAEffect> m_fxaaEffect;
     std::unique_ptr<SSAOEffect> m_ssaoEffect;
@@ -230,6 +253,14 @@ public:
     FXAAEffect* getFXAAEffect() { return m_fxaaEffect.get(); }
     SSAOEffect* getSSAOEffect() { return m_ssaoEffect.get(); }
     
+    // Full SSAO (issue #259): hand the effect chain the scene projection each
+    // frame; with it and the SSAO effect enabled, the chain computes AO from the
+    // main buffer's depth texture and composites it before bloom/FXAA. Without a
+    // projection (or with SSAO disabled, the default) the chain is unchanged.
+    void setSceneProjection(const glm::mat4& projection) {
+        if (m_ssaoEffect) m_ssaoEffect->setProjection(projection);
+    }
+
     // HDR ACES tone-mapping resolve (issue #235). When enabled, endFrame() resolves
     // the HDR scene through exposure + ACES in a single pass; when disabled (the
     // default), the existing LDR effect chain is the unchanged fallback.

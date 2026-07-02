@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Entity.h"
+#include "render/DebugTextGeometry.h" // render::TextVertex (issue #259)
 #include <glm/glm.hpp>
 #include <vector>
 #include <string>
@@ -176,6 +177,29 @@ namespace IKore {
 
         // Entity filtering
         std::function<bool(const std::shared_ptr<Entity>&)> m_entityFilter;
+
+        // GL debug-text renderer state (issue #259). Plain unsigned ints so this
+        // header stays free of GL includes; the .cpp owns all GL calls.
+        unsigned int m_textProgram = 0;
+        unsigned int m_textVAO = 0;
+        unsigned int m_textVBO = 0;
+        unsigned int m_fontTexture = 0;
+        bool m_textRendererReady = false;
+        bool m_textRendererFailed = false;
+
+        /**
+         * @brief Lazily create the text renderer's GL objects (shader, font-atlas
+         *        texture from render::buildFontAtlas(), streaming quad buffer).
+         *        Safe to call every frame; false once creation has failed.
+         */
+        bool ensureTextRenderer();
+
+        /**
+         * @brief Draw a vertex stream from render::buildTextQuads()/buildSolidQuad()
+         *        in normalized top-left screen coordinates.
+         */
+        void drawTextQuads(const std::vector<render::TextVertex>& vertices,
+                           const glm::vec4& color, bool textured);
 
         /**
          * @brief Collect debug information from all entities
