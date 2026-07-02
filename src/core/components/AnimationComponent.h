@@ -180,6 +180,7 @@ namespace IKore {
         bool m_rootMotionEnabled = false;
         glm::mat4 m_rootMotionDelta = glm::mat4(1.0f);
         glm::mat4 m_previousRootTransform = glm::mat4(1.0f);
+        float m_previousRootTime = -1.0f; ///< sample time of the previous root pose; < 0 = unprimed
         
         // Animation events
         std::map<float, std::vector<std::string>> m_animationEvents;
@@ -198,7 +199,11 @@ namespace IKore {
                                float weight, std::vector<glm::mat4>& result);
         void processAnimationEvents(float previousTime, float currentTime);
         void updateRootMotion(float deltaTime);
-        
+
+        /// The bone whose track drives root motion: the first bone whose name
+        /// contains "root" or "hips" (case-insensitive), else the first bone.
+        Bone* findRootMotionBone(Animation* animation);
+
         // Utility methods
         glm::mat4 assimpToGlmMatrix(const aiMatrix4x4& from);
         glm::vec3 assimpToGlmVec3(const aiVector3D& vec);

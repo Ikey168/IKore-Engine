@@ -15,6 +15,15 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, Mate
     setupMesh();
 }
 
+Mesh::Mesh(std::vector<AnimatedVertex> animatedVertices, std::vector<unsigned int> indices,
+           Material material)
+    : m_animatedVertices(std::move(animatedVertices)), m_hasBones(true),
+      m_indices(std::move(indices)), m_material(std::move(material)),
+      m_VAO(0), m_VBO(0), m_EBO(0), m_isSetup(false) {
+    calculateBoundingBox();
+    setupMesh();
+}
+
 Mesh::~Mesh() {
     // Check if OpenGL functions are available before cleanup
     if (m_VAO && glDeleteVertexArrays) glDeleteVertexArrays(1, &m_VAO);
@@ -22,12 +31,15 @@ Mesh::~Mesh() {
     if (m_EBO && glDeleteBuffers) glDeleteBuffers(1, &m_EBO);
 }
 
-Mesh::Mesh(Mesh&& other) noexcept 
-    : m_vertices(std::move(other.m_vertices)), m_indices(std::move(other.m_indices)),
+Mesh::Mesh(Mesh&& other) noexcept
+    : m_vertices(std::move(other.m_vertices)),
+      m_animatedVertices(std::move(other.m_animatedVertices)), m_hasBones(other.m_hasBones),
+      m_indices(std::move(other.m_indices)),
       m_material(std::move(other.m_material)), m_boundingBox(other.m_boundingBox),
       m_VAO(other.m_VAO), m_VBO(other.m_VBO), m_EBO(other.m_EBO), m_isSetup(other.m_isSetup) {
     other.m_VAO = other.m_VBO = other.m_EBO = 0;
     other.m_isSetup = false;
+    other.m_hasBones = false;
 }
 
 Mesh& Mesh::operator=(Mesh&& other) noexcept {
@@ -39,6 +51,8 @@ Mesh& Mesh::operator=(Mesh&& other) noexcept {
         
         // Move data
         m_vertices = std::move(other.m_vertices);
+        m_animatedVertices = std::move(other.m_animatedVertices);
+        m_hasBones = other.m_hasBones;
         m_indices = std::move(other.m_indices);
         m_material = std::move(other.m_material);
         m_boundingBox = other.m_boundingBox;
@@ -46,10 +60,11 @@ Mesh& Mesh::operator=(Mesh&& other) noexcept {
         m_VBO = other.m_VBO;
         m_EBO = other.m_EBO;
         m_isSetup = other.m_isSetup;
-        
+
         // Reset other object
         other.m_VAO = other.m_VBO = other.m_EBO = 0;
         other.m_isSetup = false;
+        other.m_hasBones = false;
     }
     return *this;
 }
@@ -67,55 +82,99 @@ void Mesh::setupMesh() {
     glGenBuffers(1, &m_EBO);
     
     glBindVertexArray(m_VAO);
-    
-    // Load vertex data
-    glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-    glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(Vertex), &m_vertices[0], GL_STATIC_DRAW);
-    
+
     // Load index data
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(unsigned int), &m_indices[0], GL_STATIC_DRAW);
-    
-    // Vertex positions
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    
-    // Vertex normals
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    
-    // Vertex texture coordinates
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoords));
-    
-    // Vertex tangent
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
-    
-    // Vertex bitangent
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
-    
+
+    glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+    if (m_hasBones) {
+        // Skinned layout (issue #260): AnimatedVertex keeps the same attributes 0-4
+        // as Vertex plus bone ids (5, integer attribute) and weights (6) for
+        // skinned_phong.vert's linear-blend skinning.
+        glBufferData(GL_ARRAY_BUFFER, m_animatedVertices.size() * sizeof(AnimatedVertex),
+                     &m_animatedVertices[0], GL_STATIC_DRAW);
+
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(AnimatedVertex),
+                              (void*)offsetof(AnimatedVertex, position));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(AnimatedVertex),
+                              (void*)offsetof(AnimatedVertex, normal));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(AnimatedVertex),
+                              (void*)offsetof(AnimatedVertex, texCoords));
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(AnimatedVertex),
+                              (void*)offsetof(AnimatedVertex, tangent));
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(AnimatedVertex),
+                              (void*)offsetof(AnimatedVertex, bitangent));
+        glEnableVertexAttribArray(5);
+        glVertexAttribIPointer(5, MAX_BONE_INFLUENCE, GL_INT, sizeof(AnimatedVertex),
+                               (void*)offsetof(AnimatedVertex, boneIDs));
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, MAX_BONE_INFLUENCE, GL_FLOAT, GL_FALSE, sizeof(AnimatedVertex),
+                              (void*)offsetof(AnimatedVertex, weights));
+    } else {
+        glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(Vertex), &m_vertices[0], GL_STATIC_DRAW);
+
+        // Vertex positions
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+
+        // Vertex normals
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+
+        // Vertex texture coordinates
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoords));
+
+        // Vertex tangent
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
+
+        // Vertex bitangent
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
+    }
+
     glBindVertexArray(0);
     m_isSetup = true;
 }
 
 void Mesh::calculateBoundingBox() {
+    if (m_hasBones) {
+        if (m_animatedVertices.empty()) {
+            m_boundingBox = BoundingBox();
+            return;
+        }
+        glm::vec3 minPoint = m_animatedVertices[0].position;
+        glm::vec3 maxPoint = m_animatedVertices[0].position;
+        for (const auto& vertex : m_animatedVertices) {
+            minPoint = glm::min(minPoint, vertex.position);
+            maxPoint = glm::max(maxPoint, vertex.position);
+        }
+        m_boundingBox = BoundingBox(minPoint, maxPoint);
+        return;
+    }
+
     if (m_vertices.empty()) {
         m_boundingBox = BoundingBox();
         return;
     }
-    
+
     // Initialize with first vertex
     glm::vec3 minPoint = m_vertices[0].position;
     glm::vec3 maxPoint = m_vertices[0].position;
-    
+
     // Find min and max coordinates
     for (const auto& vertex : m_vertices) {
         minPoint = glm::min(minPoint, vertex.position);
         maxPoint = glm::max(maxPoint, vertex.position);
     }
-    
+
     m_boundingBox = BoundingBox(minPoint, maxPoint);
 }
 
@@ -304,17 +363,21 @@ std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         
         // Extract bone data
         extractBoneWeightForVertices(animatedVertices, mesh, scene);
-        
-        // Flatten animated vertices to static Vertex for now; a dedicated AnimatedMesh
-        // that preserves bone IDs/weights for GPU skinning is tracked in #260.
-        for (const auto& animVertex : animatedVertices) {
-            Vertex vertex;
-            vertex.position = animVertex.position;
-            vertex.normal = animVertex.normal;
-            vertex.texCoords = animVertex.texCoords;
-            vertex.tangent = animVertex.tangent;
-            vertex.bitangent = animVertex.bitangent;
-            vertices.push_back(vertex);
+
+        // Keep the bone-carrying vertices intact for GPU skinning (issue #260) and
+        // normalize each vertex's influence weights to sum to 1, mirroring the
+        // unit-tested render::skin::normalizeInfluenceWeights.
+        for (auto& animVertex : animatedVertices) {
+            float sum = 0.0f;
+            for (int w = 0; w < MAX_BONE_INFLUENCE; ++w) {
+                if (animVertex.weights[w] > 0.0f) sum += animVertex.weights[w];
+                else animVertex.weights[w] = 0.0f;
+            }
+            if (sum <= 0.0f) {
+                animVertex.weights[0] = 1.0f;
+            } else {
+                for (int w = 0; w < MAX_BONE_INFLUENCE; ++w) animVertex.weights[w] /= sum;
+            }
         }
     } else {
         // Process regular vertices
@@ -375,7 +438,13 @@ std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         aiMaterial* mat = scene->mMaterials[mesh->mMaterialIndex];
         material = loadMaterial(mat);
     }
-    
+
+    // Skinned meshes keep their bone ids/weights (issue #260); static meshes are
+    // unchanged.
+    if (hasBones) {
+        return std::make_unique<Mesh>(std::move(animatedVertices), std::move(indices),
+                                      std::move(material));
+    }
     return std::make_unique<Mesh>(std::move(vertices), std::move(indices), std::move(material));
 }
 

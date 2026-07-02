@@ -664,6 +664,12 @@ add_executable(test_debug_text
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_debug_text.cpp
 )
 
+# Linear-blend skinning + root-motion delta math mirrored by skinned_phong.vert
+# and AnimationComponent (#260) - header-only.
+add_executable(test_skinning
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_skinning.cpp
+)
+
 # Performance-overlay stats core (Milestone 9 / #53) - header-only.
 add_executable(test_perf_stats
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_perf_stats.cpp
