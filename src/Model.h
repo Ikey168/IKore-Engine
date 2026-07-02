@@ -169,6 +169,15 @@ public:
     bool hasAnimations() const { return m_hasAnimations; }
     const std::map<std::string, BoneInfo>& getBoneInfoMap() const { return m_boneInfoMap; }
     int getBoneCount() const { return m_boneCounter; }
+
+    // True if any mesh carries bone weights, i.e. the model needs the skinned vertex
+    // path (used to pick the skinned shadow-depth program, issue #266).
+    bool hasBones() const {
+        for (const auto& mesh : m_meshes) {
+            if (mesh && mesh->hasBones()) return true;
+        }
+        return false;
+    }
     
     // Static utility functions
     static std::shared_ptr<Model> loadFromFileShared(const std::string& path);
