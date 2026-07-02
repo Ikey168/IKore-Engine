@@ -9,7 +9,7 @@
 
 /**
  * @file AppShell.h
- * @brief Platform-agnostic mobile app shell for Doodle Dungeon (issue #172).
+ * @brief Platform-agnostic mobile app shell for Doodlebound (issue #172).
  *
  * Milestone 17. The device build pairs an OpenGL ES renderer and native
  * Android/iOS touch events with this headless shell, which owns the actual app

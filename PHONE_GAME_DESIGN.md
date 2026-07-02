@@ -1,4 +1,4 @@
-# Doodle Dungeon - Deep Design & Market Analysis
+# Doodlebound - Deep Design & Market Analysis
 
 > Companion to `PHONE_GAME_CONCEPT.md`. This document does the homework before any
 > code: it researches the competition, sharpens the wedge, specifies the full
@@ -17,7 +17,7 @@ tools that produce **static visualizations, not games**.
 
 > **The white space nobody occupies: a hand-drawn *floor plan* -> a *3D place you
 > explore and play in*.** That intersection is precisely what a 3D engine like
-> IKore is built for, and it is invisible to both the 2D "draw-a-game" apps and the
+> Charta is built for, and it is invisible to both the 2D "draw-a-game" apps and the
 > non-game floor-plan tools.
 
 Reframe the product accordingly: **you are not drawing a *game*, you are drawing a
@@ -76,7 +76,7 @@ as a way to turn doodled *props* into meshes; not a competitor to the core loop.
 ```
             2D / arcade            3D / spatial
           ┌──────────────────┬──────────────────────┐
- GAME     │ Pixicade,        │   ★ DOODLE DUNGEON ★  │  <- empty quadrant
+ GAME     │ Pixicade,        │   ★ DOODLEBOUND ★     │  <- empty quadrant
  (play)   │ Draw Your Game,  │   (our wedge)         │
           │ DoodleMatic      │                       │
           ├──────────────────┼──────────────────────┤
@@ -171,7 +171,7 @@ it isn't.
 | Box outline | Blue | Pushable crate (physics) |
 | `~` region | Blue | Water (swim/slow) |
 
-> **Verticality (Tier 3) is a stealth differentiator.** Because IKore is true 3D,
+> **Verticality (Tier 3) is a stealth differentiator.** Because Charta is true 3D,
 > writing a small "2" in a room can raise it a storey - something *no* 2D
 > competitor can express. A flat floor plan becomes a multi-level space.
 
@@ -286,7 +286,7 @@ skippable and clearly labeled, COPPA/GDPR-K compliance designed in from day one.
 | "Is exploring a floor plan actually fun?" | **High** | Validate in desktop PoC first (§5.8) |
 | CV robustness on real drawings | **High** | Color-coding (§4.2), guide paper/kit, confidence+repair UI, Phase 0->2 ramp |
 | Incumbent (Pixicade) adds 3D | Medium | Move fast; depth via 3D engine + verticality + UGC moat |
-| Mobile port cost (IKore is desktop) | Medium | Prove on desktop; keep converter renderer-agnostic (see concept doc) |
+| Mobile port cost (Charta is desktop) | Medium | Prove on desktop; keep converter renderer-agnostic (see concept doc) |
 | Kids-compliance overhead | Medium | Launch adult-first; add kids mode deliberately later |
 
 ---

@@ -1,4 +1,4 @@
-# Doodle Dungeon level and scene formats
+# Doodlebound level and scene formats
 
 Milestone 15 defines two small JSON formats and the conversion between them. Both
 are pure data, have no renderer dependency, and round-trip through save/load.

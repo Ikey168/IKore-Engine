@@ -1,6 +1,6 @@
 #pragma once
 
-// The full Doodle Dungeon drawing -> scene pipeline, as one portable header.
+// The full Doodlebound drawing -> scene pipeline, as one portable header.
 #include "cv/Image.h"
 #include "cv/Rectify.h"
 #include "cv/Symbols.h"
@@ -17,7 +17,7 @@
 
 /**
  * @file Doodle.h
- * @brief Portable, renderer-agnostic Doodle Dungeon converter library (issue #171).
+ * @brief Portable, renderer-agnostic Doodlebound converter library (issue #171).
  *
  * Milestone 17. A single public header that packages the drawing -> scene pipeline
  * (Milestones 15-16) as a standalone library usable from a mobile app or any

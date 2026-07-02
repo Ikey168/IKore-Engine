@@ -14,7 +14,7 @@
  * @file Robust.h
  * @brief Phase 2 robustness for the drawing->map CV pipeline (issue #239).
  *
- * Milestone 16, "Doodle Dungeon". Phase 1 (Rectify.h / Vectorize.h / Topology.h)
+ * Milestone 16, "Doodlebound". Phase 1 (Rectify.h / Vectorize.h / Topology.h)
  * turns a clean grid-paper photo into snapped wall polylines. Phase 2 hardens that
  * against real-world input - uneven lighting and shadows, off-angle photos, colored
  * paper, and freehand wobble - which PHONE_GAME_CONCEPT.md flags as the biggest

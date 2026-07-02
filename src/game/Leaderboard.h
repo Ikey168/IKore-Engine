@@ -16,7 +16,7 @@
  * @file Leaderboard.h
  * @brief Fastest-clear leaderboards with deterministic-replay anti-cheat (issue #242).
  *
- * Milestone 17, "Doodle Dungeon" Phase 5. Ranks players by clear time per level,
+ * Milestone 17, "Doodlebound" Phase 5. Ranks players by clear time per level,
  * keyed by the content share code from LevelShare.h (#241). Because DungeonGame is
  * fully deterministic (no RNG; enemies chase deterministically), a fixed-timestep
  * input trace replays to the identical result on any device - so a submitted time

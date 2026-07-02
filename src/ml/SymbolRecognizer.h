@@ -16,7 +16,7 @@
  * @brief Phase 4 symbol-recognition maturity: data pipeline, model export, an
  *        accuracy/confusion harness, and a heuristic fallback (issue #240).
  *
- * Milestone 16/17, "Doodle Dungeon". GlyphNet.h provides the invariant feature
+ * Milestone 16/17, "Doodlebound". GlyphNet.h provides the invariant feature
  * frontend (normalizeGlyph) and a trainable softmax model (GlyphClassifier). This
  * header matures that into the shippable recognizer for the seven game symbols and
  * the reproducible pipeline around it, which PHONE_GAME_CONCEPT.md 5 (step 5) calls
