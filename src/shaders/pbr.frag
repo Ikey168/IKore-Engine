@@ -50,7 +50,23 @@ uniform int numPointLights;
 uniform bool useDirLight;
 uniform vec3 viewPos;
 
+// Image-based lighting (issue #270). When useIBL is false these are ignored and the
+// ambient term is the constant fallback below, byte-identical to before. When true the
+// ambient term samples the irradiance map (diffuse), the prefiltered environment
+// (specular), and the split-sum BRDF LUT, mirroring render::IblBrdf.
+uniform samplerCube irradianceMap;
+uniform samplerCube prefilterMap;
+uniform sampler2D brdfLUT;
+uniform bool useIBL;
+uniform float maxReflectionLod;
+
 const float PI = 3.14159265359;
+
+// Roughness-aware Fresnel for the ambient term: rough surfaces keep more of their
+// specular at grazing angles clamped by F0 (Sebastien Lagarde).
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
 
 // The functions below mirror src/render/PbrBrdf.h and the reference evaluation in
 // src/render/PbrMaterial.h (evaluateDirectionalPbr), which are unit-tested. GLSL is
@@ -143,8 +159,29 @@ void main() {
         Lo += shadePbr(N, V, L, radiance, albedo, metallic, roughness);
     }
 
-    // Simple ambient so unlit faces are not pure black (IBL replaces this later).
-    vec3 ambient = vec3(0.03) * albedo * ao;
+    // Ambient term. With IBL (issue #270): diffuse from the irradiance map and
+    // specular from the prefiltered environment weighted by the split-sum BRDF LUT.
+    // Without an environment (useIBL false), fall back to the constant ambient so the
+    // output matches the pre-IBL look exactly.
+    vec3 ambient;
+    if (useIBL) {
+        float NdotV = max(dot(N, V), 0.0);
+        vec3 F0 = mix(vec3(0.04), albedo, metallic);
+        vec3 F = fresnelSchlickRoughness(NdotV, F0, roughness);
+        vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
+
+        vec3 irradiance = texture(irradianceMap, N).rgb;
+        vec3 diffuseIBL = irradiance * albedo;
+
+        vec3 R = reflect(-V, N);
+        vec3 prefiltered = textureLod(prefilterMap, R, roughness * maxReflectionLod).rgb;
+        vec2 envBRDF = texture(brdfLUT, vec2(NdotV, roughness)).rg;
+        vec3 specularIBL = prefiltered * (F * envBRDF.x + envBRDF.y);
+
+        ambient = (kD * diffuseIBL + specularIBL) * ao;
+    } else {
+        ambient = vec3(0.03) * albedo * ao;
+    }
     vec3 color = ambient + Lo;
 
     // Reinhard tone map + gamma for display.

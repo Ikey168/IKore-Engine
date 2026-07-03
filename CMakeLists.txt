@@ -240,6 +240,7 @@ set(ENGINE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ParticleSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ShadowMap.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CascadedShadowMap.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/render/Ibl.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Frustum.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/InputComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ControllableEntities.cpp
@@ -779,6 +780,12 @@ add_executable(test_pbr_material
 # PBR texture/factor blending rule mirrored by pbr.frag (#269) - header-only.
 add_executable(test_pbr_textures
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_pbr_textures.cpp
+)
+
+# IBL split-sum math: Hammersley, GGX importance sample, BRDF LUT integration, mip
+# <-> roughness mapping, mirrored by the generation shaders (#270) - header-only.
+add_executable(test_ibl_brdf
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ibl_brdf.cpp
 )
 
 # HDR exposure + ACES tone-mapping resolve math (rendering P3 / #235) - header-only.
