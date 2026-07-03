@@ -1,6 +1,7 @@
 #include "Model.h"
 #include "Shader.h"
 #include "core/Logger.h"
+#include <glm/gtc/type_ptr.hpp> // glm::value_ptr for renderSelectable (issue #269)
 
 #include <iostream>
 #include <filesystem>
@@ -182,43 +183,83 @@ void Mesh::render(std::shared_ptr<Shader> shader) const {
     if (!m_isSetup || !shader) return;
     
     shader->use();
-    
+
     // Bind textures and set uniforms
     GLuint textureUnit = 0;
-    
-    // Diffuse texture
-    if (m_material.hasDiffuseTexture()) {
-        m_material.diffuse->bind(textureUnit);
-        shader->setFloat("material.useDiffuseTexture", 1.0f);
-        glUniform1i(glGetUniformLocation(shader->id(), "material.diffuse"), textureUnit++);
+
+    if (m_material.isPBR) {
+        // Metallic-roughness PBR binding (issue #269): scalar factors plus optional
+        // albedo / metallic-roughness / AO / normal maps. The shader multiplies each
+        // factor by its map (or 1 when absent), mirroring render::resolvePbrInputs.
+        shader->setVec3("material.albedo", m_material.albedo.x, m_material.albedo.y, m_material.albedo.z);
+        shader->setFloat("material.metallic", m_material.metallic);
+        shader->setFloat("material.roughness", m_material.roughness);
+        shader->setFloat("material.ao", m_material.ao);
+
+        if (m_material.hasAlbedoTexture()) {
+            m_material.albedoMap->bind(textureUnit);
+            shader->setInt("useAlbedoMap", 1);
+            glUniform1i(glGetUniformLocation(shader->id(), "albedoMap"), textureUnit++);
+        } else {
+            shader->setInt("useAlbedoMap", 0);
+        }
+        if (m_material.hasMetallicRoughnessTexture()) {
+            m_material.metallicRoughnessMap->bind(textureUnit);
+            shader->setInt("useMetallicRoughnessMap", 1);
+            glUniform1i(glGetUniformLocation(shader->id(), "metallicRoughnessMap"), textureUnit++);
+        } else {
+            shader->setInt("useMetallicRoughnessMap", 0);
+        }
+        if (m_material.hasAoTexture()) {
+            m_material.aoMap->bind(textureUnit);
+            shader->setInt("useAoMap", 1);
+            glUniform1i(glGetUniformLocation(shader->id(), "aoMap"), textureUnit++);
+        } else {
+            shader->setInt("useAoMap", 0);
+        }
+        if (m_material.hasNormalTexture()) {
+            m_material.normal->bind(textureUnit);
+            shader->setInt("useNormalMap", 1);
+            glUniform1i(glGetUniformLocation(shader->id(), "normalMap"), textureUnit++);
+        } else {
+            shader->setInt("useNormalMap", 0);
+        }
     } else {
-        shader->setFloat("material.useDiffuseTexture", 0.0f);
+        // Blinn-Phong binding (unchanged).
+        // Diffuse texture
+        if (m_material.hasDiffuseTexture()) {
+            m_material.diffuse->bind(textureUnit);
+            shader->setFloat("material.useDiffuseTexture", 1.0f);
+            glUniform1i(glGetUniformLocation(shader->id(), "material.diffuse"), textureUnit++);
+        } else {
+            shader->setFloat("material.useDiffuseTexture", 0.0f);
+        }
+
+        // Specular texture
+        if (m_material.hasSpecularTexture()) {
+            m_material.specular->bind(textureUnit);
+            shader->setFloat("material.useSpecularTexture", 1.0f);
+            glUniform1i(glGetUniformLocation(shader->id(), "material.specular"), textureUnit++);
+        } else {
+            shader->setFloat("material.useSpecularTexture", 0.0f);
+        }
+
+        // Normal texture
+        if (m_material.hasNormalTexture()) {
+            m_material.normal->bind(textureUnit);
+            shader->setFloat("material.useNormalTexture", 1.0f);
+            glUniform1i(glGetUniformLocation(shader->id(), "material.normal"), textureUnit++);
+        } else {
+            shader->setFloat("material.useNormalTexture", 0.0f);
+        }
+
+        // Set material color properties
+        shader->setVec3("material.ambientColor", m_material.ambientColor.x, m_material.ambientColor.y, m_material.ambientColor.z);
+        shader->setVec3("material.diffuseColor", m_material.diffuseColor.x, m_material.diffuseColor.y, m_material.diffuseColor.z);
+        shader->setVec3("material.specularColor", m_material.specularColor.x, m_material.specularColor.y, m_material.specularColor.z);
+        shader->setFloat("material.shininess", m_material.shininess);
     }
-    
-    // Specular texture
-    if (m_material.hasSpecularTexture()) {
-        m_material.specular->bind(textureUnit);
-        shader->setFloat("material.useSpecularTexture", 1.0f);
-        glUniform1i(glGetUniformLocation(shader->id(), "material.specular"), textureUnit++);
-    } else {
-        shader->setFloat("material.useSpecularTexture", 0.0f);
-    }
-    
-    // Normal texture
-    if (m_material.hasNormalTexture()) {
-        m_material.normal->bind(textureUnit);
-        shader->setFloat("material.useNormalTexture", 1.0f);
-        glUniform1i(glGetUniformLocation(shader->id(), "material.normal"), textureUnit++);
-    } else {
-        shader->setFloat("material.useNormalTexture", 0.0f);
-    }
-    
-    // Set material color properties
-    shader->setVec3("material.ambientColor", m_material.ambientColor.x, m_material.ambientColor.y, m_material.ambientColor.z);
-    shader->setVec3("material.diffuseColor", m_material.diffuseColor.x, m_material.diffuseColor.y, m_material.diffuseColor.z);
-    shader->setVec3("material.specularColor", m_material.specularColor.x, m_material.specularColor.y, m_material.specularColor.z);
-    shader->setFloat("material.shininess", m_material.shininess);
-    
+
     // Draw mesh
     glBindVertexArray(m_VAO);
     glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(m_indices.size()), GL_UNSIGNED_INT, 0);
@@ -481,7 +522,48 @@ Material Model::loadMaterial(aiMaterial* mat) {
     if (mat->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS) {
         material.shininess = shininess;
     }
-    
+
+    // Metallic-roughness PBR import (issue #269). A glTF-style asset provides PBR
+    // factors and/or textures; when any are present, mark the material PBR so the
+    // renderer picks the PBR program. Materials without them stay Blinn-Phong.
+    material.albedoMap = loadMaterialTexture(mat, aiTextureType_BASE_COLOR, Texture::Type::ALBEDO);
+    // glTF packs metallic-roughness in one texture; assimp exposes it under both
+    // METALNESS and DIFFUSE_ROUGHNESS, so accept whichever the importer filled.
+    material.metallicRoughnessMap =
+        loadMaterialTexture(mat, aiTextureType_METALNESS, Texture::Type::METALLIC_ROUGHNESS);
+    if (!material.metallicRoughnessMap) {
+        material.metallicRoughnessMap =
+            loadMaterialTexture(mat, aiTextureType_DIFFUSE_ROUGHNESS, Texture::Type::METALLIC_ROUGHNESS);
+    }
+    material.aoMap = loadMaterialTexture(mat, aiTextureType_AMBIENT_OCCLUSION, Texture::Type::AMBIENT_OCCLUSION);
+    if (!material.aoMap) {
+        material.aoMap = loadMaterialTexture(mat, aiTextureType_LIGHTMAP, Texture::Type::AMBIENT_OCCLUSION);
+    }
+
+    aiColor4D baseColor;
+    const bool hasBaseColor = mat->Get(AI_MATKEY_BASE_COLOR, baseColor) == AI_SUCCESS;
+    if (hasBaseColor) {
+        material.albedo = glm::vec3(baseColor.r, baseColor.g, baseColor.b);
+    }
+    float metallicFactor = 0.0f, roughnessFactor = 0.5f;
+    const bool hasMetallic = mat->Get(AI_MATKEY_METALLIC_FACTOR, metallicFactor) == AI_SUCCESS;
+    const bool hasRoughness = mat->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughnessFactor) == AI_SUCCESS;
+    if (hasMetallic) material.metallic = metallicFactor;
+    if (hasRoughness) material.roughness = roughnessFactor;
+
+    material.isPBR = hasBaseColor || hasMetallic || hasRoughness ||
+                     material.hasAlbedoTexture() || material.hasMetallicRoughnessTexture() ||
+                     material.hasAoTexture();
+    if (material.isPBR) {
+        // Only for PBR materials, fill the normal slot from the glTF NORMALS channel
+        // when the Phong-style HEIGHT normal was absent. Gating on isPBR keeps
+        // Blinn-Phong materials byte-identical (their normal slot is untouched).
+        if (!material.normal) {
+            material.normal = loadMaterialTexture(mat, aiTextureType_NORMALS, Texture::Type::NORMAL);
+        }
+        LOG_INFO("Material imported as metallic-roughness PBR");
+    }
+
     return material;
 }
 
@@ -542,6 +624,24 @@ Texture::Type Model::aiTextureTypeToTextureType(aiTextureType type) {
 
 void Model::render(std::shared_ptr<Shader> shader) const {
     for (const auto& mesh : m_meshes) {
+        mesh->render(shader);
+    }
+}
+
+void Model::renderSelectable(std::shared_ptr<Shader> phongShader, std::shared_ptr<Shader> pbrShader,
+                             const glm::mat4& model, const glm::mat3& normalMatrix) const {
+    for (const auto& mesh : m_meshes) {
+        // Pick the PBR program for PBR meshes (issue #269); everything else stays on
+        // the Blinn-Phong path. Falls back to Phong when no PBR program is provided.
+        const bool usePbr = pbrShader && mesh->getMaterial().isPBR;
+        std::shared_ptr<Shader> shader = usePbr ? pbrShader : phongShader;
+        if (!shader) continue;
+
+        // Per-mesh matrices go on the chosen program (frame/light uniforms are set on
+        // both by the caller). Mesh::render also calls use(), binding this program.
+        shader->use();
+        shader->setMat4("model", glm::value_ptr(model));
+        shader->setMat3("normalMatrix", glm::value_ptr(normalMatrix));
         mesh->render(shader);
     }
 }

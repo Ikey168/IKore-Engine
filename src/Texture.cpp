@@ -214,6 +214,9 @@ std::string Texture::typeToString(Type type) {
         case Type::NORMAL: return "normal";
         case Type::HEIGHT: return "height";
         case Type::EMISSIVE: return "emissive";
+        case Type::ALBEDO: return "albedo";
+        case Type::METALLIC_ROUGHNESS: return "metallicRoughness";
+        case Type::AMBIENT_OCCLUSION: return "ao";
         default: return "unknown";
     }
 }
@@ -224,6 +227,9 @@ Texture::Type Texture::stringToType(const std::string& typeStr) {
     if (typeStr == "normal") return Type::NORMAL;
     if (typeStr == "height") return Type::HEIGHT;
     if (typeStr == "emissive") return Type::EMISSIVE;
+    if (typeStr == "albedo") return Type::ALBEDO;
+    if (typeStr == "metallicRoughness") return Type::METALLIC_ROUGHNESS;
+    if (typeStr == "ao") return Type::AMBIENT_OCCLUSION;
     return Type::DIFFUSE; // Default
 }
 
@@ -364,6 +370,9 @@ std::string TextureManager::getDefaultUniformName(Texture::Type type) const {
         case Texture::Type::NORMAL: return "material.normal";
         case Texture::Type::HEIGHT: return "material.height";
         case Texture::Type::EMISSIVE: return "material.emissive";
+        case Texture::Type::ALBEDO: return "albedoMap";
+        case Texture::Type::METALLIC_ROUGHNESS: return "metallicRoughnessMap";
+        case Texture::Type::AMBIENT_OCCLUSION: return "aoMap";
         default: return "material.texture";
     }
 }

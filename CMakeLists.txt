@@ -776,6 +776,11 @@ add_executable(test_pbr_material
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_pbr_material.cpp
 )
 
+# PBR texture/factor blending rule mirrored by pbr.frag (#269) - header-only.
+add_executable(test_pbr_textures
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_pbr_textures.cpp
+)
+
 # HDR exposure + ACES tone-mapping resolve math (rendering P3 / #235) - header-only.
 add_executable(test_tone_mapping
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_tone_mapping.cpp

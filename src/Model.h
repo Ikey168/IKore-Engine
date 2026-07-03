@@ -52,12 +52,21 @@ struct Material {
     float roughness = 0.5f;
     float ao = 1.0f;
 
+    // Metallic-roughness PBR textures (issue #269). Optional: when a map is absent the
+    // corresponding scalar factor above is used unchanged (glTF factor * texture rule).
+    std::shared_ptr<Texture> albedoMap;             // base color
+    std::shared_ptr<Texture> metallicRoughnessMap;  // glTF packed: G roughness, B metallic
+    std::shared_ptr<Texture> aoMap;                 // ambient occlusion (R)
+
     // Flags to indicate texture availability
     bool hasDiffuseTexture() const { return diffuse && diffuse->isLoaded(); }
     bool hasSpecularTexture() const { return specular && specular->isLoaded(); }
     bool hasNormalTexture() const { return normal && normal->isLoaded(); }
     bool hasHeightTexture() const { return height && height->isLoaded(); }
     bool hasEmissiveTexture() const { return emissive && emissive->isLoaded(); }
+    bool hasAlbedoTexture() const { return albedoMap && albedoMap->isLoaded(); }
+    bool hasMetallicRoughnessTexture() const { return metallicRoughnessMap && metallicRoughnessMap->isLoaded(); }
+    bool hasAoTexture() const { return aoMap && aoMap->isLoaded(); }
 };
 
 class Mesh {
@@ -156,6 +165,13 @@ public:
     
     // Render the entire model
     void render(std::shared_ptr<Shader> shader) const;
+
+    // Render each mesh with the program its material selects (issue #269): meshes with
+    // Material::isPBR draw with @p pbrShader, the rest with @p phongShader. Per-mesh
+    // model/normal matrices are set on the chosen program; frame/light uniforms must
+    // already be set on both. If @p pbrShader is null, everything uses @p phongShader.
+    void renderSelectable(std::shared_ptr<Shader> phongShader, std::shared_ptr<Shader> pbrShader,
+                          const glm::mat4& model, const glm::mat3& normalMatrix) const;
     
     // Getters
     const std::vector<std::unique_ptr<Mesh>>& getMeshes() const { return m_meshes; }
