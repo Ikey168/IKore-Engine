@@ -25,6 +25,7 @@
 #include "ParticleSystem.h"
 #include "ShadowMap.h"
 #include "CascadedShadowMap.h"
+#include "render/Ibl.h"
 #include "Frustum.h"
 #include "render/FrameGraph.h"
 #include "render/ShadowSkinning.h"
@@ -65,6 +66,12 @@ IKore::PostProcessor* g_postProcessor = nullptr;
 
 // Global skybox pointer for keyboard callbacks
 IKore::Skybox* g_skybox = nullptr;
+
+// Image-based lighting for the PBR ambient term (issue #270). Generated at load from
+// the skybox cubemap; g_iblEnabled (toggle B) gates the IBL ambient so the constant-
+// ambient fallback stays available and is used whenever no environment is present.
+IKore::IblEnvironment* g_ibl = nullptr;
+bool g_iblEnabled = true;
 
 // Global debug UI pointer for keyboard callbacks (F1 toggles the overlay)
 IKore::DebugUI* g_debugUI = nullptr;
@@ -217,7 +224,19 @@ int main() {
     }
     
     g_skybox = &skybox; // Set global pointer for keyboard callbacks
-    
+
+    // Generate image-based lighting from the skybox cubemap (issue #270): irradiance,
+    // prefiltered specular, and the BRDF LUT for the PBR ambient term. Opt-in and only
+    // used when valid; PBR materials fall back to constant ambient otherwise.
+    IKore::IblEnvironment iblEnv;
+    if (skyboxLoaded && skybox.isLoaded()) {
+        if (iblEnv.generate(skybox.getTextureID())) {
+            g_ibl = &iblEnv;
+        } else {
+            LOG_WARNING("IBL generation failed - PBR uses constant ambient");
+        }
+    }
+
     // === Particle System Initialization ===
     IKore::ParticleSystemManager particleManager;
     g_particleManager = &particleManager; // Set global pointer for keyboard callbacks
@@ -958,6 +977,28 @@ int main() {
                 pbrShaderPtr->setFloat("pointLights[0].constant", pointLight.constant);
                 pbrShaderPtr->setFloat("pointLights[0].linear", pointLight.linear);
                 pbrShaderPtr->setFloat("pointLights[0].quadratic", pointLight.quadratic);
+
+                // Image-based lighting for the ambient term (issue #270). The IBL
+                // samplers always point at dedicated units 5-7 (which Mesh::render never
+                // uses - it binds material maps to 0-3) so a cube sampler can never
+                // alias unit 0's 2D material texture. Textures are bound and useIBL set
+                // only when a valid environment exists; otherwise the shader keeps the
+                // constant-ambient fallback.
+                pbrShaderPtr->setInt("irradianceMap", 5);
+                pbrShaderPtr->setInt("prefilterMap", 6);
+                pbrShaderPtr->setInt("brdfLUT", 7);
+                const bool iblOn = g_ibl && g_ibl->isValid() && g_iblEnabled;
+                pbrShaderPtr->setInt("useIBL", iblOn ? 1 : 0);
+                if (iblOn) {
+                    glActiveTexture(GL_TEXTURE5);
+                    glBindTexture(GL_TEXTURE_CUBE_MAP, g_ibl->irradianceMap());
+                    glActiveTexture(GL_TEXTURE6);
+                    glBindTexture(GL_TEXTURE_CUBE_MAP, g_ibl->prefilterMap());
+                    glActiveTexture(GL_TEXTURE7);
+                    glBindTexture(GL_TEXTURE_2D, g_ibl->brdfLUT());
+                    pbrShaderPtr->setFloat("maxReflectionLod", g_ibl->maxReflectionLod());
+                    glActiveTexture(GL_TEXTURE0);
+                }
                 shaderPtr->use(); // restore the Phong program for the draw loop below
             }
 
@@ -1302,6 +1343,11 @@ void key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action,
             li = (li + 1) % 5;
             g_cascadeSplitLambda = lambdas[li];
             LOG_INFO("Cascade split lambda: " + std::to_string(g_cascadeSplitLambda));
+        }
+        else if (key == GLFW_KEY_B && g_ibl && g_ibl->isValid()) {
+            // Toggle image-based lighting for the PBR ambient term (issue #270).
+            g_iblEnabled = !g_iblEnabled;
+            LOG_INFO("Image-based lighting " + std::string(g_iblEnabled ? "enabled" : "disabled"));
         }
         else if (key == GLFW_KEY_C) {
             // Toggle frustum culling
