@@ -939,7 +939,28 @@ int main() {
             
             // No spot lights for now
             shaderPtr->setFloat("numSpotLights", 0.0f);
-            
+
+            // PBR frame uniforms (issue #269): set once so meshes selected onto the PBR
+            // program (by Material::isPBR, via Model::renderSelectable below) are lit
+            // consistently with the Phong scene. Reuses the same directional + point
+            // light. Cheap and only matters when a mesh opts into PBR.
+            if (pbrShaderPtr) {
+                pbrShaderPtr->use();
+                pbrShaderPtr->setMat4("view", glm::value_ptr(view));
+                pbrShaderPtr->setMat4("projection", glm::value_ptr(projection));
+                pbrShaderPtr->setVec3("viewPos", cameraPos.x, cameraPos.y, cameraPos.z);
+                pbrShaderPtr->setInt("useDirLight", 1);
+                pbrShaderPtr->setVec3("dirLight.direction", dirLight.direction.x, dirLight.direction.y, dirLight.direction.z);
+                pbrShaderPtr->setVec3("dirLight.diffuse", dirLight.diffuse.x, dirLight.diffuse.y, dirLight.diffuse.z);
+                pbrShaderPtr->setInt("numPointLights", 1);
+                pbrShaderPtr->setVec3("pointLights[0].position", pointLight.position.x, pointLight.position.y, pointLight.position.z);
+                pbrShaderPtr->setVec3("pointLights[0].diffuse", pointLight.diffuse.x, pointLight.diffuse.y, pointLight.diffuse.z);
+                pbrShaderPtr->setFloat("pointLights[0].constant", pointLight.constant);
+                pbrShaderPtr->setFloat("pointLights[0].linear", pointLight.linear);
+                pbrShaderPtr->setFloat("pointLights[0].quadratic", pointLight.quadratic);
+                shaderPtr->use(); // restore the Phong program for the draw loop below
+            }
+
             // Render models if available, otherwise fallback to primitive cubes
             if (modelLoaded && !cubeModel.getMeshes().empty()) {
                 // Create a larger grid of objects for better frustum culling demonstration
@@ -977,13 +998,12 @@ int main() {
                     
                     renderedObjects++;
                     glm::mat3 cubeNormalMatrix = glm::mat3(glm::transpose(glm::inverse(instanceModel)));
-                    
-                    // Update matrices for this cube
-                    shaderPtr->setMat4("model", glm::value_ptr(instanceModel));
-                    shaderPtr->setMat3("normalMatrix", glm::value_ptr(cubeNormalMatrix));
-                    
-                    // Render the model instance
-                    cubeModel.render(shaderPtr);
+
+                    // Render the model instance, selecting the PBR or Blinn-Phong program
+                    // per mesh from Material::isPBR (issue #269). renderSelectable sets the
+                    // per-mesh matrices on the chosen program; boneless Phong meshes take
+                    // the existing path unchanged.
+                    cubeModel.renderSelectable(shaderPtr, pbrShaderPtr, instanceModel, cubeNormalMatrix);
                 }
                 
                 // Log culling statistics periodically
@@ -1066,44 +1086,10 @@ int main() {
             textureManager.unbindAll();
         }
 
-        // Opt-in PBR showcase (issue #234): a row of metallic-roughness cubes drawn
-        // with the PBR program, next to (above) the Blinn-Phong scene rendered above.
-        // This block is purely additive - it does not touch the Phong draws, so
-        // existing content renders byte-for-byte unchanged.
-        if (pbrShaderPtr && modelLoaded && !cubeModel.getMeshes().empty()) {
-            pbrShaderPtr->use();
-            pbrShaderPtr->setMat4("view", glm::value_ptr(view));
-            pbrShaderPtr->setMat4("projection", glm::value_ptr(projection));
-            glm::vec3 pbrCamPos = camera.getPosition();
-            pbrShaderPtr->setVec3("viewPos", pbrCamPos.x, pbrCamPos.y, pbrCamPos.z);
-
-            // Reuse the scene's directional + point light for the PBR objects.
-            pbrShaderPtr->setInt("useDirLight", 1);
-            pbrShaderPtr->setVec3("dirLight.direction", dirLight.direction.x, dirLight.direction.y, dirLight.direction.z);
-            pbrShaderPtr->setVec3("dirLight.diffuse", dirLight.diffuse.x, dirLight.diffuse.y, dirLight.diffuse.z);
-            pbrShaderPtr->setInt("numPointLights", 1);
-            pbrShaderPtr->setVec3("pointLights[0].position", pointLight.position.x, pointLight.position.y, pointLight.position.z);
-            pbrShaderPtr->setVec3("pointLights[0].diffuse", pointLight.diffuse.x, pointLight.diffuse.y, pointLight.diffuse.z);
-            pbrShaderPtr->setFloat("pointLights[0].constant", pointLight.constant);
-            pbrShaderPtr->setFloat("pointLights[0].linear", pointLight.linear);
-            pbrShaderPtr->setFloat("pointLights[0].quadratic", pointLight.quadratic);
-
-            const int kPbrShowcaseCount = 5;
-            for (int i = 0; i < kPbrShowcaseCount; ++i) {
-                const float t = static_cast<float>(i) / static_cast<float>(kPbrShowcaseCount - 1);
-                glm::mat4 pbrModel = glm::mat4(1.0f);
-                pbrModel = glm::translate(pbrModel, glm::vec3(-8.0f + i * 4.0f, 12.0f, 0.0f));
-                const glm::mat3 pbrNormal = glm::mat3(glm::transpose(glm::inverse(pbrModel)));
-                pbrShaderPtr->setMat4("model", glm::value_ptr(pbrModel));
-                pbrShaderPtr->setMat3("normalMatrix", glm::value_ptr(pbrNormal));
-                // Metallic increases left -> right; fixed mid-low roughness.
-                pbrShaderPtr->setVec3("material.albedo", 0.9f, 0.2f, 0.2f);
-                pbrShaderPtr->setFloat("material.metallic", t);
-                pbrShaderPtr->setFloat("material.roughness", 0.35f);
-                pbrShaderPtr->setFloat("material.ao", 1.0f);
-                cubeModel.render(pbrShaderPtr);
-            }
-        }
+        // The PBR path is now driven per mesh by Material::isPBR via
+        // Model::renderSelectable above (issue #269), replacing the hardcoded #234
+        // showcase row: a glTF-style asset renders through the PBR program with its
+        // imported textures, while Blinn-Phong meshes stay on the existing path.
         });  // end forward pass handler
 
         frameGraph.setHandler(IKore::render::passes::Particles, [&]() {

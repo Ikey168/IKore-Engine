@@ -4,6 +4,7 @@ out vec4 FragColor;
 in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoord;
+in mat3 TBN;
 
 // Metallic-roughness material (issue #234). This fragment path is only used by
 // materials that opt in; Blinn-Phong materials use phong_shadows.frag unchanged.
@@ -13,6 +14,19 @@ struct Material {
     float roughness;
     float ao;
 };
+
+// Textured metallic-roughness (issue #269). Each map is optional; when absent the
+// corresponding use* flag is false and the scalar factor above is used unchanged.
+// glTF packs roughness in the G channel and metallic in the B channel of the
+// metallic-roughness texture, and occlusion in the R channel of the AO texture.
+uniform sampler2D albedoMap;
+uniform sampler2D metallicRoughnessMap;
+uniform sampler2D aoMap;
+uniform sampler2D normalMap;
+uniform bool useAlbedoMap;
+uniform bool useMetallicRoughnessMap;
+uniform bool useAoMap;
+uniform bool useNormalMap;
 
 struct DirectionalLight {
     vec3 direction; // direction the light travels
@@ -92,12 +106,27 @@ vec3 shadePbr(vec3 N, vec3 V, vec3 L, vec3 radiance, vec3 albedo, float metallic
 }
 
 void main() {
-    vec3 N = normalize(Normal);
+    // Surface normal: perturb by the normal map when bound (tangent space via TBN),
+    // else the interpolated vertex normal. Mirrors phong_shadows.frag's normal path.
+    vec3 N;
+    if (useNormalMap) {
+        vec3 tangentNormal = texture(normalMap, TexCoord).rgb * 2.0 - 1.0;
+        N = normalize(TBN * tangentNormal);
+    } else {
+        N = normalize(Normal);
+    }
     vec3 V = normalize(viewPos - FragPos);
 
-    vec3 albedo = material.albedo;
-    float metallic = material.metallic;
-    float roughness = material.roughness;
+    // Combine scalar factors with the textures the glTF way (factor * channel, a
+    // missing map passing 1). Mirrors render::resolvePbrInputs in PbrMaterial.h.
+    vec3 albedoTexel = useAlbedoMap ? texture(albedoMap, TexCoord).rgb : vec3(1.0);
+    vec2 mrTexel = useMetallicRoughnessMap ? texture(metallicRoughnessMap, TexCoord).gb : vec2(1.0);
+    float aoTexel = useAoMap ? texture(aoMap, TexCoord).r : 1.0;
+
+    vec3 albedo = material.albedo * albedoTexel;
+    float roughness = material.roughness * mrTexel.x; // G channel
+    float metallic = material.metallic * mrTexel.y;   // B channel
+    float ao = material.ao * aoTexel;
 
     vec3 Lo = vec3(0.0);
     if (useDirLight) {
@@ -115,7 +144,7 @@ void main() {
     }
 
     // Simple ambient so unlit faces are not pure black (IBL replaces this later).
-    vec3 ambient = vec3(0.03) * albedo * material.ao;
+    vec3 ambient = vec3(0.03) * albedo * ao;
     vec3 color = ambient + Lo;
 
     // Reinhard tone map + gamma for display.

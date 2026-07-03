@@ -15,7 +15,11 @@ public:
         SPECULAR,
         NORMAL,
         HEIGHT,
-        EMISSIVE
+        EMISSIVE,
+        // Metallic-roughness PBR maps (issue #269).
+        ALBEDO,             // base color
+        METALLIC_ROUGHNESS, // glTF packed: G = roughness, B = metallic
+        AMBIENT_OCCLUSION   // R channel
     };
 
     enum class Format {

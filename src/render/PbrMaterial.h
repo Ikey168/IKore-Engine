@@ -32,6 +32,34 @@ struct PbrMaterial {
     float ao{1.0f};
 };
 
+/**
+ * @brief Combine scalar PBR factors with sampled texture values (issue #269).
+ * @param factors           The material's scalar factors (albedo/metallic/roughness/ao).
+ * @param albedoTexel       Base-color texture sample, or {1,1,1} when no albedo map.
+ * @param mrGreenRoughness  Green channel of the metallic-roughness texture (roughness),
+ *                          or 1 when no map. glTF packs roughness in G.
+ * @param mrBlueMetallic    Blue channel of the metallic-roughness texture (metallic),
+ *                          or 1 when no map. glTF packs metallic in B.
+ * @param aoTexel           Red channel of the occlusion texture, or 1 when no AO map.
+ * @return The resolved inputs to feed evaluateDirectionalPbr / the PBR shader.
+ *
+ * The blend is multiplicative (factor * texture channel), the glTF metallic-roughness
+ * convention: a missing texture passes 1 so the factor is used unchanged, and a factor
+ * of 1 uses the texture unchanged. src/shaders/pbr.frag mirrors this exactly, so the
+ * texture/uniform blending rule is unit-tested even though GLSL is not compiled in CI.
+ */
+inline PbrMaterial resolvePbrInputs(const PbrMaterial& factors, const ecs::Vec3& albedoTexel,
+                                    float mrGreenRoughness, float mrBlueMetallic, float aoTexel) {
+    PbrMaterial r;
+    r.enabled = factors.enabled;
+    r.albedo = ecs::Vec3{factors.albedo.x * albedoTexel.x, factors.albedo.y * albedoTexel.y,
+                         factors.albedo.z * albedoTexel.z};
+    r.metallic = factors.metallic * mrBlueMetallic;
+    r.roughness = factors.roughness * mrGreenRoughness;
+    r.ao = factors.ao * aoTexel;
+    return r;
+}
+
 namespace detail {
 
 inline float dot3(const ecs::Vec3& a, const ecs::Vec3& b) {
